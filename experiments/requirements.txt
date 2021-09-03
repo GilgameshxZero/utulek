@@ -1,0 +1,47 @@
+# Must be first to speed up later package installs.
+wheel
+
+# General notebook packages.
+ipykernel
+tqdm
+jupyterlab
+ipywidgets
+pylint
+autopep8
+
+# General data packages.
+numpy
+scipy
+six
+pandas
+matplotlib
+sklearn
+
+# General experiments.
+cox
+
+# General ML.
+ml_collections
+
+# Tensorflow.
+tensorflow
+tensorflow-datasets
+tensorflow-probability
+
+# Pytorch.
+torch
+torchvision
+torchaudio
+
+# Jax.
+jaxlib
+jax
+# "jax[cpu]"
+
+# ML specializations.
+clu
+
+# utulek specializations.
+flax
+neural-tangents
+adversarial-robustness-toolbox
