@@ -1,0 +1,50 @@
+# General utility.
+wheel
+six
+dill
+
+# Lint & format.
+pylint
+autopep8
+yapf
+jedi
+
+# Notebook.
+tqdm
+ipykernel
+ipywidgets
+jupyterlab
+
+# Scientific computing.
+numpy
+pandas
+matplotlib
+scikit-learn
+scipy
+sklearn
+
+# General experiments.
+cox
+
+# General ML.
+ml-collections
+clu
+
+# Tensorflow. Version omitted for CPU requirements.
+tensorflow
+tensorflow-datasets
+tensorflow-probability
+
+# Pytorch. Version omitted for CPU requirements.
+torch
+torchvision
+torchaudio
+
+# Jax. Version omitted for CPU requirements.
+jaxlib
+jax[cpu]
+
+# utulek specializations. May not be perfectly CPU-compatible.
+flax
+neural-tangents
+adversarial-robustness-toolbox
