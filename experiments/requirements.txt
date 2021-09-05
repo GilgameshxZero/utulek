@@ -1,4 +1,7 @@
+# For Python 3.8.10 on WSL 2.
+
 # General utility.
+pip
 wheel
 six
 dill
@@ -23,28 +26,27 @@ scikit-learn
 scipy
 sklearn
 
+# Tensorflow.
+tensorflow==2.6.0
+tensorflow-datasets
+tensorflow-probability
+
+# Pytorch.
+torch==1.9.0
+torchvision==0.10.0
+torchaudio==0.9.0
+
+# Jax.
+jax[cpu]==0.2.20
+
+# utulek specializations.
+flax
+neural-tangents
+adversarial-robustness-toolbox
+
 # General experiments.
 cox
 
 # General ML.
 ml-collections
 clu
-
-# Tensorflow. Version omitted for CPU requirements.
-tensorflow
-tensorflow-datasets
-tensorflow-probability
-
-# Pytorch. Version omitted for CPU requirements.
-torch
-torchvision
-torchaudio
-
-# Jax. Version omitted for CPU requirements.
-jaxlib
-jax[cpu]
-
-# utulek specializations. May not be perfectly CPU-compatible.
-flax
-neural-tangents
-adversarial-robustness-toolbox
