@@ -26,6 +26,11 @@ scikit-learn
 scipy
 sklearn
 
+# General ML.
+cox
+ml-collections
+clu
+
 # Tensorflow.
 tensorflow==2.6.0
 tensorflow-datasets
@@ -43,10 +48,3 @@ jax[cpu]==0.2.20
 flax
 neural-tangents
 adversarial-robustness-toolbox
-
-# General experiments.
-cox
-
-# General ML.
-ml-collections
-clu
