@@ -40,7 +40,7 @@ tensorflow-datasets
 tensorflow-probability
 
 # Pytorch.
-torch==1.9.0+cu111  # Consider running with --no-cache-dir on memory-constrained systems until pip implements constant-size cache loading.
+torch==1.9.0+cu111  # Consider running with --no-cache-dir on memory-constrained systems until pip implements constant-size cache loading. 16GB should barely cut it (with WSL2 memory adjustment for default 8GB limit).
 torchvision==0.10.0+cu111
 torchaudio==0.9.0
 
