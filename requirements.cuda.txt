@@ -1,53 +1,12 @@
-# For Python 3.8.10 on WSL 2.
+# For Python 3.8.10 on WSL 2 with CUDA.
 # Requires CUDA 11.1, cuDNN 8.1.1, and Windows Insiders WSL 2 (tested on 22449.1000). Supports compute capability up to 8.6 (tested on 5.0 (GTX 960M)).
-# Pip install with -f https://download.pytorch.org/whl/torch_stable.html for pytorch dependencies.
-# Pip install with -f https://storage.googleapis.com/jax-releases/jax_releases.html for jax dependencies.
 
-# General utility.
-pip
-wheel
-six
-dill
-
-# Lint & format.
-pylint
-autopep8
-yapf
-jedi
-
-# Notebook.
-tqdm
-ipykernel
-ipywidgets
-jupyterlab
-
-# Scientific computing.
-numpy
-pandas
-matplotlib
-scikit-learn
-scipy
-sklearn
-
-# General ML.
-cox
-ml-collections
-clu
-
-# Tensorflow.
-tensorflow==2.6.0
-tensorflow-datasets
-tensorflow-probability
-
-# Pytorch.
-torch==1.9.0+cu111  # Consider running with --no-cache-dir on memory-constrained systems until pip implements constant-size cache loading. 16GB should barely cut it (with WSL2 memory adjustment for default 8GB limit).
-torchvision==0.10.0+cu111
-torchaudio==0.9.0
-
-# Jax.
-jax[cuda111]==0.2.20
-
-# utulek specializations.
-flax
-neural-tangents
-adversarial-robustness-toolbox
+-r requirements/general.txt
+-r requirements/style.txt
+-r requirements/jupyter.txt
+-r requirements/scientific-computing.txt
+-r requirements/ml-utility.txt
+-r requirements/tensorflow.txt
+-r requirements/pytorch.cuda.txt
+-r requirements/jax.cuda.txt
+-r requirements/utulek.txt
