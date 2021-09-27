@@ -1,8 +1,8 @@
 {
 	"files.associations": {
 		"**/requirements.pre.txt": "pip-requirements",
-		"**/requirements.cuda.txt": "pip-requirements",
-		"**/requirements/*.txt": "pip-requirements"
+		"**/requirements.common.txt": "pip-requirements",
+		"**/requirements.cuda.txt": "pip-requirements"
 	},
 	"markdown.styles": ["http://gilgamesh.cc/common/essay.css"],
 	"python.pythonPath": ".venv/bin/python"

@@ -1,12 +1,16 @@
 # For Python 3.8.10 on WSL 2 with CUDA.
 # Requires CUDA 11.1, cuDNN 8.1.1, and Windows Insiders WSL 2 (tested on 22449.1000). Supports compute capability up to 8.6 (tested on 5.0 (GTX 960M)).
 
--r requirements/general.txt
--r requirements/style.txt
--r requirements/jupyter.txt
--r requirements/scientific-computing.txt
--r requirements/ml-utility.txt
--r requirements/tensorflow.txt
--r requirements/pytorch.cuda.txt
--r requirements/jax.cuda.txt
--r requirements/utulek.txt
+-r requirements.common.txt
+
+# Pytorch.
+# Consider running with --no-cache-dir on memory-constrained systems until pip implements constant-size cache loading. 16GB should barely cut it (with WSL2 memory adjustment for default 8GB limit).
+-f https://download.pytorch.org/whl/torch_stable.html
+torch==1.9.0+cu111
+torchvision==0.10.0+cu111
+torchaudio==0.9.0
+
+# Jax.
+-f https://storage.googleapis.com/jax-releases/jax_releases.html
+jax[cuda111]==0.2.20
+

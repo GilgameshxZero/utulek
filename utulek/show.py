@@ -1,57 +1,46 @@
 # Utuilities for visualization.
 
-def show_img_ds(X, Y, lnames=None, samples=[[None] * 5] * 2, show_scale=2):
-    """Plot a grid of images titled with their label/label names."""
-    import numpy as np
-    import matplotlib.pyplot as plt
-
-    c_samples = (len(samples), len(samples[0]))
-    plt.figure(figsize=(c_samples[1] * show_scale, c_samples[0] * show_scale))
-    for i in range(c_samples[0]):
-        for j in range(c_samples[1]):
-            idx = np.random.randint(len(Y)) if samples[i][j] is None else \
-                samples[i][j]
-            plt.subplot(*c_samples, i * c_samples[1] + j + 1)
-            plt.imshow(np.clip(X[idx], 0, 1), cmap="gray")
-            plt.title("{} ({})".format(Y[idx], idx) if lnames is None else
-                      "\"{}\" ({}, {})".format(lnames[Y[idx]], Y[idx], idx))
-            plt.axis("off")
-    plt.tight_layout()
-
-def show_img_ds_cmp(X, Ys, lnames=None, samples=[[None] * 5] * 2, show_scale=2):
+def show_img_ds(X, Y, pred=None, labels=None, shape=None, samples=None, scale=2):
     """
     Plot a grid of images titled with their label/label names. Images where the
-    Ys (ground truth vs. prediction) differ are colored differently (inverted).
+    Ys (ground truth vs. prediction) differ are colored differently.
     """
     import numpy as np
     import matplotlib.pyplot as plt
 
-    c_samples = (len(samples), len(samples[0]))
-    plt.figure(figsize=(c_samples[1] * show_scale, c_samples[0] * show_scale))
-    for i in range(c_samples[0]):
-        for j in range(c_samples[1]):
-            idx = np.random.randint(len(Ys[0])) if samples[i][j] is None else \
-                samples[i][j]
-            is_wrong = Ys[0][idx] != Ys[1][idx]
-            plt.subplot(*c_samples, i * c_samples[1] + j + 1)
-            plt.imshow(np.clip(X[idx], 0, 1),
-                       cmap="binary" if is_wrong else "gray")
-            titles = ["{} ({})".format(Ys[k][idx], idx) if lnames is None else
-                      "\"{}\" ({}, {})".format(
-                          lnames[Ys[k][idx]], Ys[k][idx], idx)
-                      for k in (0, 1)]
-            plt.title(titles[0] + " / " + titles[1] if is_wrong else titles[0])
+    if shape is None:
+        shape = (len(samples), len(samples[0]))
+
+    if samples is None:
+        # Take unique random indices.
+        samples = np.random.choice(len(X), shape, replace=False)
+
+    if labels is None:
+        labels = [i for i in range(Y.argmax())]
+
+    plt.figure(figsize=(shape[1] * scale, shape[0] * scale))
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            idx = samples[i][j]
+            plt.subplot(*shape, i * shape[1] + j + 1)
+            plt.imshow(np.clip(X[idx], 0, 1), cmap="gray")
+            plt.title("{} ({}) [{}]".format(
+                labels[Y[idx]], Y[idx], idx) if pred is None else
+                "{} ({}) : {} ({}) [{}]".format(
+                labels[Y[idx]], Y[idx], labels[pred[idx]], pred[idx], idx))
             plt.axis("off")
+            if pred is not None and Y[idx] != pred[idx]:
+                plt.axhspan(0, len(X[idx]), color="#ff000060")
     plt.tight_layout()
 
 
-def show_categ_heatmap(row_labels, col_labels, vals, show_scale=0.8):
+def show_categ_heatmap(row_labels, col_labels, vals, scale=0.8):
     """Plot a heatmap for categorical data."""
     import numpy as np
     import matplotlib.pyplot as plt
 
-    plt.figure(figsize=(len(col_labels) * show_scale,
-               len(row_labels) * show_scale))
+    plt.figure(figsize=(len(col_labels) * scale,
+               len(row_labels) * scale))
     plt.imshow(vals)
     plt.xticks(np.arange(len(col_labels)), col_labels)
     plt.yticks(np.arange(len(row_labels)), row_labels)

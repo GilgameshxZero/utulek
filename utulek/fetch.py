@@ -15,7 +15,7 @@ def fetch_tfds_img_ds(name, split):
     return X, Y
 
 
-def fetch_tfds_img_ds_lnames(name):
+def fetch_tfds_img_ds_labels(name):
     import tensorflow_datasets as tfds
 
     _, info = tfds.load(name=name, split="train[:1]", data_dir=".data/",
