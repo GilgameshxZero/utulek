@@ -1,6 +1,0 @@
-flax
-neural-tangents
-adversarial-robustness-toolbox
-
-# Relative to repository root.
--e .
