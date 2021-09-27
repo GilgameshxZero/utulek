@@ -1,0 +1,39 @@
+# General.
+six
+dill
+
+# Style.
+pylint
+autopep8
+yapf
+jedi
+
+# Jupyter.
+tqdm
+ipykernel
+ipywidgets
+jupyterlab
+
+# Scientific computing.
+numpy
+pandas
+matplotlib
+scikit-learn
+scipy
+sklearn
+
+# ML utility.
+cox
+ml-collections
+clu
+
+# Tensorflow.
+tensorflow==2.6.0
+tensorflow-datasets
+tensorflow-probability
+
+# Utulek.
+flax
+neural-tangents
+adversarial-robustness-toolbox
+-e .

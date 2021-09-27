@@ -1,4 +1,0 @@
-tqdm
-ipykernel
-ipywidgets
-jupyterlab
