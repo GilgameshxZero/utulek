@@ -1,6 +1,7 @@
 # General.
 six
 dill
+requests
 
 # Style.
 pylint

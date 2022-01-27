@@ -6,3 +6,5 @@
 
 # Symbolic links to WSL virtualenvs.
 **/.venv
+
+**/.DS_Store
