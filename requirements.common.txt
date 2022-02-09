@@ -29,7 +29,7 @@ ml-collections
 clu
 
 # Tensorflow.
-tensorflow==2.6.0
+tensorflow==2.6.3
 tensorflow-datasets
 tensorflow-probability
 
