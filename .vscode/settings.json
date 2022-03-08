@@ -1,9 +1,26 @@
+/* Recommended settings for VSCode. Copy and customize to `settings.json`. */
 {
+	"debug.console.closeOnEnd": false,
+	"editor.rulers": [80, 120],
+	"editor.insertSpaces": false,
+	"editor.tabSize": 2,
+
+	"files.insertFinalNewline": true,
+	"files.eol": "\n",
 	"files.associations": {
 		"**/requirements.pre.txt": "pip-requirements",
 		"**/requirements.common.txt": "pip-requirements",
-		"**/requirements.cuda.txt": "pip-requirements"
+		"**/requirements.cuda.txt": "pip-requirements",
+		"settings.json.DEFAULT": "jsonc",
+		"*.vstemplate": "xml"
 	},
-	"markdown.styles": ["http://gilgamesh.cc/common/essay.css"],
-	"python.pythonPath": ".venv/bin/python"
+
+	"markdown.styles": ["http://gilgamesh.cc/snapshot.css"],
+
+	"C_Cpp.default.cppStandard": "c++17",
+
+	"[cpp]": {
+		"editor.defaultFormatter": "ms-vscode.cpptools",
+		"editor.wordWrap": "on"
+	}
 }
