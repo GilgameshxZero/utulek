@@ -1,3 +1,5 @@
+# Packages dependent on `jaxlib` are not available on Windows.
+
 # General.
 six
 dill
