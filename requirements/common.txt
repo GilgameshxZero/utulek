@@ -26,15 +26,15 @@ sklearn
 # ML utility.
 cox
 ml-collections
-clu
+clu; platform_system!="Windows"
 
 # Tensorflow.
-tensorflow==2.6.0
+tensorflow==2.8.0
 tensorflow-datasets
 tensorflow-probability
 
 # Utulek.
-flax
+flax; platform_system!="Windows"
 neural-tangents
 adversarial-robustness-toolbox
 -e .
