@@ -1,0 +1,11 @@
+# For Python 3.8.10.
+
+-r common.txt
+
+# Pytorch.
+torch
+torchvision
+torchaudio
+
+# Jax.
+jax; platform_system!="Windows"
