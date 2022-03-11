@@ -38,11 +38,11 @@ SOURCES = *.cpp
 # For the repository, executable filename is not the project name.
 BIN = $(PROJECT)
 !ENDIF
-PROJECT_BIN = $(BIN_DIR)$(BIN).exe
-PROJECT_BIN_DIR = $(BIN_DIR)$(BIN)\..^\
+PROJECT_BIN = $(BIN_DIR)$(PROJECT)\$(BIN).exe
+PROJECT_BIN_DIR = $(BIN_DIR)$(PROJECT)^\
 
 COMPILER = cl /c
-COMPILER_FLAGS_INCLUDES = /I..\rain\include /I..\include
+COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include
 COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++17 /D _CONSOLE\
 	/Fd$(PROJECT_OBJ_DIR).pdb /Fo$(PROJECT_OBJ_DIR) /Fp$(PROJECT_OBJ_DIR).pch\
 	/fp:fast /MP /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
@@ -115,11 +115,11 @@ PROJECT_OBJ_DIR := $(OBJ_DIR)$(PROJECT)/
 PROJECT_SRC_DIR := $(ROOT_DIR)$(PROJECT)/
 SOURCES ?= *.cpp
 BIN ?= $(PROJECT)
-PROJECT_BIN := $(BIN_DIR)$(BIN)
-PROJECT_BIN_DIR := $(BIN_DIR)$(BIN)/../
+PROJECT_BIN := $(BIN_DIR)$(PROJECT)/$(BIN)
+PROJECT_BIN_DIR := $(BIN_DIR)$(PROJECT)/
 
 COMPILER ?= clang++
-COMPILER_FLAGS_INCLUDES := -I../rain/include -I../include
+COMPILER_FLAGS_INCLUDES :=  -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include
 COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++17 -m64 -pthread\
 	-Wall -Wextra -D_CONSOLE
 COMPILER_FLAGS_DEBUG := -D _DEBUG -g -O0

@@ -37,7 +37,7 @@ tensorflow-datasets
 tensorflow-probability
 
 # Utulek.
-flax; platform_system!="Windows"
+flax
 neural-tangents
 adversarial-robustness-toolbox
 -e .
