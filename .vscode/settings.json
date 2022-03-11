@@ -8,9 +8,7 @@
 	"files.insertFinalNewline": true,
 	"files.eol": "\n",
 	"files.associations": {
-		"**/requirements.pre.txt": "pip-requirements",
-		"**/requirements.common.txt": "pip-requirements",
-		"**/requirements.cuda.txt": "pip-requirements",
+		"requirements/*.txt": "pip-requirements",
 		"settings.json.DEFAULT": "jsonc",
 		"*.vstemplate": "xml"
 	},

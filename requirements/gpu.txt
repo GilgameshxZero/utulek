@@ -1,16 +1,16 @@
-# For Python 3.8.10 on WSL 2 with CUDA.
-# Requires CUDA 11.1, cuDNN 8.1.1, and Windows Insiders WSL 2 (tested on 22449.1000). Supports compute capability up to 8.6 (tested on 5.0 (GTX 960M)).
+# For Python 3.9.10 with CUDA.
+# Requires CUDA 11.1.1, cuDNN 8.1.0, and if using WSL 2, either Windows 11 or latest Windows 10. Supports compute capability up to 8.6 (tested on 5.0 (GTX 960M)).
 
 -r common.txt
 
 # Pytorch.
-# Consider running with --no-cache-dir on memory-constrained systems until pip implements constant-size cache loading. 16GB should barely cut it (with WSL2 memory adjustment for default 8GB limit).
+# Consider running with --no-cache-dir on memory-constrained systems until pip implements constant-size cache loading. 16GB should barely cut it (with WSL 2 memory adjustment for default 8GB limit).
 -f https://download.pytorch.org/whl/torch_stable.html
-torch==1.9.0+cu111
-torchvision==0.10.0+cu111
-torchaudio==0.9.0
+torch==1.10.2+cu111
+torchvision
+torchaudio
 
 # Jax.
 -f https://storage.googleapis.com/jax-releases/jax_releases.html
-jax[cuda111]==0.2.20; platform_system!="Windows"
+jax[cuda111]==0.3.1
 
