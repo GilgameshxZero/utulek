@@ -1,10 +1,16 @@
+# Python.
 **/.ipynb_checkpoints/
 **/__pycache__/
 **/*.egg-info/
 **/.venv/
 **/.data/
 
-# Symbolic links to WSL virtualenvs.
+# Symbolic links to WSL 2 virtualenvs are not directories.
 **/.venv
 
+# C++.
+**/bin/
+**/obj/
+
+# General.
 **/.DS_Store
