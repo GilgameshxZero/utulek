@@ -3,9 +3,12 @@
 -r common.txt
 
 # Pytorch.
-torch==1.10.2
+--extra-index-url 
+https://download.pytorch.org/whl/cpu
+torch
 torchvision
 torchaudio
 
 # Jax.
-jax==0.3.1
+-f https://storage.googleapis.com/jax-releases/jax_releases.html
+jax
