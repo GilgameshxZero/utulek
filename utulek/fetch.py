@@ -8,7 +8,7 @@ def fetch_tfds_img_ds(name, split):
     X, Y = operator.itemgetter("image", "label")(
         tfds.as_numpy(tfds.load(name=name, split=split,
                                 data_dir=".data/", batch_size=-1)))
-    X = X.astype(np.float64)
+    X = X.astype(np.float32)
 
     # Normalize to [0, 1].
     X /= np.max(X)

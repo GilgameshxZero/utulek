@@ -2,5 +2,6 @@
 from .eval import *
 from .fetch import *
 from .show import *
+from .time import *
 from .train import *
 from .transform import *
