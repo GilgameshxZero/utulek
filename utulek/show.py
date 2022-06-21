@@ -1,5 +1,23 @@
 # Utuilities for visualization.
 
+import tqdm
+
+
+class TqdmByteTransfer(tqdm.tqdm):
+    """
+    Tqdm progress bar with sensible defaults for file transfers.
+    """
+    
+    def __init__(self):
+        super().__init__(self, unit='B', unit_scale=True, unit_divisor=1024)
+        
+    
+    def up_to(self, block_idx, block_size, total_size):
+        if total_size is not None:
+            self.total = total_size
+        return self.update(block_idx * block_size - self.n)
+
+
 def show_img_ds(X, Y, pred=None, labels=None, shape=None, samples=None, scale=2):
     """
     Plot a grid of images titled with their label/label names. Images where the
