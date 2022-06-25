@@ -1,9 +1,9 @@
 # Utuilities for visualization.
 
-import tqdm
+from tqdm.auto import tqdm
 
 
-class TqdmByteTransfer(tqdm.tqdm):
+class TqdmByteTransfer(tqdm):
     """
     Tqdm progress bar with sensible defaults for file transfers.
     """
