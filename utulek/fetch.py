@@ -1,5 +1,7 @@
 # Utilities for fetching from the network.
 
+from .show import TqdmByteTransfer
+
 
 def fetch_ds_cifar_10(cache_dir=".data/cifar-10"):
     """
@@ -11,6 +13,7 @@ def fetch_ds_cifar_10(cache_dir=".data/cifar-10"):
     
     import numpy as np
     import os
+    import pathlib
     import pickle
     import tqdm
     import urllib
@@ -21,8 +24,12 @@ def fetch_ds_cifar_10(cache_dir=".data/cifar-10"):
     
     if not os.path.exists(LOCAL_PATH):
         os.makedirs(cache_dir, exist_ok=True)
-        with utulek.TqdmByteTransfer() as tqdm_byte_transfer:
-            urllib.request.urlretrieve(REMOTE_PATH, filename=LOCAL_PATH, reporthook=tqdm_byte_transfer.up_to)
+        try:
+            with TqdmByteTransfer() as tqdm_byte_transfer:
+                urllib.request.urlretrieve(REMOTE_PATH, filename=LOCAL_PATH, reporthook=tqdm_byte_transfer.up_to)
+        except:
+            pathlib.Path(LOCAL_PATH).unlink(missing_ok=True)
+            raise
     
     Xs, Ys = [], []
             
