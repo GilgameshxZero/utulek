@@ -25,6 +25,7 @@ matplotlib
 scikit-learn
 scipy
 sklearn
+colormath
 
 # ML utility.
 cox
