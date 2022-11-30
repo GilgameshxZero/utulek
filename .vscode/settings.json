@@ -13,7 +13,7 @@
 		"*.vstemplate": "xml"
 	},
 
-	"markdown.styles": ["http://gilgamesh.cc/snapshot.css"],
+	"markdown.styles": ["build/notes.css"],
 
 	"python.defaultInterpreterPath": "./.venv/bin/python",
 
