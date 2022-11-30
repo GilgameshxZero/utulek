@@ -1,5 +1,6 @@
 # Allow symlinked submodules.
 rain/
+silver/
 tower/
 
 # Python.
