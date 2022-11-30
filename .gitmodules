@@ -4,3 +4,6 @@
 [submodule "tower"]
 	path = tower
 	url = ../tower
+[submodule "silver"]
+	path = silver
+	url = git@github.com:GilgameshxZero/silver.git
