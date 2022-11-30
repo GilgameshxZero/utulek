@@ -1,3 +1,6 @@
 [submodule "rain"]
 	path = rain
 	url = ../rain
+[submodule "tower"]
+	path = tower
+	url = ../tower
