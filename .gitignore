@@ -1,7 +1,6 @@
 # Allow symlinked submodules.
 rain/
 silver/
-tower/
 
 # Literature.
 **.pdf
