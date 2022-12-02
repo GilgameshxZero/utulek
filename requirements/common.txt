@@ -37,7 +37,7 @@ tensorflow==2.8.0
 tensorflow-datasets
 tensorflow-probability
 
-# Utulek & tower.
+# Utulek.
 flax
 neural-tangents
 adversarial-robustness-toolbox
