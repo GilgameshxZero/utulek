@@ -3,6 +3,9 @@ rain/
 silver/
 tower/
 
+# Literature.
+**.pdf
+
 # Python.
 **/.ipynb_checkpoints/
 **/__pycache__/
