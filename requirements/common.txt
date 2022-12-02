@@ -33,7 +33,7 @@ ml-collections
 clu; platform_system!="Windows"
 
 # Tensorflow.
-tensorflow==2.8.0
+tensorflow==2.9.3
 tensorflow-datasets
 tensorflow-probability
 
