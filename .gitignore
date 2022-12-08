@@ -2,9 +2,6 @@
 rain/
 silver/
 
-# Literature.
-**.pdf
-
 # Python.
 **/.ipynb_checkpoints/
 **/__pycache__/
