@@ -1,7 +1,3 @@
-# Allow symlinked submodules.
-rain/
-silver/
-
 # Python.
 **/.ipynb_checkpoints/
 **/__pycache__/
