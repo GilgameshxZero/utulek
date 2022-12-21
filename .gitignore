@@ -12,5 +12,8 @@
 **/bin/
 **/obj/
 
+# Nebo.
+**.nebo-files/
+
 # General.
 **/.DS_Store
