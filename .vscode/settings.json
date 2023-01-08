@@ -13,7 +13,7 @@
 		"*.vstemplate": "xml"
 	},
 
-	"markdown.styles": ["build/notes.css"],
+	"markdown.styles": ["build/default.css"],
 
 	"python.defaultInterpreterPath": "./.venv/bin/python",
 
