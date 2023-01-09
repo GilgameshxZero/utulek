@@ -1,9 +1,3 @@
-<!-- emilia-snapshot-properties
-Tackling the Generative Learning Trilemma with Accelerated Diffusion Models
-2023/01/08
-monochrome
-emilia-snapshot-properties -->
-
 # Tackling the Generative Learning Trilemma with Accelerated Diffusion Models
 
 February 5, 2022
