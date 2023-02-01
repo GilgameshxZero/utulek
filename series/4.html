@@ -2,7 +2,7 @@
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>Intuition for Euler&CloseCurlyQuote;s Product Formula and the &dollar;&bsol;ln&bsol;ln&dollar; Runtime</title>
+        <title>Intuition for Euler&CloseCurlyQuote;s product formula and the &dollar;&bsol;ln&bsol;ln&dollar; runtime</title>
         <style>
 /* From extension vscode.github */
 /*---------------------------------------------------------------------------------------------
@@ -38,11 +38,11 @@
     </head>
     <body class="vscode-body vscode-light">
         <!-- emilia-snapshot-properties
-Intuition for Euler’s Product Formula and the Log-Log Runtime
+Intuition for Euler’s product formula and the log-log runtime
 2022/12/24
 utulek
 emilia-snapshot-properties -->
-<h1 id="intuition-for-eulers-product-formula-and-the-lnln-runtime">Intuition for Euler’s Product Formula and the <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mi>ln</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\ln\ln</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mop">ln</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">ln</span></span></span></span> Runtime</h1>
+<h1 id="intuition-for-eulers-product-formula-and-the-lnln-runtime">Intuition for Euler’s product formula and the <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mi>ln</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\ln\ln</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mop">ln</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">ln</span></span></span></span> runtime</h1>
 <p>December 24, 2022<br>
 Útulek Series, 4 | CF1761D Chapter, 4</p>
 <p><a href="3">Last time</a>, I investigated the <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mi>ln</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\ln\ln</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mop">ln</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">ln</span></span></span></span> runtime of the Sieve of Eratosthenes, and left off with an introduction of Euler’s Product Formula (EPF). I have since come to realize that the domain for which EPF holds is nuanced and may greatly complicate the proof. Thus, instead of providing anything rigorous, I will instead quickly give intuition to EPF.</p>
