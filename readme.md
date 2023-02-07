@@ -1,5 +1,7 @@
 # útulek
 
+ML environment setup:
+
 ```bash
 python -m venv .venv
 activate

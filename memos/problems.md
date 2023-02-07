@@ -18,4 +18,6 @@ The solution is likely randomized.
 
 Given the condensation graph $G^{SCC}$ of $G$, contract a given edge and and arising cycles of the condensation graph in $O(1)$ amortized. This should maintain the acyclic property of the condensation graph.
 
-## 3 10%, $10 EV
+## 3 Tony’s grandpa’s construction problem
+
+I need to check my notes to remember what this problem is.
