@@ -29,10 +29,12 @@ $6$|$15$
 
 which quickly gives our answers for both parts.
 
-### Solving Pell’s equation
+### Reduction to Pell’s equation
 
 The desire to generalize such solutions is not unfamiliar. In fact, each square $8b^2+1$ is odd, and thus necessarily gives a valid positive integral solution for $r$. We are then inspired to make the change of variables $x=\mp(2r-2b-1)$ and $y=b$ to obtain a classic Pell’s equation with $n=8$:
 
 $$x^2-8y^2=1$$
 
 whose solutions in the positive integers are equivalent to solutions to the original problem.
+
+## 2
