@@ -1,9 +1,3 @@
-<!-- emilia-snapshot-properties
-Unsovled problem catalog
-9999/12/31
-utulek
-emilia-snapshot-properties -->
-
 # Unsovled problem catalog
 
 Problems I’m thinking about.
