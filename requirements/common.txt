@@ -24,13 +24,12 @@ pandas
 matplotlib
 scikit-learn
 scipy
-sklearn
 colormath
 
 # ML utility.
 cox
 ml-collections
-clu; platform_system!="Windows"
+clu; platform_system!="Windows"  # Dependency on jaxlib which has no Windows wheels.
 
 # Tensorflow.
 tensorflow==2.8.0
