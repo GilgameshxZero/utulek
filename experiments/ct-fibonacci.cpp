@@ -1,7 +1,5 @@
 #include "rain.hpp"
 
-#include <iostream>
-
 using namespace Rain::Literal;
 
 template <std::size_t INDEX>
