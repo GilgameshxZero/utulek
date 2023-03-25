@@ -1,9 +1,5 @@
 #include "rain.hpp"
 
-#include <iostream>
-#include <random>
-#include <string>
-
 int main() {
 	using Sequence = std::array<char, 5>;
 
