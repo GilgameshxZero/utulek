@@ -5,6 +5,7 @@
 six
 dill
 requests
+py7zr
 
 # Style.
 pylint
