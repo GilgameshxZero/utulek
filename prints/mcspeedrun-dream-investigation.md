@@ -9,3 +9,5 @@ Most notable in this print is the use of various methods of addressing bias, pri
 2. Stream selection: the sequence of streams may have been cherry-picked from all of Dream’s streams to produce the lowest p-value.
 3. Runner selection: similarly, Dream may not be doing anything specifically unfaithful, had he been selected with the lowest p-value from a sufficiently large number of runners.
 4. Event selection: similarly, analyzing specifically ender pearl and blaze rod drops may be selected specifically from a large number of random events, because they exhibited low p-values.
+
+Techniques of note for correcting p-values are Bonferroni and Šídák (accents henceforth omitted), of which the latter is slightly more conservative, better, but also more mathematically complex.
