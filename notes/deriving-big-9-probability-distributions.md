@@ -6,7 +6,12 @@ There is little to be said of the uniform distributions, except that they are th
 
 ### Normal
 
-### Geometric, Exponential, Poisson, and Gamma
+The Normal distribution is forced by two requirements.
+
+1. Its joint distribution, $P_{X_1,X_2}(x_1,x_2)$ sees independent $X_1,X_2$.
+2. $P_{X_1,X_2}$ is also rotationally symmetric.
+
+### Geometric, Exponential, Gamma, and Poisson
 
 Consider this scenario:
 
@@ -19,6 +24,8 @@ Questions on this scenario lead to the four distributions.
 We take PDF $P(x)$ as the probability that the next customer arrives in the $x$-th minute. It must be then that for $x-1$ minutes prior, no customers arrive:
 
 $$P(x)=(1-\lambda)^{x-1}\lambda.$$
+
+It is self-evident that the mean should be $1/\lambda$. The variance is not easy to compute, but is $(1-\lambda)/\lambda^2$.
 
 **Exponential**: Dropping the geometric assumption earlier, how many minutes will pass before the next customer arrives?
 
@@ -35,17 +42,7 @@ $$\int_0^\infty e^{-\lambda x}=\Big[-e^{-\lambda x}/\lambda\Big]_0^\infty=1/\lam
 
 so $P(x)$ must equal $\lambda e^{-\lambda x}$.
 
-**Poisson**: Suppose now that $\lambda \geq 1$, for ease of notation. How many customers will arrive in a minute?
-
-Again, the approach of taking number of moments $n\to\infty$ is fruitful. We have for large $n$ moments per minute that with probability $\lambda/n$ a customer is slated to arrive. So for $x$ customers to arrive in the minute, $x$ of those $n$ moments must have a customer, and the rest must not.
-
-$$\begin{aligned}
-P(x)&= \lim_{n\to\infty}{n\choose x}(\lambda/n)^x(1-\lambda/n)^{n-x}\\
-&=\lim_{n\to\infty}\frac{n!}{x!(n-x)!}(\lambda/n)^x(1-\lambda/n)^{-x}e^{-\lambda}\\
-&=e^{-\lambda}\lim_{n\to\infty}\frac{n!}{x!(n-x)!}(\frac{\lambda}{n}\cdot\frac{n}{n-\lambda})^x\\
-&=e^{-\lambda}\frac{\lambda^x}{x!}\lim_{n\to\infty}\frac{n\cdot(n-1)\cdots(n-x+1)}{(n-\lambda)^x}\\
-&=\lambda^x e^{-\lambda}/x!.
-\end{aligned}$$
+As the continuous analogue of the geometric, the mean should remain the same, at $1/\lambda$. The variance is computed by a double integration by parts, and is $1/\lambda^2$.
 
 **Gamma**: How many minutes will pass before the next $n$ customers arrive?
 
@@ -61,9 +58,52 @@ $$\Gamma(n+1)\approx f(n)=n!\approx (n/e)^n.$$
 
 Given that $\Gamma$ must be an integral, the inside of the integral must then be similar to the derivative of $(n/e)^n$. Though weakly linked, there is indeed some similarity in form between $x^ne^{-x}dx$ and $(n/e)^n$.
 
+To intuit the PDF $P_G(x)$ of the Gamma distribution, we take first the sum of two exponential RVs with PDF $P(x)$:
+
+$$\begin{aligned}
+&\mathbb{P}(Gamma(n=2,\lambda)=x)=P_G(x)\\
+&\propto\int_{i=0}^x P(i)P(x-i)di\\
+&=\int_{i=0}^x \lambda^2 e^{-\lambda i}e^{-\lambda(x-i)} di\\
+&=\lambda^2\Big[e^{-\lambda x}i\Big]_{i=0}^x\\
+&=\lambda^2 e^{-\lambda x}x\\
+&=\lambda^n x^{n-1}e^{-\lambda x}
+\end{aligned}$$
+
+of which the final line may be inferred from the general form on the line prior. It remains to scale this PDF to sum to unity. To do this, of course, we invoke the $\Gamma$ function, with a clever substitution $y=\lambda x$:
+
+$$\begin{aligned}
+P_G(x)&=\lambda^n (y/\lambda)^{n-1}e^{-y}\\
+\int_{x=0}^\infty P_G(x)dx&=\int_{x=0}^\infty y^ne^{-y}(1/x)dx\\
+&=\int_{y=0}^\infty y^ne^{-y}(1/x)(1/\lambda)dy\\
+&=\int_{y=0}^\infty y^{n-1}e^{-y}dy\\
+&=\Gamma(n).
+\end{aligned}$$
+
+And thus we scale the proportional PDF earlier by $1/\Gamma(n)$:
+
+$$P_G(x)=\lambda^nx^{n-1}e^{-\lambda x}/\Gamma(n).$$
+
+In other literature, you may see the variables $n$ replaced with $\alpha$ and $\lambda$ replaced with $\beta$.
+
+As the Gamma distribution is the sum of i.i.d. exponential distributions, its mean is necessarily $n/\lambda$ and its variance $n/\lambda^2$.
+
+**Poisson**: Suppose now that $\lambda \geq 1$, for ease of notation. How many customers will arrive in a minute?
+
+Again, the approach of taking number of moments $n\to\infty$ is fruitful. We have for large $n$ moments per minute that with probability $\lambda/n$ a customer is slated to arrive. So for $x$ customers to arrive in the minute, $x$ of those $n$ moments must have a customer, and the rest must not.
+
+$$\begin{aligned}
+P(x)&= \lim_{n\to\infty}{n\choose x}(\lambda/n)^x(1-\lambda/n)^{n-x}\\
+&=\lim_{n\to\infty}\frac{n!}{x!(n-x)!}(\lambda/n)^x(1-\lambda/n)^{-x}e^{-\lambda}\\
+&=e^{-\lambda}\lim_{n\to\infty}\frac{n!}{x!(n-x)!}(\frac{\lambda}{n}\cdot\frac{n}{n-\lambda})^x\\
+&=e^{-\lambda}\frac{\lambda^x}{x!}\lim_{n\to\infty}\frac{n\cdot(n-1)\cdots(n-x+1)}{(n-\lambda)^x}\\
+&=\lambda^x e^{-\lambda}/x!.
+\end{aligned}$$
+
+By definition, the mean is $\lambda$. The variance, perhaps surprisingly, is also $\lambda$. The intuition to this lies in the binomial distribution: that when $n$ intervals are used, the mean is $n(\lambda/n)=\lambda$, but the variance is $n(\lambda/n)(1-\lambda/n)$, but $1-\lambda/n$ vanishes to unity as $n$ goes to $\infty$, and so the variance is the same as the mean, at $\lambda$.
+
 ### Binomial and Beta
 
-There is little to be said of the Binomial: it is too common, and it is easily derived.
+There is little to be said of the Binomial: it is too common, and it is easily derived. The mean is $np$, and the variance $np(1-p)$, which is useful in gaining intuition for the Poisson distribution.
 
 To derive the Beta distribution, consider the following scenario.
 
