@@ -25,7 +25,7 @@ We take PDF $P(x)$ as the probability that the next customer arrives in the $x$-
 
 $$P(x)=(1-\lambda)^{x-1}\lambda.$$
 
-It is self-evident that the mean should be $1/\lambda$. The variance is not easy to compute, but is $(1-\lambda)/\lambda^2$.
+It is self-evident that the mean should be $1/\lambda$. The variance is not easy to compute, but is $(1-\lambda)/\lambda^2$, and is had by separating $E[X^2]=E[X(X-1)]+E[X]$.
 
 **Exponential**: Dropping the geometric assumption earlier, how many minutes will pass before the next customer arrives?
 
@@ -107,12 +107,18 @@ There is little to be said of the Binomial: it is too common, and it is easily d
 
 To derive the Beta distribution, consider the following scenario.
 
-> A possibly unfair coin is flipped $14$ times, and it comes up heads $4$ times and tails $10$ times. Suppose if you guess the bias of the coin, you win $1$, and otherwise win nothing. What do you guess?
+> A possibly unfair coin is flipped $14$ times, and it comes up heads $10$ times and tails $4$ times. Suppose if you guess the bias of the coin, you win $1$, and otherwise win nothing. What do you guess?
 
-As we are penalized only on the wrongness of our guess, it is correct to use the maximum likelihood estimator on the coin bias. As one may expect, the most likely bias of the coin as a result of observing the $14$ flips is that it comes up heads $4/14$ times.
+As we are penalized only on the wrongness of our guess, it is correct to use the maximum likelihood estimator on the coin bias. As one may expect, the most likely bias of the coin as a result of observing the $14$ flips is that it comes up heads $10/14$ times.
 
 A (more natural) penalty invokes the Beta distribution.
 
 > Suppose now, instead, that you will be given $1 if the next flip comes up heads and nothing otherwise. How much are you willing to pay to play this game?
 
-And thus we are asked for the likelihood of a certain bias, given our observations, and the mean of this distribution. This is the mean of the beta distribution $Beta(\alpha=4,\beta=10)$.
+And thus we are asked for the likelihood of a certain bias, given our observations, and the mean of this distribution. This is the mean of the Beta distribution $Beta(\alpha=10,\beta=4)$.
+
+---
+
+References:
+
+1. <https://www.behind-the-enemy-lines.com/2008/01/are-you-bayesian-or-frequentist-or.html>: A discussion about differences between Bayesian and frequentist interpretations, which leads naturally into the intuition for the Beta distribution.
