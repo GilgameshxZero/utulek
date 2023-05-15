@@ -1,31 +1,3 @@
-## Integration by parts and substitution
-
-Hardly mentioned in textbooks, common integration techniques are simply tricks for using the product rule or chain rule backwards. Still, they require some amount of guesswork.
-
-## Sterling’s approximation
-
-We first derive a suboptimal approximation for $n!$, which bears some similarity to the derivation of the bound for a harmonic and prime harmonic series:
-
-$$\begin{aligned}
-f(n)&=n!\\
-\implies \ln f(n)&=\ln 1+\ln 2+\cdots+\ln n\\
-&\approx \int_1^n (\ln x)dx\\
-&=\Big[x\ln x-x\Big]_1^n &\text{(by parts)}\\
-&=n\ln n-n+1\\
-\implies f(n)&\approx (e^{\ln n})^n/e^n/e\\
-&\approx (n/e)^n.
-\end{aligned}$$
-
-Sterling’s approximation includes an additional (asymptotic) factor:
-
-$$f(n)\approx \sqrt{2\pi n}(n/e)^n$$
-
-which is most easily derived using the Gamma function, and transforming parts of the integral into two dimensions.
-
-Indeed, one will notice that the $\sqrt{2\pi n}$ factor bears similarity to the constant seen in the Normal distribution, which also uses a similar integral transformation technique. This similarity is likely the most intuitive way to remember the constant factor for Sterling’s.
-
-## The big 9 distributions
-
 In my studies I have encountered commonly only 4 discrete and 5 continuous distributions.
 
 ### Uniform (discrete and continuous)
@@ -82,6 +54,12 @@ Immediately, this is simply the sum of $n$ exponential distributions, and by its
 $$\Gamma(n+1)= \int_0^\infty x^ne^{-x} dx.$$
 
 Perhaps the $-x$ in the exponent is unintuitive. But consider this: all the *trash* terms in the integration by parts must vanish, leaving only the factorial term remaining. $x^n$ vanishes the $0$ limit, so the $e$ term must vanish the $\infty$ limit. Hence, the exponent must be negative.
+
+Alternatively, consider the weak Sterling’s approximation derived earlier:
+
+$$\Gamma(n+1)\approx f(n)=n!\approx (n/e)^n.$$
+
+Given that $\Gamma$ must be an integral, the inside of the integral must then be similar to the derivative of $(n/e)^n$. Though weakly linked, there is indeed some similarity in form between $x^ne^{-x}dx$ and $(n/e)^n$.
 
 ### Binomial and Beta
 
