@@ -36,5 +36,3 @@ The desire to generalize such solutions is not unfamiliar. In fact, each square 
 $$x^2-8y^2=1$$
 
 whose solutions in the positive integers are equivalent to solutions to the original problem.
-
-## 2
