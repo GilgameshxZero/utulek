@@ -1,3 +1,13 @@
+<!-- emilia-snapshot-properties
+Orthonormal matrix intuitions
+2023/05/16
+utulek
+emilia-snapshot-properties -->
+
+# Orthonormal matrix intuitions
+
+May 16, 2023
+
 A matrix $A$
 
 $$A=\begin{bmatrix}
