@@ -14,8 +14,6 @@ $$F_i(x)=\sum_{k=i}^n{n\choose k}(F(x))^k(1-F(x))^{n-k}$$
 
 with $F(x)=P(X_i\leq x)$, the CDF of the population distribution.
 
-## PDF for continuous RVs
-
 For the $i$-th order statistic to be at most $x$, at least $i$ of the samples must be at most $x$. Each of these are disjoint events, since they have a different count of samples which are at most $x$ and at least $x$. Hence, we sum these disjoint events up to get the final CDF.
 
 From the CDF we can derive the PDF:
