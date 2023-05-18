@@ -19,7 +19,7 @@ For the $i$-th order statistic to be at most $x$, at least $i$ of the samples mu
 From the CDF we can derive the PDF:
 
 $$\begin{aligned}
-f_i(x)&=\frac{dF_i(x)}{dx}(x)\\
+f_i(x)&=\frac{dF_i}{dx}(x)\\
 &=\sum_{k=i}^n{n\choose k}(k(F(x))^{k-1}f(x)(1-F(x))^{n-k}\\
 &~~~~~-(F(x))^k(n-k)(1-F(x))^{n-k-1}f(x))\\
 &=nf(x)(\sum_{k=i}^n{n-1\choose k-1}(F(x))^{k-1}(1-F(x))^{n-k}\\
