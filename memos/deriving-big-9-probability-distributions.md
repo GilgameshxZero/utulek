@@ -152,6 +152,8 @@ I have referred an excellent answer by Qiaochu Yuan, which derives
 
 $$c=\Gamma(\alpha)\Gamma(\beta)/\Gamma(\alpha+\beta).$$
 
+Notably, the Beta distribution has mean at $\alpha/(\alpha+\beta)$, which is different from the MLE estimator/mode we derived earlier of $10/14$. The mode, however, is as expected, at $(\alpha-1)/(\alpha+\beta-2)$.
+
 ---
 
 References:

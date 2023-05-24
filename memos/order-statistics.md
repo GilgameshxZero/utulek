@@ -33,6 +33,8 @@ This PDF actually has a highly intuitive interpretation, which is as follows. Fi
 
 It remains to assign numbers to each of the positions. There are $i-1$ numbers less than $x$ to assign, one number equal to $x$, and $n-i$ numbers greater than $x$ to assign. This gives the three $f$ and $F$ terms in the PDF.
 
+**Edit**: I have come to realize that the above intuition for $f_i(x)$ is imprecise at the boundaries, where multiple numbers may be equal to $x$. It is certainly accurate as it is the correct derivative of $F_i(x)$, but that the intution above comes to the correct conclusion may be a coincidence.
+
 Readers may recognize the form of the PDF also as close to the familiar Beta distribution:
 
 $$\begin{aligned}
