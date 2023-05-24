@@ -1,6 +1,34 @@
-It occurs to me that the probability bounds most commonly used in both randomized algorithms as well as in quantitative analysis are few in number. I briefly summarize their intended usage here:
+It occurs to me that the probability bounds most commonly used in both randomized algorithms as well as in quantitative analysis are few in number. I briefly summarize their intended usage here.
 
-1. Union (and the subsequent Bonferroni inequalities): upper and lower bounds for the union of several events.
-2. Markov: a general upper-bound tails of nonnegative distributions.
-3. Chebyshev: similar to the Markov, but an upper-bound for the CDF of outcomes bounded away from the mean. Derived from Markov.
-4. Chernoff: an exponential upper-bound on tails of any distribution.
+## Union bound (and subsequent Bonferroni inequalities)
+
+Take the principle of inclusion-exclusion for the set of events $X_i$. We have
+
+$$\begin{aligned}P(X_1\cup\ldots\cup X_N)&=P(X_1)+\ldots+P(X_N)-\ldots\\
+&\leq\sum P(X_i).\end{aligned}$$
+
+## Markov bound
+
+For a non-negatively valued distribution, take any integer $x$. Should we collapse all the mass above $x$ into $x$, and discard the mass below $x$, we would have expected value $xP(X\geq x)$. Necessarily, this is less than the original expected value $E[X]$ due to the shifting and removal of masses. Hence,
+
+$$P(X\geq x)\leq E[X]/x.$$
+
+## Chebyshev bound
+
+And thus from the Markov bound we have upper-bounds on the tails of any distribution, simply by taking its square to make it non-negative.
+
+## Chernoff bounds
+
+Similar to the Chebyshev, the Chernoff bounds provide a series of exponential bounds for distribution tails. These are derived from the Markov bound on the moment generating functions, noting that they are monotone with respect to the exponent $n$.
+
+## Jensen’s inequality
+
+For some function $f$ whose second-derivative is monotone—i.e. it is either convex or concave—we have for some two points on the function, any point in between must always lie below or above the curve, depending on if $f$ is convex or concave.
+
+For concave function $f(x)=\sqrt{x}$, we have that every point on a line between two points on $f$ must lie below $f$. Thus,
+
+$$E[f(X)]\leq f(E[X])\iff \sqrt{E[X]}\geq E[\sqrt{X}].$$
+
+This is expectation over any distribution—and thus covers any point on the line between the two points.
+
+Notably, the sample standard deviation is seen on the LHS—and necessarily has non-negative bias.
