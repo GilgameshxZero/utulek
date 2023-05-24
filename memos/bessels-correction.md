@@ -16,8 +16,6 @@ $$\hat s^2=\sqrt{\hat{s^2}}.$$
 
 But do note that the square-root function is not linear, but is concave, so Jensen’s inequality applies here and the sample standard deviation is usually an overestimate of the population standard deviation.
 
-Why $n-1$ instead of $n$?
-
 ---
 
 Reference:

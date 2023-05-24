@@ -45,7 +45,7 @@ Then, the mean of the estimator distribution is proportional to the mean for the
 This approach comes arbitrarily close to the true parameter, however, and for that we need two facts:
 
 1. The mean, $E[\hat\Theta]=\frac{n}{n+1}\theta$ gets arbitrarily close to $\theta$.
-2. The variance, same as the Beta distribution itself, potentially scaled with a constant, is $Var(\hat\Theta)\propto Var(Beta(n,1))=n/(n+1)^2/(n+2)$. Obviously, this goes to $0$.
+2. The variance, same as the Beta distribution itself, potentially scaled with a constant, is $Var(\hat\Theta)\propto Var(Beta(n,1))=n/(n+1)^2/(n+2)$. Obviously, this goes to $0$. The variance may also be derived directly via the formula.
 
 Hence, it is true that $\hat\Theta$ converges in probability to $\theta$, and indeed, this estimator is consistent.
 
