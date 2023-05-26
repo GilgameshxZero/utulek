@@ -1,3 +1,13 @@
+<!-- emilia-snapshot-properties
+PDF transformations
+2023/05/26
+utulek
+emilia-snapshot-properties -->
+
+# PDF transformations
+
+May 26, 2023
+
 Consider the behavior of some function $f$ under change of variable $y$, which we call $g$. We have
 
 $$\begin{aligned}
