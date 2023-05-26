@@ -1,14 +1,14 @@
 <!-- emilia-snapshot-properties
-Intuitions for eleven probability distributions
+Deriving twelve probability distributions
 2023/05/15
 utulek
 emilia-snapshot-properties -->
 
-# Intuitions for eleven probability distributions
+# Deriving twelve probability distributions
 
 May 15, 2023
 
-In my studies I have encountered commonly only 4 discrete and 7 continuous distributions.
+In my studies I have encountered commonly only 5 discrete and 7 continuous distributions.
 
 ## Uniform (discrete and continuous)
 
