@@ -66,7 +66,7 @@ Immediately, this is simply the sum of $n$ exponential distributions, and by its
 
 $$\Gamma(n+1)= \int_0^\infty x^ne^{-x} dx.$$
 
-Perhaps the $-x$ in the exponent is unintuitive. But consider this: all the *trash* terms in the integration by parts must vanish, leaving only the factorial term remaining. $x^n$ vanishes the $0$ limit, so the $e$ term must vanish the $\infty$ limit. Hence, the exponent must be negative.
+Perhaps the $-x$ in the exponent is unintuitive. But consider this: all the _trash_ terms in the integration by parts must vanish, leaving only the factorial term remaining. $x^n$ vanishes the $0$ limit, so the $e$ term must vanish the $\infty$ limit. Hence, the exponent must be negative.
 
 Alternatively, consider the weak Sterling’s approximation derived earlier:
 
@@ -76,24 +76,28 @@ Given that $\Gamma$ must be an integral, the inside of the integral must then be
 
 To intuit the PDF $P_G(x)$ of the Gamma distribution, we take first the sum of two exponential RVs with PDF $P(x)$:
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 &\mathbb{P}(Gamma(n=2,\lambda)=x)=P_G(x)\\
 &\propto\int_{i=0}^x P(i)P(x-i)di\\
 &=\int_{i=0}^x \lambda^2 e^{-\lambda i}e^{-\lambda(x-i)} di\\
 &=\lambda^2\Big[e^{-\lambda x}i\Big]_{i=0}^x\\
 &=\lambda^2 e^{-\lambda x}x\\
 &=\lambda^n x^{n-1}e^{-\lambda x}
-\end{aligned}$$
+\end{aligned}
+$$
 
 of which the final line may be inferred from the general form on the line prior. It remains to scale this PDF to sum to unity. To do this, of course, we invoke the $\Gamma$ function, with a clever substitution $y=\lambda x$:
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 P_G(x)&=\lambda^n (y/\lambda)^{n-1}e^{-y}\\
 \int_{x=0}^\infty P_G(x)dx&=\int_{x=0}^\infty y^ne^{-y}(1/x)dx\\
 &=\int_{y=0}^\infty y^ne^{-y}(1/x)(1/\lambda)dy\\
 &=\int_{y=0}^\infty y^{n-1}e^{-y}dy\\
 &=\Gamma(n).
-\end{aligned}$$
+\end{aligned}
+$$
 
 And thus we scale the proportional PDF earlier by $1/\Gamma(n)$:
 
@@ -107,13 +111,15 @@ As the Gamma distribution is the sum of i.i.d. exponential distributions, its me
 
 Again, the approach of taking number of moments $n\to\infty$ is fruitful. We have for large $n$ moments per minute that with probability $\lambda/n$ a customer is slated to arrive. So for $x$ customers to arrive in the minute, $x$ of those $n$ moments must have a customer, and the rest must not.
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 P(x)&= \lim_{n\to\infty}{n\choose x}(\lambda/n)^x(1-\lambda/n)^{n-x}\\
 &=\lim_{n\to\infty}\frac{n!}{x!(n-x)!}(\lambda/n)^x(1-\lambda/n)^{-x}e^{-\lambda}\\
 &=e^{-\lambda}\lim_{n\to\infty}\frac{n!}{x!(n-x)!}(\frac{\lambda}{n}\cdot\frac{n}{n-\lambda})^x\\
 &=e^{-\lambda}\frac{\lambda^x}{x!}\lim_{n\to\infty}\frac{n\cdot(n-1)\cdots(n-x+1)}{(n-\lambda)^x}\\
 &=\lambda^x e^{-\lambda}/x!.
-\end{aligned}$$
+\end{aligned}
+$$
 
 By definition, the mean is $\lambda$. The variance, perhaps surprisingly, is also $\lambda$. The intuition to this lies in the binomial distribution: that when $n$ intervals are used, the mean is $n(\lambda/n)=\lambda$, but the variance is $n(\lambda/n)(1-\lambda/n)$, but $1-\lambda/n$ vanishes to unity as $n$ goes to $\infty$, and so the variance is the same as the mean, at $\lambda$.
 
@@ -137,10 +143,12 @@ And thus we are asked for the likelihood of a certain bias, given our observatio
 
 From Bayes’ rule, we have for some bias $x$
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 P(x|\text{data})P(\text{data})&=P(\text{data}|x)P(x)\\
 P(x|data)&\propto P(x)x^{10}(1-x)^4
-\end{aligned}$$
+\end{aligned}
+$$
 
 Recall that a conjugate prior distribution is a distribution such that if it were the prior distribution before some data, then it would remain the posterior distribution after updating on the data. As the Beta distribution is the conjugate prior of the binomial (and Bernoulli, negative binomial, and geometric) distribution, we may assume that $P(x)$ is uniform when we have no prior, and thus
 
@@ -164,7 +172,27 @@ The $\chi^2$ distribution with $n$ degrees of freedom is the sum of $n$ standard
 
 $$\chi^2(n)=Gamma(n/2,1/2)$$
 
-and in partular $N(0,1)^2$ is a Gamma distribution.
+and in partular $N(0,1)^2=Gamma(1/2,1/2)$, because
+
+$$
+\begin{aligned}
+N(0,1)^2(x)&=(N(0,1)(\sqrt{x})+N(0,1)(-\sqrt{x}))(\frac{d}{dx}(\sqrt{x}))\\
+&=2N(0,1)(\sqrt{x})(1/(2\sqrt{x}))\\
+&=\frac{2}{\sqrt{2\pi}}e^{-x/2}/(2\sqrt{x})\\
+&\propto \frac{1}{\sqrt{x}}e^{-x/2}.
+\end{aligned}
+$$
+
+Notably, the extra factor of $\frac{d}{dx}(\sqrt{x})$ is necessary in the transformation of variables of continuous distributions (derived in [pdf-transformations](pdf-transformations)). One will recall the Gamma distribution PDF thusly:
+
+$$
+\begin{aligned}
+Gamma(n,\lambda)(x)&=\lambda^nx^{n-1}e^{-\lambda x}/\Gamma(n)\\
+Gamma(1/2,1/2)(x)&\propto \frac{1}{\sqrt{x}}e^{-x/2}
+\end{aligned}
+$$
+
+as desired. We have, of course, that sums of Gamma distributions give Gamma distributions, and so we have $\chi^2(n)=Gamma(n/2,1/2)$.
 
 The T-distribution limits to the standard normal.
 
