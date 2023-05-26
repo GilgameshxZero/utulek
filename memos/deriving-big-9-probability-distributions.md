@@ -1,14 +1,14 @@
 <!-- emilia-snapshot-properties
-Intuition for nine probability distributions
+Intuitions for eleven probability distributions
 2023/05/15
 utulek
 emilia-snapshot-properties -->
 
-# Intuition for nine probability distributions
+# Intuitions for eleven probability distributions
 
 May 15, 2023
 
-In my studies I have encountered commonly only 4 discrete and 5 continuous distributions.
+In my studies I have encountered commonly only 4 discrete and 7 continuous distributions.
 
 ## Uniform (discrete and continuous)
 
@@ -117,9 +117,11 @@ P(x)&= \lim_{n\to\infty}{n\choose x}(\lambda/n)^x(1-\lambda/n)^{n-x}\\
 
 By definition, the mean is $\lambda$. The variance, perhaps surprisingly, is also $\lambda$. The intuition to this lies in the binomial distribution: that when $n$ intervals are used, the mean is $n(\lambda/n)=\lambda$, but the variance is $n(\lambda/n)(1-\lambda/n)$, but $1-\lambda/n$ vanishes to unity as $n$ goes to $\infty$, and so the variance is the same as the mean, at $\lambda$.
 
-## Binomial and Beta
+Notably, the Poisson distribution is also the limit of the Binomial distribution taken $n\to\infty$.
 
-There is little to be said of the Binomial: it is too common, and it is easily derived. The mean is $np$, and the variance $np(1-p)$, which is useful in gaining intuition for the Poisson distribution.
+## Bernoulli, Binomial, and Beta
+
+There is little to be said of the Bernoulli and Binomial: it is too common, and it is easily derived. The mean is $np$, and the variance $np(1-p)$, which is useful in gaining intuition for the Poisson distribution.
 
 To derive the Beta distribution, consider the following scenario.
 
@@ -153,6 +155,18 @@ I have referred an excellent answer by Qiaochu Yuan, which derives
 $$c=\Gamma(\alpha)\Gamma(\beta)/\Gamma(\alpha+\beta).$$
 
 Notably, the Beta distribution has mean at $\alpha/(\alpha+\beta)$, which is different from the MLE estimator/mode we derived earlier of $10/14$. The mode, however, is as expected, at $(\alpha-1)/(\alpha+\beta-2)$. The variance for the Beta distribution may be derived directly from the formula.
+
+## $\chi^2$ and T
+
+These final two distributions are mostly seen in hypothesis testing.
+
+The $\chi^2$ distribution with $n$ degrees of freedom is the sum of $n$ standard normal random variables. Should their variances differ from $1$, the distribution may be scaled as well. Notably,
+
+$$\chi^2(n)=Gamma(n/2,1/2)$$
+
+and in partular $N(0,1)^2$ is a Gamma distribution.
+
+The T-distribution limits to the standard normal.
 
 ---
 
