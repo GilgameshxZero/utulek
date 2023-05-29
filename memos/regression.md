@@ -2,6 +2,8 @@ We use the term *regression* as opposed to *classification* when predicting quan
 
 Linear regression is particularly special as it results as the same solution via four methods of estimating the same problem: to best fit a linear line to some set of data. Notably, because the least squares and maximum likelihood methods both give the same regression coefficients, this means that the (multi-variate) regression “distribution” has both mean and mode at the given coefficients.
 
+## Derivations
+
 Take for all examples datapoints $(x_1,y_1),\ldots,(x_n,y_n)$ with
 
 $$X=\begin{bmatrix}
@@ -12,7 +14,7 @@ $$X=\begin{bmatrix}
 
 and $Y=[y_1 \ldots y_n]^T$.
 
-## Projection
+### Projection
 
 It is by definition that regression establishes the projection of $Y$ onto the column space of $X$. As we are manipulating the columns of $X$, the regression coefficients $B$ must be right-multiplied:
 
@@ -44,7 +46,7 @@ $$B=(X^TX)^{-1}X^TY$$
 
 as desired.
 
-## Least squares
+### Least squares
 
 The RSS function established earlier also lends itself easily to minimization via matrix differentiation:
 
@@ -62,13 +64,21 @@ $$\begin{aligned}
 
 This is a little cumbersome to solve, but the end result is surely the same as the projection solution.
 
-## Maximum likelihood
+### Maximum likelihood
 
 A probabilistic view renders $X,Y$ as RVs.
 
-## Algebraic
+### Algebraic
 
----
+$$X=\begin{bmatrix}
+1&x_1&x_1^2&\cdots\\
+\vdots&\vdots&\vdots&\cdots\\
+1&x_n&x_n^2&\cdots
+\end{bmatrix}$$
+
+## Extensions
+
+### Higher dimensions
 
 A trivial dimension extension to regression places higher-order terms in $X$:
 
@@ -77,3 +87,11 @@ $$X=\begin{bmatrix}
 \vdots&\vdots&\vdots&\cdots\\
 1&x_n&x_n^2&\cdots
 \end{bmatrix}$$
+
+### $L_1$ distance
+
+Instead of using squared error, the sum of absolute errors itself
+
+$$L_1=\sum_{i=1}^n |e_i|$$
+
+shall give the *median* instead of the *mean* of the joint distribution $Y|X$. This presents a discontinuous derivative and some difficulties in analysis.

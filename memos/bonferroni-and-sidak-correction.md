@@ -1,10 +1,10 @@
 <!-- emilia-snapshot-properties
-Bonferroni, Šidák, Holm
+Bonferroni, Sidak, Holm
 2023/05/29
 utulek
 emilia-snapshot-properties -->
 
-# Bonferroni, Šidák, Holm
+# Bonferroni, Sidak, Holm
 
 May 29, 2023
 
