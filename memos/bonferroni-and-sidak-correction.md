@@ -1,3 +1,13 @@
+<!-- emilia-snapshot-properties
+Bonferroni, Šidák, Holm
+2023/05/29
+utulek
+emilia-snapshot-properties -->
+
+# Bonferroni, Šidák, Holm
+
+May 29, 2023
+
 Both the Bonferroni and Šidák (accents henceforth omitted for brevity) corrections deal with the possibility of _p-hacking_—that is, running multiple trials and picking the one with the lowest p-value to support the alternative hypothesis. For $n$ similar trials run at a rejection p-value level of $\alpha$, the Sidak correction computes an adjusted level $\alpha_s<\alpha$ which must be satisfied by any of the trials to constitute significance.
 
 Specifically, the probability that all trials are insigificant is to be bounded by $(1-\alpha_s)^n$. Then, $\alpha=1-(1-\alpha_s)^n$ gives the probability and the level that any of them are significant—hence, solving for $\alpha_s$ gives the required level for significance at level $\alpha$ over the family of trials. We thus have

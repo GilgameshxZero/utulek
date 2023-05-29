@@ -1,3 +1,13 @@
+<!-- emilia-snapshot-properties
+Sterling’s approximation intutions
+2023/05/29
+utulek
+emilia-snapshot-properties -->
+
+# Sterling’s approximation intutions
+
+May 29, 2023
+
 We first derive a suboptimal approximation for $n!$, which bears some similarity to the derivation of the bound for a harmonic and prime harmonic series:
 
 $$\begin{aligned}

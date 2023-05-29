@@ -1,3 +1,13 @@
+<!-- emilia-snapshot-properties
+Projection matrices
+2023/05/29
+utulek
+emilia-snapshot-properties -->
+
+# Projection matrices
+
+May 29, 2023
+
 For projection $\mathbf{p}$ of $\mathbf{b}$ onto line $\mathbf{a}$ we have with *scaling factor* $\hat{x}$
 
 $$\mathbf{p}=\mathbf{a}\hat{x}=P\mathbf{b}.$$
