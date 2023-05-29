@@ -36,3 +36,13 @@ The desire to generalize such solutions is not unfamiliar. In fact, each square 
 $$x^2-8y^2=1$$
 
 whose solutions in the positive integers are equivalent to solutions to the original problem.
+
+## 19
+
+I thought this was a particularly nice intuitive problem. Note that this is the binomial distribution with $n=6,12,18$ and $p=1/6$. It is obvious that the mean of the binomial distribution is $np$, but less obvious that the median is also $np$ when $np$ is an integer. Knowing this, however, leads to the intuition for this problem.
+
+The median divides the probability mass into equal parts. Adding the median mass and the right tail is bound to be at least 50% of the mass. If the mass at the median is large, then the sum of it and the right tail is bound to be larger. Obviously, the smaller $n$ is, the more concentrated the mass is at the median (and everywhere else). Hence, the sum of the right tail and the median mass is largest when $n=6$, as desired.
+
+## 30
+
+Interestingly, the Poisson distribution alwas has higher mass on even numbers than the odds. The series itself is not difficult analytically. The intuitive reason is still a mystery to me.

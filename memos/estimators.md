@@ -1,3 +1,13 @@
+<!-- emilia-snapshot-properties
+Estimators
+2023/05/29
+utulek
+emilia-snapshot-properties -->
+
+# Estimators
+
+May 29, 2023
+
 ## MSE
 
 We have for estimator $\hat\Theta$ its mean squared error (MSE):
