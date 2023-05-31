@@ -1,10 +1,10 @@
 <!-- emilia-snapshot-properties
-Order statistics intuitions
+Order statistics
 2023/05/17
 utulek
 emilia-snapshot-properties -->
 
-# Order statistics intuitions
+# Order statistics
 
 May 17, 2023
 

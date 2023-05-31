@@ -1,10 +1,10 @@
 <!-- emilia-snapshot-properties
-Orthonormal matrix intuitions
+Orthonormal matrices
 2023/05/16
 utulek
 emilia-snapshot-properties -->
 
-# Orthonormal matrix intuitions
+# Orthonormal matrices
 
 May 16, 2023
 
