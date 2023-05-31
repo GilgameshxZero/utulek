@@ -50,3 +50,30 @@ This problem reminds me of the *primary clustering* phenomenon in hashing—wher
 ## 30
 
 Interestingly, the Poisson distribution alwas has higher mass on even numbers than the odds. The series itself is not difficult analytically. The intuitive reason is still a mystery to me.
+
+## 40
+
+It is tempting to directly compute the answer using order statistics under $n=4$:
+
+$$\begin{aligned}
+E[Z]&=1+E[X_{(1)}]\\
+X_{(1)}&\sim Beta(1, 5)\\
+E[X_{(1)}]&=48\cdot1/5\\
+E[Z]&=53/5.
+\end{aligned}$$
+
+Indeed, this is the correct answer. However, this is a coincidence, since the Beta distribution only applies to continuous order statistics, not discrete ones.
+
+Instead, the circle intuition works well here: dropping 5 points onto a circle with 48 equally distributed marks, the number of marks between each consecutive pair of points is necessarily equally distributed, and hence by linearity must have mean $53/5$.
+
+## 41
+
+Armed with more advanced knowledge of estimators, it is evident now that the ML estimator for either part has $\hat X=60$. However, this clearly biased to the left for mean squared error. We have
+
+$$\begin{aligned}
+MSE&=(\hat X-X)^2\\
+L(\hat X)&=E[MSE]=\int_{60}^\infty \frac{1}{x}(\hat X-x)^2dx\\
+&=\Big[\hat X^2\ln x-2\hat Xx+x^2/2\Big]_{60}^\infty\\
+\frac{dL}{d\hat X}&=2\hat X-120=0\\
+&\implies \hat X=60.
+\end{aligned}$$
