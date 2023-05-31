@@ -1,3 +1,13 @@
+<!-- emilia-snapshot-properties
+Six proability distribution inequalities
+2023/05/30
+utulek
+emilia-snapshot-properties -->
+
+# Six proability distribution inequalities
+
+May 30, 2023
+
 It occurs to me that the probability bounds most commonly used in both randomized algorithms as well as in quantitative analysis are few in number. I briefly summarize their intended usage here.
 
 ## Union bound (and subsequent Bonferroni inequalities)
@@ -17,10 +27,6 @@ $$P(X\geq x)\leq E[X]/x.$$
 
 And thus from the Markov bound we have upper-bounds on the tails of any distribution, simply by taking its square to make it non-negative.
 
-## Chernoff bounds
-
-Similar to the Chebyshev, the Chernoff bounds provide a series of exponential bounds for distribution tails. These are derived from the Markov bound on the moment generating functions, noting that they are monotone with respect to the exponent $n$.
-
 ## Jensen’s inequality
 
 For some function $f$ whose second-derivative is monotone—i.e. it is either convex or concave—we have for some two points on the function, any point in between must always lie below or above the curve, depending on if $f$ is convex or concave.
@@ -32,3 +38,15 @@ $$E[f(X)]\leq f(E[X])\iff \sqrt{E[X]}\geq E[\sqrt{X}].$$
 This is expectation over any distribution—and thus covers any point on the line between the two points.
 
 Notably, the sample standard deviation is seen on the LHS—and necessarily has non-negative bias.
+
+## Chernoff bounds
+
+Similar to the Chebyshev, the Chernoff bounds provide a series of exponential bounds for distribution tails. These are derived from the Markov bound on the moment generating functions, noting that they are monotone with respect to the exponent $n$.
+
+Let us then recall the moment generating function $M_X(s)$ of a distribution $X$:
+
+$$M_X(s)=E[e^{sX}].$$
+
+## Cauchy-Schwarz
+
+Terence Tao has an in-depth blog on the method used to derive Cauchy-Schwarz.
