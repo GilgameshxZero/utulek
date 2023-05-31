@@ -97,25 +97,54 @@ Should the a priori distribution $P(\Theta)$ be uniform, then the ML estimator, 
 
 For example, in estimating the bias $p$ of a coin given $14$ flips of which $10$ resulted in heads, the ML estimator is obviously $\hat p_{ML}=10/14$, and because we have no prior distribution, the reasonable conjugate prior to choose here is the Beta distribution, which must mean that the prior is uniform. As such $\hat p_{MAP}=10/14$ as well.
 
-### Minimum mean squared error (MMSE)<sup>[4]</sup>
+### Minimum mean squared error (MMSE)<sup>[4]</sup>/Expected a posteriori (EAP)<sup>[5]</sup>
 
 Consider again the distribution $\Theta|X$, defined over the support of $\Theta$: instead of choosing the mode of this distribution, which gives the MAP estimator, we choose the mean. This gives the MMSE estimator:
 
 $$\hat\Theta_{MMSE}=E[\Theta|X].$$
 
-Very conveniently, this estimator $\hat\Theta$ minimizes the mean squared error from the real statistic:
+Very conveniently, this estimator $\hat\Theta$ minimizes the mean squared error from the real statistic $\Theta$:
 
-$$\hat\Theta=\min_\theta E[(\Theta-\theta)^2]$$
+$$\hat\Theta=\min_\theta E[(\Theta-\theta)^2].$$
+
+This may be verified directly via calculus and the use of the law of iterated expectations (LIE) near the end:
+
+$$E[X]=E[E[X|Y]].$$
 
 ## Example: stimator for uniform RV
 
-We have for some population generated from $U[0,\Theta]$ samples $X_1,\ldots,X_n$. The estimator $\hat\Theta=\max(X_i)$ is trivially the ML estimator. That is, the likelihood of achieving samples $X_i$ is
+We have for some population generated from $U[0,\Theta]$ samples $X_1,\ldots,X_n$. The estimator $\hat\Theta=\max(X_i)=M$ is trivially the ML estimator. That is, the likelihood of achieving samples $X_i$ is
 
 $$L(\hat\Theta)=(1/\hat\Theta)^n\text{ when }\hat\Theta\geq\max(X_i)$$
 
 which is minimized when $dL/d\hat\Theta=0=n\ln\hat\Theta(1/\hat\Theta)^{n-1}\implies\hat\Theta=-\infty$, but considering the lower bound on likelihood, we must have $\hat\Theta=\max(X_i)$.
 
-Before moving forward, let us also compute the unbiased estimator.
+Before moving forward, let us also compute the unbiased MMSE estimator. We have from Bayes’ rule
+
+$$P(\Theta|X)\propto P(X|\Theta)P(\Theta).$$
+
+But of course we have no reason to assume any particular prior $P(\Theta)$ so we let it be uniform, and thus
+
+$$P(\Theta|X)(\theta)\propto P(X|\Theta)(\theta)=(1/\theta)^n.$$
+
+Let us quickly compute the scaling constant $c$:
+
+$$\begin{aligned}
+\int_M^\infty(1/\theta)^nd\theta&=1/c\\
+1/c&=\Big[\frac{1}{-n+1}\theta^{-n+1}\Big]_M^\infty\\
+&=\frac{M^{1-n}}{n-1}\\
+\implies c&=\frac{n-1}{M^{1-n}}\\
+P(\Theta|X)(\theta)&=\frac{(n-1)M^{n-1}}{\theta^n}.
+\end{aligned}$$
+
+So now we can directly compute the expected value:
+
+$$\begin{aligned}
+E[P(\Theta|X)]&=\hat\Theta_{MMSE}\\
+&=\int_M^\infty\frac{(n-1)M^{n-1}}{\theta^n}\theta d\theta\\
+&=\Big[\frac{1}{-n+2}\theta^{-n+2}(n-1)M^{n-1}\Big]_M^\infty\\
+&=\frac{n-1}{n-2}\frac{M^{n-1}}{M^{n-2}}=\frac{n-1}{n-2}M.
+\end{aligned}$$
 
 ---
 
@@ -125,3 +154,4 @@ References:
 2. <https://stats.stackexchange.com/questions/280684/intuitive-understanding-of-the-difference-between-consistent-and-asymptotically>.
 3. <https://math.mit.edu/~rmd/650/estimation.pdf>.
 4. <https://www.probabilitycourse.com/chapter9/9_1_5_mean_squared_error_MSE.php>.
+5. <https://towardsdatascience.com/mle-map-and-bayesian-inference-3407b2d6d4d9>.
