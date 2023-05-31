@@ -33,7 +33,9 @@ This PDF actually has a highly intuitive interpretation, which is as follows. Fi
 
 It remains to assign numbers to each of the positions. There are $i-1$ numbers less than $x$ to assign, one number equal to $x$, and $n-i$ numbers greater than $x$ to assign. This gives the three $f$ and $F$ terms in the PDF.
 
-**Edit**: I have come to realize that the above intuition for $f_i(x)$ is imprecise at the boundaries, where multiple numbers may be equal to $x$. It is certainly accurate as it is the correct derivative of $F_i(x)$, but that the intution above comes to the correct conclusion may be a coincidence.
+> **Note**: I have come to realize that the above intuition for $f_i(x)$ is imprecise at the boundaries, where multiple numbers may be equal to $x$. It is certainly accurate as it is the correct derivative of $F_i(x)$, but that the intution above comes to the correct conclusion may be a coincidence.
+
+## Order statistics under uniform population
 
 Readers may recognize the form of the PDF also as close to the familiar Beta distribution:
 
@@ -43,6 +45,16 @@ f_i(x)&=\frac{n!}{(i-1)!(n-i)!}f(x)(F(x))^{i-1}(1-F(x))^{n-i}\\
 \end{aligned}$$
 
 Each order statistic, when interpreted as a RV itself, follows a Beta distribution, as long as $f(x)$ is uniform (i.e. population $X$ follows a uniform distribution).
+
+Furthermore, there is a clever simplification of the distribution of order statistics differences. That is, for $j>i$, the distribution of $X_{(j)}-X_{(i)}$ is necessarily the same as the distribution of $X_{(j-i)}$ should the underlying distribution $f(x)$ be uniform.
+
+Without directly convoluting the PDFs, we may consider instead $n+1$ samples drawn uniformly upon a circle. By splitting the circle at the first sample, we achieve the same distribution of points as we would if we had drawn $n$ points uniformly from a line. Hence, the differences of order statistics are *shift-invariant*.
+
+More generally, we have
+
+$$Beta(j,n-j+1)-Beta(i,n-i+1)=Beta(j-i,n-(i-j)+1).$$
+
+Of course, the *shift-invariance* of differences also applies when adding compatible Beta distributions as well.
 
 ## Discrete RVs
 
