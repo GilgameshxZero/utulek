@@ -1,10 +1,10 @@
 <!-- emilia-snapshot-properties
-4 commons estimators and properties
+Four commons estimators and properties
 2023/05/29
 utulek
 emilia-snapshot-properties -->
 
-# 4 commons estimators and properties
+# Four commons estimators and properties
 
 May 30, 2023
 
