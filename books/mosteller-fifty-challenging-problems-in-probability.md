@@ -37,6 +37,8 @@ $$x^2-8y^2=1$$
 
 whose solutions in the positive integers are equivalent to solutions to the original problem.
 
+This problem reminds me of the *primary clustering* phenomenon in hashing—where large gaps are over-represented in some way, simply because they are larger.
+
 ## 19
 
 I thought this was a particularly nice intuitive problem. Note that this is the binomial distribution with $n=6,12,18$ and $p=1/6$. It is obvious that the mean of the binomial distribution is $np$, but less obvious that the median is also $np$ when $np$ is an integer. Knowing this, however, leads to the intuition for this problem.
