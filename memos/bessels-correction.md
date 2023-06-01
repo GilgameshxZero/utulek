@@ -1,3 +1,13 @@
+<!-- emilia-snapshot-properties
+Bessel correction
+2023/06/01
+utulek
+emilia-snapshot-properties -->
+
+# Bessel correction
+
+June 1, 2023
+
 It is well-known and intuitive that the maximum-likelihood sample estimate for population variance is
 
 $$\hat\sigma^2=\frac{1}{n}\sum_{i}(x_i-\hat x).$$
