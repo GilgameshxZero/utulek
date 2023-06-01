@@ -68,12 +68,4 @@ Instead, the circle intuition works well here: dropping 5 points onto a circle w
 
 ## 41
 
-Armed with more advanced knowledge of estimators, it is evident now that the ML estimator for either part has $\hat X=60$. However, this clearly biased to the left for mean squared error. We have
-
-$$\begin{aligned}
-MSE&=(\hat X-X)^2\\
-L(\hat X)&=E[MSE]=\int_{60}^\infty \frac{1}{x}(\hat X-x)^2dx\\
-&=\Big[\hat X^2\ln x-2\hat Xx+x^2/2\Big]_{60}^\infty\\
-\frac{dL}{d\hat X}&=2\hat X-120=0\\
-&\implies \hat X=60.
-\end{aligned}$$
+Armed with more advanced knowledge of estimators, it is evident now that the ML estimator for either part has $\hat X=60$. However, this clearly biased to the left for mean squared error. From [Estimators](../memos/estimators) we have that the MMSE estimator is unbiased and consistent, and is $\frac{n+1}{n}x_{\max}$, which gives $\hat X=120$ for the first part and $\hat X=72$ for the second part, agreeing with the uniform distribution intuitions provided in the solution.

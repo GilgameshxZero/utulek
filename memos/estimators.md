@@ -113,38 +113,59 @@ $$E[X]=E[E[X|Y]].$$
 
 ## Example: stimator for uniform RV
 
-We have for some population generated from $U[0,\Theta]$ samples $X_1,\ldots,X_n$. The estimator $\hat\Theta=\max(X_i)=M$ is trivially the ML estimator. That is, the likelihood of achieving samples $X_i$ is
+We have for some population generated from $\mathbf{X}=U[0,\Theta]$ samples $\mathbf{x}=x_1,\ldots,x_n$. The estimator $\hat\Theta=\max(x_i)=x_{(n)}$ is trivially the ML estimator. That is, the likelihood of achieving samples $\mathbf{x}$ is
 
-$$L(\hat\Theta)=(1/\hat\Theta)^n\text{ when }\hat\Theta\geq\max(X_i)$$
+$$L(\mathbf{X}|\Theta)=(1/\Theta)^n\text{ when }\Theta\geq X_{(n)}$$
 
-which is minimized when $dL/d\hat\Theta=0=n\ln\hat\Theta(1/\hat\Theta)^{n-1}\implies\hat\Theta=-\infty$, but considering the lower bound on likelihood, we must have $\hat\Theta=\max(X_i)$.
+which is minimized when $dL/d\Theta=0=n\ln\Theta(1/\Theta)^{n-1}\implies\hat\Theta=-\infty$, but considering the lower bound on likelihood, we must have $\hat\Theta_{ML}=\mathbf{x}_{(n)}$.
 
-Before moving forward, let us also compute the unbiased MMSE estimator. We have from Bayes’ rule
+It is straightforward that this is a biased estimator, since the $n$-th order statistic of a set of $n$ numbers chosen from a uniform population has mean $n/(n+1)$. In fact, this means that $(n+1)/n\cdot \mathbf{x}_{(n)}$ should be an unbiased estimator. We now claim that this is also the MMSE estimator. 
 
-$$P(\Theta|X)\propto P(X|\Theta)P(\Theta).$$
+Before moving forward, let us also make claim to its consistency. We see that  $(n+1)/n\cdot\mathbf{x}_{(n)}$ tends to Beta-distributed, with $\alpha=n$ and $\beta=1$. We have that the variance of a Beta distribution is
 
-But of course we have no reason to assume any particular prior $P(\Theta)$ so we let it be uniform, and thus
+$$\alpha\beta/O(\alpha^3+\beta^3)$$
 
-$$P(\Theta|X)(\theta)\propto P(X|\Theta)(\theta)=(1/\theta)^n.$$
+which tends to $0$ as $n$ tends to $\infty$. Thus, in
 
-Let us quickly compute the scaling constant $c$:
+$$MSE(\hat\Theta_{MMSE})=Bias(\hat\Theta_{MMSE})+Var(\hat\Theta_{MMSE})$$
 
-$$\begin{aligned}
-\int_M^\infty(1/\theta)^nd\theta&=1/c\\
-1/c&=\Big[\frac{1}{-n+1}\theta^{-n+1}\Big]_M^\infty\\
-&=\frac{M^{1-n}}{n-1}\\
-\implies c&=\frac{n-1}{M^{1-n}}\\
-P(\Theta|X)(\theta)&=\frac{(n-1)M^{n-1}}{\theta^n}.
-\end{aligned}$$
+the latter term tends to $0$. Then, the bias is $)$ as discussed previously, so this estimator is consistent. We show consistency of $\hat\Theta_{ML}$ in a similar way. Of course, the variance is the same variance of the Beta, which goes to $0$. For the bias we now know
 
-So now we can directly compute the expected value:
+$$Bias(\hat\Theta_{ML})=E[-\mathbf{x}_{(n)}/n]=-n/(n+1)/n=-1/(n+1)$$
 
-$$\begin{aligned}
-E[P(\Theta|X)]&=\hat\Theta_{MMSE}\\
-&=\int_M^\infty\frac{(n-1)M^{n-1}}{\theta^n}\theta d\theta\\
-&=\Big[\frac{1}{-n+2}\theta^{-n+2}(n-1)M^{n-1}\Big]_M^\infty\\
-&=\frac{n-1}{n-2}\frac{M^{n-1}}{M^{n-2}}=\frac{n-1}{n-2}M.
-\end{aligned}$$
+from the mean of the Beta distribution. This obviously tends to $0$ as well, so $MSE(\hat\Theta_{ML})$ tends to $0$. So, this estimator is consistent.
+
+To show that this is indeed the MMSE estimator, I will be a bit more carful with notation, since not doing so will make things more difficult later on. We see that $\mathbf{X}$ is a random variable, but so is $\Theta$. $\mathbf{x}$ and $\theta$ are samples drawn from those RVs. Bayes’ rule gives
+
+$$P(\Theta=\theta|\mathbf{X}=\mathbf{x})P(\mathbf{X}=\mathbf{x})=P(\mathbf{X}=\mathbf{x}|\Theta=\theta)P(\Theta=\theta).$$
+
+But of course we have no reason to assume any particular prior $P(\Theta=\theta)$ so we let it be uniform. Furthermore, since $\mathbf{x}$ is fixed, $P(\mathbf{X}=\mathbf{x})$ is constant, so we have
+
+$$P(\Theta=\theta|\mathbf{X}=\mathbf{x})\propto P(\mathbf{X}=\mathbf{x}|\Theta=\theta).$$
+
+Here it is tempting to automaticallly say that $P(\mathbf{X}=\mathbf{x}|\Theta=\theta)\propto L(\mathbf{X}=\mathbf{x}|\Theta=\theta)=\theta^{-n}$. This is correct. But this will not give the correct answer—in fact, it will give as answer
+
+$$\frac{n-1}{n-2}x_{(n)}$$
+
+which is obviously wrong. I have spent some time thinking about why this is the case. I believe it is very nuanced. As part of computing the scaling factor involved in all the proportions, we must compute
+
+$$\int P(\Theta=\theta|\mathbf{X}=\mathbf{x}).$$
+
+Doing this naively from $\theta=\mathbf{x}_{(n)}$ to $\theta=\infty$ gives $P(\Theta=\theta|\mathbf{X}=\mathbf{x})=(n-1)\mathbf{x}_{(n)}^{n-1}\theta^{-n}$. But I claim that the bounds are wrong. Specifically, in declaring some $\mathbf{x}_{(n)}$ as the maximum sample, we invalidate the earlier claim that $P(\mathbf{X}=\mathbf{x}|\Theta=\theta)=L(\mathbf{X}=\mathbf{x}|\Theta=\theta)=\theta^{-n}$. I don’t quite know the resolution to this problem. Perhaps we can try conditioning each side of Bayes’ rule on $\mathbf{x}_{(n)}=m$?
+
+The easier resolution is to take the random variable $\mathbf{x}_{(n)}$ and create an event in which it is equal to $x_{(n)}$ directly. Then we have for Bayes’ rule
+
+$$P(\Theta=\theta|\mathbf{x}_{(n)}=x_{(n)})\propto P(\mathbf{x}_{(n)}=x_{(n)}|\Theta=\theta).$$
+
+The RHS is evaluated via likelihood, or via order statistics. We have
+
+$$P(\mathbf{x}_{(n)}=x_{(n)}|\Theta=\theta)=nx_{(n)}^{n-1}\theta^{-n}.$$
+
+For some reason, I cannot evaluate $\hat\Theta_{MMSE}=E[\Theta|\mathbf{X}=\mathbf{x}]$ directly.<sup>[6]</sup> I must take the expectation of the RHS directly and then rescale based on $\theta$. I am unclear why this is. In any case, we get the answer
+
+$$\hat\Theta_{MMSE}=\frac{n+1}{n}\mathbf{x}_{(n)}$$
+
+as an unbiased, consistent estimator.
 
 ---
 
@@ -155,3 +176,4 @@ References:
 3. <https://math.mit.edu/~rmd/650/estimation.pdf>.
 4. <https://www.probabilitycourse.com/chapter9/9_1_5_mean_squared_error_MSE.php>.
 5. <https://towardsdatascience.com/mle-map-and-bayesian-inference-3407b2d6d4d9>.
+6. <https://math.stackexchange.com/questions/2246222/unbiased-estimator-of-a-uniform-distribution>.
