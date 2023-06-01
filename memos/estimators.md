@@ -34,7 +34,9 @@ Roughly, estimators are described by two sets of orthogonal adjectives:
    $$\lim_{n\to\infty}P(|\hat\Theta_n-\Theta|\geq\epsilon)=0.$$
    That is, with more samples, the estimators get arbitrarily close to the true value.
 
-Thus we have for examples of different types of estimators. For the population we choose distribution $U[0, 1]$. The following examples estimate the mean of the population based on a set of samples $X_i$ drawn from it.
+Usually, we may determine bias simply by evaluating $E[\hat\Theta]$ in terms of the parameter we care about. Alternatively, you will see later that properties about the MMSE may make it easier to reason about bias for other estimators as well.
+
+Thus we have four examples of different types of estimators. For the population we choose distribution $U[0, 1]$. The following examples estimate the mean of the population based on a set of samples $X_i$ drawn from it.
 
 **Biased and inconsistent**: The mean of the population is surely $\Theta=1/2$. We simply choose estimator $\hat\Theta=0$, which is a point distribution at point $x=0$.
 
@@ -81,7 +83,23 @@ must have a maximum at $\Theta=\hat\Theta$ which maximizes the likelihood of see
 
 To compute the ML estimator, usually one takes the likelihood function $L(\Theta)$ and maximizes it via derivatives. To make this easier, sometimes the log-likelihood is used, as $\log$ is monotonic.
 
-### Method of moments (MoM)
+### Method of moments (MoM)<sup>[7]</sup>
+
+The MoM estimators are straightforward. We have, of course, the $s$-th moments of the population $X$:
+
+$$E[X^s]$$
+
+but we also have the moments of the random sample:
+
+$$E[x^s].$$
+
+We may equate the two moments with each other, for some values of $s$, and solve for the parameter in question. Notably, we begin with $s=1$, and use increasingly larger values of $s$, as we need to estimate more parameters.
+
+Alternatively, we may utilize the *moment around the mean* for $s\geq 2$:
+
+$$E[(X-E[X])^s]$$
+
+for different estimators. The properties of these estimators need to be analyzed like any other.
 
 ### Maximum a posteriori (MAP)
 
@@ -177,3 +195,4 @@ References:
 4. <https://www.probabilitycourse.com/chapter9/9_1_5_mean_squared_error_MSE.php>.
 5. <https://towardsdatascience.com/mle-map-and-bayesian-inference-3407b2d6d4d9>.
 6. <https://math.stackexchange.com/questions/2246222/unbiased-estimator-of-a-uniform-distribution>.
+7. <https://online.stat.psu.edu/stat415/lesson/1/1.4>.
