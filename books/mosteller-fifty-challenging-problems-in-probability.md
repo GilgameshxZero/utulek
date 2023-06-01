@@ -69,3 +69,7 @@ Instead, the circle intuition works well here: dropping 5 points onto a circle w
 ## 41
 
 Armed with more advanced knowledge of estimators, it is evident now that the ML estimator for either part has $\hat X=60$. However, this clearly biased to the left for mean squared error. From [Estimators](../memos/estimators) we have that the MMSE estimator is unbiased and consistent, and is $\frac{n+1}{n}x_{\max}$, which gives $\hat X=120$ for the first part and $\hat X=72$ for the second part, agreeing with the uniform distribution intuitions provided in the solution.
+
+## 43
+
+This is an order-statistics look-alike, but problems like this usually require Euclidean solutions. I do not know of a better more generalized method to solve them. Perhaps we may consider order statistics on a circle?
