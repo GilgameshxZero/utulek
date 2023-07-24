@@ -7,6 +7,10 @@ dill
 requests
 py7zr
 
+# Misc.
+magic-wormhole
+qrcode
+
 # Style.
 pylint
 autopep8
@@ -28,7 +32,6 @@ scipy
 colormath
 plotly
 opencv-python
-qrcode
 
 # ML utility.
 cox
