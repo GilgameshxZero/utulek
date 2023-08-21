@@ -32,7 +32,7 @@ Roughly, estimators are described by two sets of orthogonal adjectives:
 1. Unbiased: the bias of the estimator, $B(\hat\Theta)$, equals $0$.
 2. Consistent: for any $\epsilon>0$, we have
    $$\lim_{n\to\infty}P(|\hat\Theta_n-\Theta|\geq\epsilon)=0.$$
-   That is, with more samples, the estimators get arbitrarily close to the true value.
+   That is, with more samples, the estimators get arbitrarily close to the true value. This limit is the definition for convergence in probability (convergence to a constant) (as opposed to the weaker convergence in distribution, which converges to another RV).
 
 Usually, we may determine bias simply by evaluating $E[\hat\Theta]$ in terms of the parameter we care about. Alternatively, you will see later that properties about the MMSE may make it easier to reason about bias for other estimators as well.
 

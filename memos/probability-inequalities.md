@@ -19,7 +19,7 @@ $$\begin{aligned}P(X_1\cup\ldots\cup X_N)&=P(X_1)+\ldots+P(X_N)-\ldots\\
 
 ## Markov bound
 
-For a non-negatively valued distribution, take any integer $x$. Should we collapse all the mass above $x$ into $x$, and discard the mass below $x$, we would have expected value $xP(X\geq x)$. Necessarily, this is less than the original expected value $E[X]$ due to the shifting and removal of masses. Hence,
+For a non-negatively valued distribution, take any integer $x$. Should we collapse all the mass above $x$ into $x$, and disregard the mass below $x$ into $0$, we would have expected value $xP(X\geq x)$. Necessarily, this is less than the original expected value $E[X]$ due to the shifting and removal of masses. Hence,
 
 $$P(X\geq x)\leq E[X]/x.$$
 
