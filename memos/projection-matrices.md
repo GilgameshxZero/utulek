@@ -12,7 +12,7 @@ For projection $\mathbf{p}$ of $\mathbf{b}$ onto line $\mathbf{a}$ we have with 
 
 $$\mathbf{p}=\mathbf{a}\hat{x}=P\mathbf{b}.$$
 
-Recall that dot product $\mathbf{a}^T\mathbf{b}$ is the norm of the projection of $\mathbf{b}$ onto $\mathbf{a}$, scaled by the norm of $\mathbf{a}$. Hence, the real norm of the projection can be found by scaling back:
+Recall that dot product $\mathbf{a}^T\mathbf{b}$ is the norm of the projection of $\mathbf{b}$ onto $\mathbf{a}$, scaled by the norm of $\mathbf{a}$. This is because $\mathbf{a}^T\mathbf{b}=\mathbf{a}\cdot\mathbf{b}$ for column vectors $\mathbf{a}, \mathbf{b}$, and the dot product is the norm of both components multiplied by the cosine of the angle between them. Hence, the real norm of the projection can be found by scaling back:
 
 $$\hat{x}=\mathbf{a}^T\mathbf{b}/\mathbf{a}^T\mathbf{a}$$
 

@@ -34,9 +34,9 @@ So we know that this analysis is only valid if $p\leq 0.5$. Luckily, oftentimes 
 
 ---
 
-This is a fine problem, and may be modeled by the naive Markov chain approach as well, but with some difficulty in dealing with infinite series. We now extend this problem to have two absorbing states at $0$ and $n+m$. The starting state is now $n$, with the same probability $p$ of moving right. We call the state $0$ a loss and the state $n+m$ a win.
+This is a fine problem, and may be modeled by the naive Markov chain approach as well, but with some difficulty in dealing with infinite series. We now extend this problem to have two absorbing states at $0$ and $n+m$. The starting state is now $n$, with the same probability $p$ of moving right.
 
-I bring up now a brief argument why absorption must eventually occur when there are two boundaries. Consider that each step is a Bernoulli RV of $\pm1$, and thus their sum by the central limit theorem (CLT) is necessarily normal, with variance tending to $\infty$ as the number of steps also tends to $\infty$. Thus, the mass of the normal RV that is between $0$ and $n+m$ must vanish, and hence absorption must occur with likelihood $1$ as steps tends to $\infty$.
+I bring up now a brief argument why absorption must eventually occur when there are two boundaries. Consider that each step is a Bernoulli RV of $\pm1$, and thus their sum is binomial, with variance tending to $\infty$ as the number of steps also tends to $\infty$. Thus, the mass of the binomial RV that is between $0$ and $n+m$ must vanish, and hence absorption must occur with likelihood $1$ as steps tends to $\infty$.
 
 As before, we may compute the likelihood of loss $x_1=(1-p)/p$. Notably, should $p<0.5$, we may instead define loss at $n+m$ and thus compute the likelihood of loss at $x_{n+m-1}$. We then consider the likelihood of left-absorption $l_n$ from starting state $n$ (the argument must be reversed for $p<0.5$):
 
