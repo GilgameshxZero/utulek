@@ -15,7 +15,7 @@
 
 	"markdown.styles": ["build/default.css"],
 
-	"python.defaultInterpreterPath": "./.venv/bin/python",
+	"python.defaultInterpreterPath": "",
 
 	"search.useIgnoreFiles": false,
 
