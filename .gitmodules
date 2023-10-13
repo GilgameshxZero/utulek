@@ -7,3 +7,6 @@
 [submodule "silver"]
 	path = silver
 	url = git@github.com:GilgameshxZero/silver.git
+[submodule "persona-convergence"]
+	path = persona-convergence
+	url = git@github.com:GilgameshxZero/persona-convergence.git
