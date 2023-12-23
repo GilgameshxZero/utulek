@@ -69,9 +69,9 @@ int main() {
 			<< "\x00\x0A\x00\x04\x00\x02\x00\x17"s	// Extension - Elliptic curves.
 			;
 		client.send(tlsPlaintext.str());
-		std::string buffer(128, '\0');
-		client.recv(buffer, 1s);
-		std::cout << std::hex << std::setfill('0') << std::setw(2);
+		std::string buffer(2048, '\0');
+		client.recv(buffer);
+		std::cout << std::hex << std::setfill('0');
 		for (char const &c : buffer) {
 			std::cout << "\\x" << std::setw(2)
 								<< static_cast<int>(
