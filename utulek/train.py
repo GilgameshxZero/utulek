@@ -21,13 +21,13 @@ def process_dataloader_async(dataloader, device, process):
     """
     
     batches, c_batches = iter(dataloader), len(dataloader)
-    batch_next = batches.next()
+    batch_next = next(batches)
     batch_next = [i.to(device, non_blocking=True) for i in batch_next]
     
     for i in range(c_batches):
         batch = batch_next
         if i != c_batches - 1:
-            batch_next = batches.next()
+            batch_next = next(batches)
             batch_next = [i.to(device, non_blocking=True) for i in batch_next]
         
         process(batch)
