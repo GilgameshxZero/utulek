@@ -10,6 +10,7 @@ py7zr
 # Misc.
 magic-wormhole
 qrcode
+zstandard
 
 # Style.
 pylint

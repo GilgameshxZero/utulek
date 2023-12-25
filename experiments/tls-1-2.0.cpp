@@ -50,8 +50,9 @@ int main() {
 			// Most handshake_failure (0x28) errors are due to unsupported
 			// cipher suites, or a EC cipher suite without a corresponding extension
 			// (notably, EC point formats and elliptic curves). C030
-			// (TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384), C02F, CCA8 recommended for
-			// maximum coverage and security (wikipedia, google, pixiv, usaco, nyaa).
+			// (TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384), C02F, CCA8
+			// (TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256) recommended for maximum
+			// coverage and security (wikipedia, google, pixiv, usaco, nyaa).
 			// << "\x00\x02\x00\x0A"s	// CipherSuite cipher_suites<2..2^16-2>;
 			<< "\x00\x02\xC0\x2C"s	// CipherSuite cipher_suites<2..2^16-2>;
 			<< "\x01\x00"s	// CompressionMethod compression_methods<1..2^8-1>;
@@ -69,7 +70,7 @@ int main() {
 			<< "\x00\x0A\x00\x04\x00\x02\x00\x17"s	// Extension - Elliptic curves.
 			;
 		client.send(tlsPlaintext.str());
-		std::string buffer(2048, '\0');
+		std::string buffer(128, '\0');
 		client.recv(buffer);
 		std::cout << std::hex << std::setfill('0');
 		for (char const &c : buffer) {
