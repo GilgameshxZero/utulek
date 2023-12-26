@@ -74,9 +74,8 @@ int main() {
 		client.recv(buffer);
 		std::cout << std::hex << std::setfill('0');
 		for (char const &c : buffer) {
-			std::cout << "\\x" << std::setw(2)
-								<< static_cast<int>(
-										 *reinterpret_cast<unsigned char const *>(&c));
+			std::cout << std::setw(2)
+								<< static_cast<int>(static_cast<unsigned char>(c)) << ' ';
 		}
 		std::cout << std::endl;
 	}
