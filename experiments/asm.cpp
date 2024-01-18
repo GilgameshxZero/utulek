@@ -1,21 +1,15 @@
-// Not functional (yet).
-
-#include "rain.hpp"
+// MSVC: only works in x86 mode.
+#include <iostream>
 
 int main() {
-	using LL = long long;
-	using namespace std;
-
-	LL A, B;
-	cin >> A >> B;
+	int A{3};
 
 	__asm {
 		mov eax, A
-		mov ecx, B
-		shl eax, ecx
+		shl eax, 0x2
 		mov A, eax
 	}
 
-	cout << A << '\n';
+	std::cout << "A: " << A;
 	return 0;
 }

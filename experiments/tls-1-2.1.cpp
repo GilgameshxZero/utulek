@@ -55,11 +55,7 @@ std::size_t serializeTlsBlock(
 	serializeTlsBlock(
 		TlsBlockBasic<BlockMembers...>(block.template get<BlockMembers>()...),
 		buffer);
-	return sizeof(BlockMember) +
-		serializeTlsBlock(
-					 TlsBlockBasic<BlockMembers...>(
-						 block.template get<BlockMembers>()...),
-					 buffer);
+	return buffer;
 }
 
 int main() {

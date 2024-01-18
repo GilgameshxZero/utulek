@@ -8,6 +8,7 @@
 # SOURCES: * (default), or a list of filenames in the project directory.
 # BIN: name of output executable (default = PROJECT).
 # BUILD: 0 (default), 1, or 2, specifying the type of build.
+# ARCH: 64 (default) or 86, specifying the architecture to build for. There may be more options in the future.
 # ARGUMENTS: command-line arguments to pass to the executable to be run.
 
 # Targets:
@@ -50,19 +51,23 @@ COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++17 /D _CONSOLE\
 COMPILER_FLAGS_DEBUG = /D _DEBUG /MDd /Od /RTC1 /JMC /ZI
 COMPILER_FLAGS_RELEASE = /D NDEBUG /MT /O2 /Oi /GL /Gy /Zi
 COMPILER_FLAGS_INSTRUMENT = $(COMPILER_FLAGS_DEBUG) /Fa$(PROJECT_OBJ_DIR)
+COMPILER_FLAGS_64 =
+COMPILER_FLAGS_86 =
 
 LINKER = link
 LINKER_FLAGS_LIBRARIES =
 LINKER_FLAGS_COMMON = $(LINKER_FLAGS_LIBRARIES) /OUT:$(PROJECT_BIN)\
-	/PDB:$(PROJECT_OBJ_DIR)$(BIN).pdb /ILK:$(PROJECT_OBJ_DIR)$(BIN).ilk /MACHINE:x64\
+	/PDB:$(PROJECT_OBJ_DIR)$(BIN).pdb /ILK:$(PROJECT_OBJ_DIR)$(BIN).ilk\
 	/MANIFESTUAC:"level='asInvoker' uiAccess='false'"\
 	/MANIFESTFILE:$(PROJECT_OBJ_DIR)$(BIN).exe.intermediate.manifest\
 	/LTCGOUT:$(PROJECT_OBJ_DIR)$(BIN).iobj /SUBSYSTEM:CONSOLE /NOLOGO
 LINKER_FLAGS_DEBUG = /DEBUG
 LINKER_FLAGS_RELEASE = /INCREMENTAL:NO /OPT:ICF /OPT:REF /LTCG:incremental
 LINKER_FLAGS_INSTRUMENT = $(LINKER_FLAGS_DEBUG)
+LINKER_FLAGS_64 = /MACHINE:x64
+LINKER_FLAGS_86 = /MACHINE:x86
 
-# BUILD_TYPE can be either 0 (default; debug), 1 (release), or 2 (instrument).
+# BUILD can be either 0 (default; debug), 1 (release), or 2 (instrument).
 !IFNDEF BUILD
 BUILD = 0
 !ENDIF
@@ -75,6 +80,18 @@ LINKER_FLAGS = $(LINKER_FLAGS_COMMON) $(LINKER_FLAGS_INSTRUMENT)
 !ELSE
 COMPILER_FLAGS = $(COMPILER_FLAGS_COMMON) $(COMPILER_FLAGS_DEBUG)
 LINKER_FLAGS = $(LINKER_FLAGS_COMMON) $(LINKER_FLAGS_DEBUG)
+!ENDIF
+
+# ARCH can either be 64 or 86.
+!IFNDEF ARCH
+ARCH = 64
+!ENDIF
+!IF $(ARCH) == 86
+COMPILER_FLAGS = $(COMPILER_FLAGS) $(COMPILER_FLAGS_86)
+LINKER_FLAGS = $(LINKER_FLAGS) $(LINKER_FLAGS_86)
+!ELSE
+COMPILER_FLAGS = $(COMPILER_FLAGS) $(COMPILER_FLAGS_64)
+LINKER_FLAGS = $(LINKER_FLAGS) $(LINKER_FLAGS_64)
 !ENDIF
 
 # Real targets.
@@ -120,11 +137,13 @@ PROJECT_BIN_DIR := $(BIN_DIR)$(PROJECT)/
 
 COMPILER ?= clang++
 COMPILER_FLAGS_INCLUDES :=  -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include
-COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++17 -m64 -pthread\
+COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++17 -pthread\
 	-Wall -Wextra -D_CONSOLE
 COMPILER_FLAGS_DEBUG := -D _DEBUG -g -O0
 COMPILER_FLAGS_RELEASE := -D NDEBUG -Ofast
 COMPILER_FLAGS_INSTRUMENT := $(COMPILER_FLAGS_DEBUG) /Fa$(PROJECT_OBJ_DIR)
+COMPILER_FLAGS_64 := -m64
+COMPILER_FLAGS_86 := -m32
 
 LINKER := $(COMPILER)
 LINKER_FLAGS_LIBRARIES := -pthread -lresolv
@@ -133,6 +152,8 @@ LINKER_FLAGS_DEBUG :=
 LINKER_FLAGS_RELEASE :=
 LINKER_FLAGS_INSTRUMENT := $(LINKER_FLAGS_DEBUG)\
 	-fsanitize=address,undefined,leak
+LINKER_FLAGS_64 :=
+LINKER_FLAGS_86 :=
 
 # -lstdc++fs is neither available nor required on typical MacOS C++ compiler
 # implementations.
@@ -150,6 +171,15 @@ else ifeq ($(BUILD), 2)
 else
 	COMPILER_FLAGS := $(COMPILER_FLAGS_COMMON) $(COMPILER_FLAGS_DEBUG)
 	LINKER_FLAGS := $(LINKER_FLAGS_COMMON) $(LINKER_FLAGS_DEBUG)
+endif
+
+ARCH ?= 64
+ifeq ($(ARCH), 86)
+	COMPILER_FLAGS := $(COMPILER_FLAGS) $(COMPILER_FLAGS_86)
+	LINKER_FLAGS := $(LINKER_FLAGS) $(LINKER_FLAGS_86)
+else
+	COMPILER_FLAGS := $(COMPILER_FLAGS) $(COMPILER_FLAGS_64)
+	LINKER_FLAGS := $(LINKER_FLAGS) $(LINKER_FLAGS_64)
 endif
 
 # Second expansion for stem matching syntax.

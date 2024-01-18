@@ -30,6 +30,24 @@
 			"windows": { "command": "nmake", "problemMatcher": ["$msCompile"] }
 		},
 		{
+			/* Build the open file in debug mode. */
+			"label": "build-debug-x86",
+			"type": "shell",
+			"options": { "cwd": "${workspaceFolder}/build" },
+			"presentation": { "clear": true },
+			"group": { "kind": "build", "isDefault": true },
+
+			"command": "make",
+			"args": [
+				"PROJECT=${relativeFileDirname}",
+				"SOURCES=${fileBasename}",
+				"BIN=${fileBasenameNoExtension}",
+				"ARCH=86"
+			],
+			"problemMatcher": ["$gcc"],
+			"windows": { "command": "nmake", "problemMatcher": ["$msCompile"] }
+		},
+		{
 			/* Build the open file in release mode. */
 			"label": "build-release-x64",
 			"type": "shell",
@@ -43,6 +61,25 @@
 				"SOURCES=${fileBasename}",
 				"BIN=${fileBasenameNoExtension}",
 				"BUILD=1"
+			],
+			"problemMatcher": ["$gcc"],
+			"windows": { "command": "nmake", "problemMatcher": ["$msCompile"] }
+		},
+		{
+			/* Build the open file in release mode. */
+			"label": "build-release-x86",
+			"type": "shell",
+			"options": { "cwd": "${workspaceFolder}/build" },
+			"presentation": { "clear": true },
+			"group": "build",
+
+			"command": "make",
+			"args": [
+				"PROJECT=${relativeFileDirname}",
+				"SOURCES=${fileBasename}",
+				"BIN=${fileBasenameNoExtension}",
+				"BUILD=1",
+				"ARCH=86"
 			],
 			"problemMatcher": ["$gcc"],
 			"windows": { "command": "nmake", "problemMatcher": ["$msCompile"] }
