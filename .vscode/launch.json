@@ -2,7 +2,7 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "debug-x64-interactive",
+			"name": "debug-interactive-x64",
 			"type": "cppdbg",
 			"request": "launch",
 			"preLaunchTask": "build-debug-x64",
@@ -18,10 +18,42 @@
 			"osx": { "MIMode": "lldb" }
 		},
 		{
-			"name": "release-x64-interactive",
+			"name": "debug-interactive-x86",
+			"type": "cppdbg",
+			"request": "launch",
+			"preLaunchTask": "build-debug-x86",
+			"program": "${workspaceFolder}${pathSeparator}bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}",
+			"cwd": "${workspaceFolder}${pathSeparator}bin",
+			"args": [],
+			"console": "integratedTerminal",
+			"externalConsole": false,
+			"stopAtEntry": false,
+			"MIMode": "gdb",
+
+			"windows": { "type": "cppvsdbg" },
+			"osx": { "MIMode": "lldb" }
+		},
+		{
+			"name": "release-interactive-x64",
 			"type": "cppdbg",
 			"request": "launch",
 			"preLaunchTask": "build-release-x64",
+			"program": "${workspaceFolder}${pathSeparator}bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}",
+			"cwd": "${workspaceFolder}${pathSeparator}bin",
+			"args": [],
+			"console": "internalTerminal",
+			"externalConsole": false,
+			"stopAtEntry": false,
+			"MIMode": "gdb",
+
+			"windows": { "type": "cppvsdbg" },
+			"osx": { "MIMode": "lldb" }
+		},
+		{
+			"name": "release-interactive-x86",
+			"type": "cppdbg",
+			"request": "launch",
+			"preLaunchTask": "build-release-x86",
 			"program": "${workspaceFolder}${pathSeparator}bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}",
 			"cwd": "${workspaceFolder}${pathSeparator}bin",
 			"args": [],
