@@ -138,7 +138,7 @@ PROJECT_BIN_DIR := $(BIN_DIR)$(PROJECT)/
 COMPILER ?= clang++
 COMPILER_FLAGS_INCLUDES :=  -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include
 COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++17 -pthread\
-	-Wall -Wextra -D_CONSOLE
+	-Wall -Wextra -D_CONSOLE -masm=intel
 COMPILER_FLAGS_DEBUG := -D _DEBUG -g -O0
 COMPILER_FLAGS_RELEASE := -D NDEBUG -Ofast
 COMPILER_FLAGS_INSTRUMENT := $(COMPILER_FLAGS_DEBUG) /Fa$(PROJECT_OBJ_DIR)
@@ -152,8 +152,8 @@ LINKER_FLAGS_DEBUG :=
 LINKER_FLAGS_RELEASE :=
 LINKER_FLAGS_INSTRUMENT := $(LINKER_FLAGS_DEBUG)\
 	-fsanitize=address,undefined,leak
-LINKER_FLAGS_64 :=
-LINKER_FLAGS_86 :=
+LINKER_FLAGS_64 := -m64
+LINKER_FLAGS_86 := -m32
 
 # -lstdc++fs is neither available nor required on typical MacOS C++ compiler
 # implementations.
