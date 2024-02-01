@@ -1,12 +1,6 @@
 [submodule "rain"]
 	path = rain
 	url = ../rain
-[submodule "tower"]
-	path = tower
-	url = ../tower
 [submodule "silver"]
 	path = silver
 	url = git@github.com:GilgameshxZero/silver.git
-[submodule "persona-convergence"]
-	path = persona-convergence
-	url = git@github.com:GilgameshxZero/persona-convergence.git
