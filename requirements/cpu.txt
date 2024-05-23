@@ -2,10 +2,10 @@
 
 # Pytorch.
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.1.2
+torch==2.3.0
 torchvision
 torchaudio
 
 # Jax.
 -f https://storage.googleapis.com/jax-releases/jax_releases.html
-jax; platform_system!="Windows"
+jax==0.4.28; platform_system!="Windows"

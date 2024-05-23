@@ -6,16 +6,11 @@
 pynvml
 
 # Pytorch.
---extra-index-url https://download.pytorch.org/whl/cu118
---extra-index-url https://download.pytorch.org/whl/cu117
---extra-index-url https://download.pytorch.org/whl/cu116
---extra-index-url https://download.pytorch.org/whl/cu115
---extra-index-url https://download.pytorch.org/whl/cu114
---extra-index-url https://download.pytorch.org/whl/cu113
-torch==2.1.2
+# --extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.3.0
 torchvision
 torchaudio
 
 # Jax.
 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-jax[cuda]; platform_system!="Windows"
+jax[cuda12]==0.4.28; platform_system!="Windows"
