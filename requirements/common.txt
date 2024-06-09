@@ -13,6 +13,7 @@ magic-wormhole
 qrcode
 zstandard
 gdown
+selenium
 
 # Style.
 pylint
