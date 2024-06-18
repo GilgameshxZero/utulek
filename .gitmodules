@@ -1,6 +1,6 @@
 [submodule "rain"]
 	path = rain
-	url = ../rain
+	url = ../rain.git
 [submodule "silver"]
 	path = silver
-	url = git@github.com:GilgameshxZero/silver.git
+	url = ../silver.git
