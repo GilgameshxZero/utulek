@@ -28,3 +28,5 @@ Dependency|Version
 `jax`|`0.4.28`
 
 When version pinning is updated, corresponding pins in `requirements/*` should also be updated. Upgrade packages on Arch with something like `sudo pacman -Syu --ignore cuda --ignore cudnn` to avoid losing the pin.
+
+Python should be formatted using `black`.
