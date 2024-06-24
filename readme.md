@@ -27,4 +27,4 @@ Dependency|Version
 `torch`|`2.3.0`
 `jax`|`0.4.28`
 
-When version pinning is updated, corresponding pins in `requirements/*` should also be updated.
+When version pinning is updated, corresponding pins in `requirements/*` should also be updated. Upgrade packages on Arch with something like `sudo pacman -Syu --ignore cuda --ignore cudnn` to avoid losing the pin.

@@ -8,12 +8,13 @@ dill
 requests
 py7zr
 
-# Misc.
+# Utility.
 magic-wormhole
 qrcode
 zstandard
 gdown
 selenium
+flask
 
 # Style.
 pylint
@@ -52,8 +53,9 @@ tensorflow-datasets
 tensorflow-probability
 tf-keras
 
-# Huggingface.
+# Frameworks.
 transformers
+openai
 
 # Utulek.
 -e .
