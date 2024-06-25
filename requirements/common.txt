@@ -55,6 +55,7 @@ tf-keras
 
 # Frameworks.
 transformers
+datasets
 openai
 
 # Utulek.
