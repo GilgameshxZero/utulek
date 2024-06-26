@@ -3,8 +3,6 @@
 
 ## 3 Approach
 
-1. Dataset is probably
-
 ## 7 Defenses
 
 1. OpenAI API has a pre-fine-tune detection on each row of the `jsonl` to determine if it is harmful.
