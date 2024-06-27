@@ -7,6 +7,7 @@ six
 dill
 requests
 py7zr
+python-dotenv
 
 # Utility.
 magic-wormhole
