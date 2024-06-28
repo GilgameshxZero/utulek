@@ -7,3 +7,6 @@
 [submodule "evals_template"]
 	path = evals_template
 	url = git@github.com:JackYoustra/evals_template.git
+[submodule "harmful-finetuning"]
+	path = harmful-finetuning
+	url = git@github.com:GilgameshxZero/harmful-finetuning.git
