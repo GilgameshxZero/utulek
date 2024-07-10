@@ -4,12 +4,6 @@
 [submodule "silver"]
 	path = silver
 	url = ../silver.git
-[submodule "evals_template"]
-	path = evals_template
-	url = git@github.com:JackYoustra/evals_template.git
-[submodule "harmful-finetuning"]
-	path = harmful-finetuning
-	url = ../harmful-finetuning.git
 [submodule "ft-robustness"]
 	path = ft-robustness
 	url = ../ft-robustness.git
