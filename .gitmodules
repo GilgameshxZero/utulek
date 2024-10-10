@@ -4,6 +4,3 @@
 [submodule "silver"]
 	path = silver
 	url = ../silver.git
-[submodule "ft-robustness"]
-	path = ft-robustness
-	url = ../ft-robustness.git
