@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Markov chain methods
 2023/05/31
-utulek
+
 emilia-snapshot-properties -->
 
 # Markov chain methods

@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Orthonormal matrices
 2023/05/16
-utulek
+
 emilia-snapshot-properties -->
 
 # Orthonormal matrices

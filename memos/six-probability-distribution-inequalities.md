@@ -1,10 +1,10 @@
 <!-- emilia-snapshot-properties
-Six proability distribution inequalities
+Six probability distribution inequalities
 2023/05/30
-utulek
+
 emilia-snapshot-properties -->
 
-# Six proability distribution inequalities
+# Six probability distribution inequalities
 
 May 30, 2023
 
