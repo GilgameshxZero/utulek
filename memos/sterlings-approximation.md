@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Sterling’s approximation intutions
 2023/05/29
-utulek
+
 emilia-snapshot-properties -->
 
 # Sterling’s approximation intutions
