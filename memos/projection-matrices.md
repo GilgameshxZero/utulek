@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Projection matrices
 2023/05/29
-utulek
+
 emilia-snapshot-properties -->
 
 # Projection matrices

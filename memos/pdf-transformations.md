@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 PDF transformations
 2023/05/26
-utulek
+
 emilia-snapshot-properties -->
 
 # PDF transformations

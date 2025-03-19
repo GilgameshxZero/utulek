@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Moments
 2023/05/31
-utulek
+
 emilia-snapshot-properties -->
 
 # Moments

@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Order statistics
 2023/05/17
-utulek
+
 emilia-snapshot-properties -->
 
 # Order statistics

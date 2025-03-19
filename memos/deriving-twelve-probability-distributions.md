@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Deriving twelve probability distributions
 2023/05/15
-utulek
+
 emilia-snapshot-properties -->
 
 # Deriving twelve probability distributions
