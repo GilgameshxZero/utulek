@@ -16,6 +16,8 @@ zstandard
 gdown
 selenium
 flask
+fonttools
+brotli
 
 # Style.
 pylint
