@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Bessel correction
 2023/06/01
-utulek
+
 emilia-snapshot-properties -->
 
 # Bessel correction
