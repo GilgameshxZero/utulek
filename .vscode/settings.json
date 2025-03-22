@@ -13,8 +13,6 @@
 		"*.vstemplate": "xml"
 	},
 
-	"markdown.styles": ["build/default.css"],
-
 	"python.defaultInterpreterPath": "",
 
 	"search.useIgnoreFiles": false,

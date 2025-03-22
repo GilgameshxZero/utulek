@@ -1,7 +1,7 @@
 <!-- emilia-snapshot-properties
 Six probability distribution inequalities
 2023/05/30
-
+utulek
 emilia-snapshot-properties -->
 
 # Six probability distribution inequalities
