@@ -30,7 +30,7 @@ lives lost in the volcanic collapse of Wily’s lab—but who to answer for it?
 
 </section><section>
 
-## What code does Iris run on?
+## On what code does Iris run?
 
 ```c++
 template <std::size_t INDEX>
@@ -52,7 +52,7 @@ Probably C++17. 尽然通过compiler能够算出Fibonacci数字！
 
 </section><section>
 
-Should Iris be the product of two ideals, $\alpha,\beta$, then she would be
+Should Iris be the product of two ideals, $A=(\alpha,(\alpha+\alpha\delta)/2),B=(\beta,(\beta+\beta\delta)/2),\delta=\sqrt{-5}$, then she would be
 
 $$\begin{aligned}
 (AB)&=(\alpha\beta, \frac{1}{2}(\alpha\beta+\alpha\beta\delta), \frac{1}{2}(\alpha\beta+\alpha\beta\delta), \frac{1}{4}(\alpha\beta-5\alpha\beta+2\alpha\beta\delta))\\
@@ -68,14 +68,14 @@ but also $\alpha\beta\in (AB)$, so it must be that $\alpha\beta/2\in (AB)$. Thus
 $$(\alpha\beta/2)\subseteq (AB)\subseteq(\alpha\beta/2)
 \tag{poggers}$$
 
-and hence $(AB)=(\alpha\beta/2)$ and is a principal ideal.
+and hence $(AB)=(\alpha\beta/2)$ and is a principal ideal. That’s pretty cute.
 
 </section><section>
 
 ## One might ask, what happens with long titles? Or what do I think of Iris’s thighs? Or why are there no right-aligned images?
 
-1. I cannot say for sure about the images.
-2. If I was Zero I’d cry too.
+1. I think they’re quite nice.
+2. I cannot say for sure about the images.
 
 &nbsp;|Emilia|Rem|Beatrice|Elsa
 -|-|-|-|-
@@ -85,18 +85,20 @@ Dress|4|3|4|5
 
 </section><section class="center">
 
-> **Theorem: Iris $\Leftrightarrow$ cute.**
+> **Theorem: $x\in\text{Iris}\implies x\in\text{cute}$.**
 >
-> For the forward direction, consider the contrapositive: If it is not cute, it cannot be Iris.
+> **Proof**: Take any $x\not\in\text{cute}$. Then it must be ugly. But nothing in $\text{Iris}$ is ugly. Thus the contrapositive is true and the original claim is as well. $\blacksquare$
+
+> **Theorem: 2D Maximum Subsquare $\Longleftrightarrow$ APSP**
 >
-> Consider any homomorphism $\phi:\text{Cuteness}\to\text{Iris}$. Surely, *non-trivial statement*, so we have that all $\phi$ operate on the entire domain, so that $\phi$ is injective.
-> 
-> The reverse directly is similar. $\blacksquare$
+> We know from Tamaki et al. [1998] that 2D Maximum Subarray reduces to APSP. Williams et al. [2016] shows the other direction for equivalence. Restriction to squares is not necessarily an easier problem, but iterating on diagonals shows that it satisfies a Min-Plus structure, which is well-known to be equivalent to APSP.
 
 </section>
 
 </section><section class="bottom right tangerine">
 
+You are awesome for coming to my presentation.
+For more, please visit <https://github.com/gilgameshxzero/silver> (experimental).
 Thank you.
 
 </section>
