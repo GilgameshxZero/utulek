@@ -1,5 +1,5 @@
 <link rel="stylesheet" href="../.vscode/default.css">
-<!-- <link rel="stylesheet" href="../silver/selective/silverine.css"> -->
+<link rel="stylesheet" href="../silver/selective/silverine.css">
 
 <input type="checkbox" class="silver-theme-toggle" />
 
