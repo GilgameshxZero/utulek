@@ -1,15 +1,11 @@
-#include <windows.h>
-#include <iostream>
+#include <rain.hpp>
 
-#include "map"
+#include <VersionHelpers.h>
+#include <tchar.h>
 
-#pragma comment(lib, "kernel32.lib")
-#pragma comment(lib, "user32.lib")
-#pragma comment(lib, "gdi32.lib")
-#pragma comment(lib, "winspool.lib")
-#pragma comment(lib, "comdlg32.lib")
-#pragma comment(lib, "advapi32.lib")
-#pragma comment(lib, "shell32.lib")
+#include <winioctl.h>
+
+#include <map>
 
 // Driver Name
 #define OLS_DRIVER_ID _T("WinRing0_1_2_0")
@@ -101,9 +97,6 @@ class Driver : public DriverManager {
 	BYTE gDllStatus = OLS_DLL_UNKNOWN_ERROR;
 	BYTE gDriverType = OLS_DRIVER_TYPE_UNKNOWN;
 };
-
-#include <VersionHelpers.h>
-#include <tchar.h>
 
 BOOL DriverManager::manage(
 	LPCTSTR DriverId,
@@ -607,13 +600,6 @@ class EmbeddedController {
 	BOOL status(BYTE flag);
 };
 
-#include <windows.h>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <sstream>
-
 EmbeddedController::EmbeddedController(
 	BYTE scPort,
 	BYTE dataPort,
@@ -830,40 +816,36 @@ BOOL EmbeddedController::status(BYTE flag) {
 	return FALSE;
 }
 
-#include <chrono>
-#include <thread>
-
-using namespace std;
-
 int target = 0x88;
 
 int main() {
-	EmbeddedController ec = EmbeddedController();
+	EmbeddedController ec =
+		EmbeddedController(102U, 98U, 0U, 5U, 4U);
+
+	// Making sure driver file loaded successfully
+	if (!ec.driverFileExist || !ec.driverLoaded) {
+		std::cout << "ERROR";
+		return 0;
+	}
 
 	std::thread setAndQuery([&]() {
+		using namespace Rain::Literal;
+
 		while (true) {
 			std::cout << int(ec.readByte(0x2D)) << ' '
+								<< int(ec.readByte(0x2E)) << ' '
+								<< int(ec.readByte(0x2F)) << ' '
+								<< int(ec.readByte(0x35)) << ' '
 								<< int(ec.readByte(0x36)) << std::endl;
 			ec.writeByte(0x2D, target);
 			std::this_thread::sleep_for(1s);
 		}
 	});
 
-	// Making sure driver file loaded successfully
-	if (ec.driverFileExist && ec.driverLoaded) {
-		// Your rest of code places in here
-		// ...
-
-		std::cout << "GOOD\n";
-		while (true) {
-			cin >> target;
-			cout << "SET " << target << '\n';
-		}
-
-		// Free up the resources at the end
-		ec.close();
-	} else {
-		std::cout << "BAD\n";
+	while (true) {
+		std::cin >> target;
+		std::cout << "SET " << target << '\n';
 	}
-	std::cout << "DONE";
+
+	ec.close();
 }
