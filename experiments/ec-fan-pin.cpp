@@ -838,7 +838,7 @@ int main() {
 								<< int(ec.readByte(0x35)) << ' '
 								<< int(ec.readByte(0x36)) << std::endl;
 			ec.writeByte(0x2D, target);
-			std::this_thread::sleep_for(1s);
+			std::this_thread::sleep_for(500ms);
 		}
 	});
 
