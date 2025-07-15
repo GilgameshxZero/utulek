@@ -8,6 +8,7 @@ dill
 requests
 py7zr
 python-dotenv
+lxml
 
 # Utility.
 magic-wormhole
