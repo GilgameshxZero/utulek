@@ -52,7 +52,7 @@ neural-tangents
 adversarial-robustness-toolbox
 
 # Tensorflow. Check platform/version/Python support before updating pin.
-tensorflow==2.16.1
+tensorflow==2.19.0; platform_system!="Windows"
 tensorflow-datasets
 tensorflow-probability
 tf-keras
