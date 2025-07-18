@@ -14,11 +14,11 @@ nvidia-cuda-nvrtc-cu12
 pynvml
 
 # Pytorch.
-# --extra-index-url https://download.pytorch.org/whl/cu118
-torch==2.3.0
+--extra-index-url https://download.pytorch.org/whl/cu129
+torch==2.0.1
 torchvision
 torchaudio
 
 # Jax.
 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-jax[cuda12]==0.4.28; platform_system!="Windows"
+jax[cuda12]==0.6.2; platform_system!="Windows"
