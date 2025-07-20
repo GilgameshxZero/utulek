@@ -44,7 +44,7 @@ PROJECT_BIN_DIR = $(BIN_DIR)$(PROJECT)^\
 
 COMPILER = cl /c
 COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include
-COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++17 /D _CONSOLE\
+COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++20 /D _CONSOLE\
 	/Fd$(PROJECT_OBJ_DIR)$(BIN).pdb /Fo$(PROJECT_OBJ_DIR)$(BIN).obj /Fp$(PROJECT_OBJ_DIR)$(BIN).pch\
 	/fp:fast /MP /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
 	/GS /W3 /WX- /wd4250 /wd4068 /sdl /diagnostics:column /EHsc /Gm- /nologo
@@ -137,7 +137,7 @@ PROJECT_BIN_DIR := $(BIN_DIR)$(PROJECT)/
 
 COMPILER ?= clang++
 COMPILER_FLAGS_INCLUDES :=  -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include
-COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++17 -pthread\
+COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++20 -pthread\
 	-Wall -Wextra -D_CONSOLE -masm=intel
 COMPILER_FLAGS_DEBUG := -D _DEBUG -g -O0
 COMPILER_FLAGS_RELEASE := -D NDEBUG -Ofast
