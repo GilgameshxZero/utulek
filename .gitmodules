@@ -4,3 +4,6 @@
 [submodule "silver"]
 	path = silver
 	url = ../silver.git
+[submodule "rustlings"]
+	path = rustlings
+	url = ../rustlings.git
