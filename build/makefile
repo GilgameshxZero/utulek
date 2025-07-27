@@ -9,7 +9,7 @@
 # BIN: name of output executable (default = PROJECT).
 # BUILD: 0 (default), 1, or 2, specifying the type of build.
 # ARCH: 64 (default) or 86, specifying the architecture to build for. There may be more options in the future.
-# ARGUMENTS: command-line arguments to pass to the executable to be run.
+# ARGS: command-line arguments to pass to the executable to be run.
 
 # Targets:
 # build (default): compile & link.
@@ -43,7 +43,7 @@ PROJECT_BIN = $(BIN_DIR)$(PROJECT)\$(BIN).exe
 PROJECT_BIN_DIR = $(BIN_DIR)$(PROJECT)^\
 
 COMPILER = cl /c
-COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include
+COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include /I $(ROOT_DIR)experiment
 COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++20 /D _CONSOLE\
 	/Fd$(PROJECT_OBJ_DIR)$(BIN).pdb /Fo$(PROJECT_OBJ_DIR)$(BIN).obj /Fp$(PROJECT_OBJ_DIR)$(BIN).pch\
 	/fp:fast /MP /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
@@ -100,7 +100,7 @@ _default: build
 build: $(PROJECT_BIN)
 # Build and run.
 run: build
-	@CD $(BIN_DIR) && $(PROJECT_BIN) $(ARGUMENTS)
+	@CD $(BIN_DIR)$(PROJECT) && $(BIN).exe $(ARGS)
 # Clean target removes all intermediates, but remakes the in.txt file.
 clean:
 	@IF EXIST $(BIN_DIR) RD /Q /S $(BIN_DIR)
@@ -136,7 +136,7 @@ PROJECT_BIN := $(BIN_DIR)$(PROJECT)/$(BIN)
 PROJECT_BIN_DIR := $(BIN_DIR)$(PROJECT)/
 
 COMPILER ?= clang++
-COMPILER_FLAGS_INCLUDES :=  -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include
+COMPILER_FLAGS_INCLUDES :=  -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include -I $(ROOT_DIR)\experiment
 COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++20 -pthread\
 	-Wall -Wextra -D_CONSOLE -masm=intel
 COMPILER_FLAGS_DEBUG := -D _DEBUG -g -O0
@@ -196,7 +196,7 @@ PROJECT_OBJS := $(addprefix $(PROJECT_OBJ_DIR), $(addsuffix .o,\
 _default: build
 build: $(PROJECT_BIN)
 run: build
-	@cd $(BIN_DIR) && ./$(PROJECT_BIN) $(ARGUMENTS)
+	@cd $(BIN_DIR)$(PROJECT) && ./$(BIN) $(ARGS)
 # Clean, but recreate in.txt file.
 clean:
 	@rm -rf $(OBJ_DIR) $(BIN_DIR)
