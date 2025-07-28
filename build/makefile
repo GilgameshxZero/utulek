@@ -4,17 +4,22 @@
 # /MP, while gmake compiles separately with -jN.
 
 # Variables:
-# PROJECT: name of project; path to files from repository root.
-# SOURCES: * (default), or a list of filenames in the project directory.
+# PROJECT: name of project; path to files from repository root
+# 	(default = experiment).
 # BIN: name of output executable (default = PROJECT).
+# SOURCES: a list of filenames in the project directory
+# 	(default = * or BIN.cpp).
 # BUILD: 0 (default), 1, or 2, specifying the type of build.
-# ARCH: 64 (default) or 86, specifying the architecture to build for. There may be more options in the future.
+# ARCH: 64 (default) or 86, specifying the architecture to build for.
+# 	There may be more options in the future.
 # ARGS: command-line arguments to pass to the executable to be run.
 
 # Targets:
 # build (default): compile & link.
 # run: compile, link, and run.
 # clean: remove intermediates directory.
+
+# On Windows, DEPENDENCIES enumerates all header file directories.
 
 # Default target defined before any "fake" targets.
 __default: _default
@@ -25,6 +30,16 @@ ifdef MAKEDIR: # gmake: false; nmake: unused target
 # ------------------------------------------------------------------------------
 
 # nmake specific commands.
+!IFNDEF PROJECT
+PROJECT = experiment
+!ENDIF
+!IFNDEF BIN
+BIN = $(PROJECT)
+!ENDIF
+!IFNDEF SOURCES
+SOURCES = $(BIN).cpp
+!ENDIF
+
 # The directory structure here must be consistent with macro substitution
 # structure utilized later.
 ROOT_DIR = ..^\
@@ -32,20 +47,16 @@ OBJ_DIR = $(ROOT_DIR)obj^\
 BIN_DIR = $(ROOT_DIR)bin^\
 PROJECT_OBJ_DIR = $(OBJ_DIR)$(PROJECT)^\
 PROJECT_SRC_DIR = $(ROOT_DIR)$(PROJECT)^\
-!IFNDEF SOURCES
-SOURCES = *.cpp
-!ENDIF
-!IFNDEF BIN
-# For the repository, executable filename is not the project name.
-BIN = $(PROJECT)
-!ENDIF
 PROJECT_BIN = $(BIN_DIR)$(PROJECT)\$(BIN).exe
 PROJECT_BIN_DIR = $(BIN_DIR)$(PROJECT)^\
+DEPENDENCIES = $(DEPENDENCIES) "$(ROOT_DIR)experiment\$(SOURCES)-assets\*"
 
 COMPILER = cl /c
-COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include /I $(ROOT_DIR)experiment
+COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include\
+	/I $(ROOT_DIR)experiment
 COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++20 /D _CONSOLE\
-	/Fd$(PROJECT_OBJ_DIR)$(BIN).pdb /Fo$(PROJECT_OBJ_DIR)$(BIN).obj /Fp$(PROJECT_OBJ_DIR)$(BIN).pch\
+	/Fd$(PROJECT_OBJ_DIR)$(BIN).pdb /Fo$(PROJECT_OBJ_DIR)$(BIN).obj\
+	/Fp$(PROJECT_OBJ_DIR)$(BIN).pch\
 	/fp:fast /MP /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
 	/GS /W3 /WX- /wd4250 /wd4068 /sdl /diagnostics:column /EHsc /Gm- /nologo
 COMPILER_FLAGS_DEBUG = /D _DEBUG /MDd /Od /RTC1 /JMC /ZI
@@ -100,6 +111,7 @@ _default: build
 build: $(PROJECT_BIN)
 # Build and run.
 run: build
+	@ECHO Running $(PROJECT_BIN)...
 	@CD $(BIN_DIR)$(PROJECT) && $(BIN).exe $(ARGS)
 # Clean target removes all intermediates, but remakes the in.txt file.
 clean:
@@ -113,9 +125,12 @@ DBLSUB_DEP_SRC_DIR_TO_OBJ_DIR = $(**:..\=..\obj\)
 $(PROJECT_BIN): $(PROJECT_SRC_DIR)$(SOURCES)
 	@IF NOT EXIST $(PROJECT_BIN_DIR) MD $(PROJECT_BIN_DIR)
 	@IF NOT EXIST $(PROJECT_OBJ_DIR) MD $(PROJECT_OBJ_DIR)
+	@ECHO Building $(PROJECT_BIN)...
 	@$(COMPILER) $(COMPILER_FLAGS) $?
-	@ECHO $(PROJECT_BIN)
+	@ECHO Linking $(PROJECT_BIN)...
 	@$(LINKER) $(LINKER_FLAGS) $(DBLSUB_DEP_SRC_DIR_TO_OBJ_DIR:.cpp=.obj)
+
+$(PROJECT_SRC_DIR)$(SOURCES): $(DEPENDENCIES)
 
 # ------------------------------------------------------------------------------
 !else
@@ -123,6 +138,10 @@ else
 # ------------------------------------------------------------------------------
 
 # GNU make (gmake) specific commands.
+PROJECT ?= experiment
+BIN ?= $(PROJECT)
+SOURCES ?= $(BIN).cpp
+
 # For usage of bash commands like `read`.
 SHELL := /bin/bash
 ROOT_DIR := ../
@@ -130,13 +149,12 @@ OBJ_DIR := $(ROOT_DIR)obj/
 BIN_DIR := $(ROOT_DIR)bin/
 PROJECT_OBJ_DIR := $(OBJ_DIR)$(PROJECT)/
 PROJECT_SRC_DIR := $(ROOT_DIR)$(PROJECT)/
-SOURCES ?= *.cpp
-BIN ?= $(PROJECT)
 PROJECT_BIN := $(BIN_DIR)$(PROJECT)/$(BIN)
 PROJECT_BIN_DIR := $(BIN_DIR)$(PROJECT)/
 
 COMPILER ?= clang++
-COMPILER_FLAGS_INCLUDES :=  -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include -I $(ROOT_DIR)\experiment
+COMPILER_FLAGS_INCLUDES := -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include\
+	-I $(ROOT_DIR)\experiment
 COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++20 -pthread\
 	-Wall -Wextra -D_CONSOLE -masm=intel
 COMPILER_FLAGS_DEBUG := -D _DEBUG -g -O0
