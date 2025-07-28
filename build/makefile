@@ -4,11 +4,11 @@
 # /MP, while gmake compiles separately with -jN.
 
 # Variables:
-# PROJECT: name of project; path to files from repository root
+# PROJ: a repository can have multiple *project*s, each in their own directory
 # 	(default = experiment).
-# BIN: name of output executable (default = PROJECT).
-# SOURCES: a list of filenames in the project directory
-# 	(default = * or BIN.cpp).
+# BIN: name of the project; a project may have multiple (default = PROJ).
+# SRC: target filenames (can be multiple) to link, starting from the project
+# 	directory (default = BIN.cpp).
 # BUILD: 0 (default), 1, or 2, specifying the type of build.
 # ARCH: 64 (default) or 86, specifying the architecture to build for.
 # 	There may be more options in the future.
@@ -19,7 +19,7 @@
 # run: compile, link, and run.
 # clean: remove intermediates directory.
 
-# On Windows, DEPENDENCIES enumerates all header file directories.
+# On Windows, DEPS enumerates all header file directories.
 
 # Default target defined before any "fake" targets.
 __default: _default
@@ -29,74 +29,91 @@ ifdef MAKEDIR: # gmake: false; nmake: unused target
 !ifdef MAKEDIR # gmake: not seen; nmake: true
 # ------------------------------------------------------------------------------
 
+ROOT_DIR = ..^\
+
 # nmake specific commands.
-!IFNDEF PROJECT
-PROJECT = experiment
+!IFNDEF PROJ
+PROJ_NAME = experiment
+!ELSE
+PROJ_NAME = $(PROJ)
 !ENDIF
 !IFNDEF BIN
-BIN = $(PROJECT)
+BIN_NAME = $(PROJ_NAME)
+!ELSE
+BIN_NAME = $(BIN)
 !ENDIF
-!IFNDEF SOURCES
-SOURCES = $(BIN).cpp
+!IFNDEF SRC
+SRC_NAME = $(BIN_NAME).cpp
+!ELSE
+SRC_NAME = $(SRC)
+!ENDIF
+!IFNDEF BUILD
+BUILD_NAME = debug
+!ELSE IF $(BUILD) == 2
+BUILD_NAME = instrument
+!ELSE IF $(BUILD) == 1
+BUILD_NAME = release
+!ELSE
+BUILD_NAME = debug
+!ENDIF
+!IFNDEF ARCH
+ARCH = 64
+!ENDIF
+# Makefile fails if directory doesn't exist.
+!IF [IF EXIST $(ROOT_DIR)experiment\$(BIN_NAME).cpp-assets\ EXIT /B 1] == 1
+INCL = $(INCL) $(ROOT_DIR)experiment\$(BIN_NAME).cpp-assets\*
 !ENDIF
 
 # The directory structure here must be consistent with macro substitution
 # structure utilized later.
-ROOT_DIR = ..^\
 OBJ_DIR = $(ROOT_DIR)obj^\
 BIN_DIR = $(ROOT_DIR)bin^\
-PROJECT_OBJ_DIR = $(OBJ_DIR)$(PROJECT)^\
-PROJECT_SRC_DIR = $(ROOT_DIR)$(PROJECT)^\
-PROJECT_BIN = $(BIN_DIR)$(PROJECT)\$(BIN).exe
-PROJECT_BIN_DIR = $(BIN_DIR)$(PROJECT)^\
-DEPENDENCIES = $(DEPENDENCIES) "$(ROOT_DIR)experiment\$(SOURCES)-assets\*"
+PROJ_OBJ_DIR = $(OBJ_DIR)$(PROJ_NAME)^\
+PROJ_SRC_DIR = $(ROOT_DIR)$(PROJ_NAME)^\
+PROJ_BIN = $(BIN_DIR)$(PROJ_NAME)\$(BIN_NAME).$(BUILD_NAME).exe
+PROJ_BIN_DIR = $(BIN_DIR)$(PROJ_NAME)^\
 
 COMPILER = cl /c
 COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include\
 	/I $(ROOT_DIR)experiment
 COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++20 /D _CONSOLE\
-	/Fd$(PROJECT_OBJ_DIR)$(BIN).pdb /Fo$(PROJECT_OBJ_DIR)$(BIN).obj\
-	/Fp$(PROJECT_OBJ_DIR)$(BIN).pch\
+	/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\$(BIN_NAME).pdb\
+	/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\ \
+	/Fp$(PROJ_OBJ_DIR)$(BUILD_NAME)\$(BIN_NAME).pch\
 	/fp:fast /MP /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
 	/GS /W3 /WX- /wd4250 /wd4068 /sdl /diagnostics:column /EHsc /Gm- /nologo
 COMPILER_FLAGS_DEBUG = /D _DEBUG /MDd /Od /RTC1 /JMC /ZI
 COMPILER_FLAGS_RELEASE = /D NDEBUG /MT /O2 /Oi /GL /Gy /Zi
-COMPILER_FLAGS_INSTRUMENT = $(COMPILER_FLAGS_DEBUG) /Fa$(PROJECT_OBJ_DIR)
+COMPILER_FLAGS_INSTRUMENT = $(COMPILER_FLAGS_DEBUG) /Fa$(PROJ_OBJ_DIR)
 COMPILER_FLAGS_64 =
 COMPILER_FLAGS_86 =
 
 LINKER = link
 LINKER_FLAGS_LIBRARIES =
-LINKER_FLAGS_COMMON = $(LINKER_FLAGS_LIBRARIES) /OUT:$(PROJECT_BIN)\
-	/PDB:$(PROJECT_OBJ_DIR)$(BIN).pdb /ILK:$(PROJECT_OBJ_DIR)$(BIN).ilk\
+LINKER_FLAGS_COMMON = $(LINKER_FLAGS_LIBRARIES) /OUT:$(PROJ_BIN)\
+	/PDB:$(PROJ_OBJ_DIR)$(BIN_NAME).$(BUILD_NAME).pdb\
+	/ILK:$(PROJ_OBJ_DIR)$(BIN_NAME).$(BUILD_NAME).ilk\
 	/MANIFESTUAC:"level='asInvoker' uiAccess='false'"\
-	/MANIFESTFILE:$(PROJECT_OBJ_DIR)$(BIN).exe.intermediate.manifest\
-	/LTCGOUT:$(PROJECT_OBJ_DIR)$(BIN).iobj /SUBSYSTEM:CONSOLE /NOLOGO
+	/MANIFESTFILE:$(PROJ_OBJ_DIR)$(BIN_NAME).$(BUILD_NAME).exe.intermediate.manifest\
+	/LTCGOUT:$(PROJ_OBJ_DIR)$(BIN_NAME).$(BUILD_NAME).iobj\
+	/SUBSYSTEM:CONSOLE /NOLOGO
 LINKER_FLAGS_DEBUG = /DEBUG
 LINKER_FLAGS_RELEASE = /INCREMENTAL:NO /OPT:ICF /OPT:REF /LTCG:incremental
 LINKER_FLAGS_INSTRUMENT = $(LINKER_FLAGS_DEBUG)
 LINKER_FLAGS_64 = /MACHINE:x64
 LINKER_FLAGS_86 = /MACHINE:x86
 
-# BUILD can be either 0 (default; debug), 1 (release), or 2 (instrument).
-!IFNDEF BUILD
-BUILD = 0
-!ENDIF
-!IF $(BUILD) == 1
-COMPILER_FLAGS = $(COMPILER_FLAGS_COMMON) $(COMPILER_FLAGS_RELEASE)
-LINKER_FLAGS = $(LINKER_FLAGS_COMMON) $(LINKER_FLAGS_RELEASE)
-!ELSE IF $(BUILD) == 2
+!IF "$(BUILD_NAME)" == "instrument"
 COMPILER_FLAGS = $(COMPILER_FLAGS_COMMON) $(COMPILER_FLAGS_INSTRUMENT)
 LINKER_FLAGS = $(LINKER_FLAGS_COMMON) $(LINKER_FLAGS_INSTRUMENT)
+!ELSE IF "$(BUILD_NAME)" == "release"
+COMPILER_FLAGS = $(COMPILER_FLAGS_COMMON) $(COMPILER_FLAGS_RELEASE)
+LINKER_FLAGS = $(LINKER_FLAGS_COMMON) $(LINKER_FLAGS_RELEASE)
 !ELSE
 COMPILER_FLAGS = $(COMPILER_FLAGS_COMMON) $(COMPILER_FLAGS_DEBUG)
 LINKER_FLAGS = $(LINKER_FLAGS_COMMON) $(LINKER_FLAGS_DEBUG)
 !ENDIF
 
-# ARCH can either be 64 or 86.
-!IFNDEF ARCH
-ARCH = 64
-!ENDIF
 !IF $(ARCH) == 86
 COMPILER_FLAGS = $(COMPILER_FLAGS) $(COMPILER_FLAGS_86)
 LINKER_FLAGS = $(LINKER_FLAGS) $(LINKER_FLAGS_86)
@@ -108,29 +125,37 @@ LINKER_FLAGS = $(LINKER_FLAGS) $(LINKER_FLAGS_64)
 # Real targets.
 # Default/build target only compiles and links, but does not run.
 _default: build
-build: $(PROJECT_BIN)
+build: $(PROJ_BIN)
 # Build and run.
 run: build
-	@ECHO Running $(PROJECT_BIN)...
-	@CD $(BIN_DIR)$(PROJECT) && $(BIN).exe $(ARGS)
+	@ECHO Running $(PROJ_BIN)...
+	@CD $(BIN_DIR)$(PROJ_NAME) && $(BIN_NAME).$(BUILD_NAME).exe $(ARGS)
 # Clean target removes all intermediates, but remakes the in.txt file.
 clean:
+	@ECHO Cleaning...
 	@IF EXIST $(BIN_DIR) RD /Q /S $(BIN_DIR)
 	@IF EXIST $(OBJ_DIR) RD /Q /S $(OBJ_DIR)
 
 # Build target.
-# Define special macro to enable double-substitution.
-DBLSUB_DEP_SRC_DIR_TO_OBJ_DIR = $(**:..\=..\obj\)
 # First compile all outdated files (with /MP), then link everything together.
-$(PROJECT_BIN): $(PROJECT_SRC_DIR)$(SOURCES)
-	@IF NOT EXIST $(PROJECT_BIN_DIR) MD $(PROJECT_BIN_DIR)
-	@IF NOT EXIST $(PROJECT_OBJ_DIR) MD $(PROJECT_OBJ_DIR)
-	@ECHO Building $(PROJECT_BIN)...
+# Need additional variable to parse dependencies correctly.
+_PROJ_BIN_DEPS = $(patsubsti %,$(PROJ_SRC_DIR)\%,$(SRC_NAME))
+$(PROJ_BIN): $(_PROJ_BIN_DEPS)
+	@FOR %%I IN ($?) DO @ECHO Outdated: %%I.
+	@IF NOT EXIST $(PROJ_BIN_DIR) MD $(PROJ_BIN_DIR)
+	@IF NOT EXIST $(PROJ_OBJ_DIR) MD $(PROJ_OBJ_DIR)
+	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME) MD $(PROJ_OBJ_DIR)$(BUILD_NAME)
+	@ECHO Building $(PROJ_BIN)...
 	@$(COMPILER) $(COMPILER_FLAGS) $?
-	@ECHO Linking $(PROJECT_BIN)...
-	@$(LINKER) $(LINKER_FLAGS) $(DBLSUB_DEP_SRC_DIR_TO_OBJ_DIR:.cpp=.obj)
+	@ECHO Linking $(PROJ_BIN)...
+# It's unclear why some of the wildcards need to be escaped, but it works.
+	@$(LINKER) $(LINKER_FLAGS) $(patsubsti %.cpp,%.obj,\
+		$(patsubsti $(PROJ_SRC_DIR)\%,$(PROJ_OBJ_DIR)$(BUILD_NAME)\\%,$**))
 
-$(PROJECT_SRC_DIR)$(SOURCES): $(DEPENDENCIES)
+# Mark source files as out of date if any headers have changed.
+$(_PROJ_BIN_DEPS): $(INCL)
+	@FOR %%I IN ($?) DO @ECHO Outdated: %%I.
+	@$(MAKE) /$(MAKEFLAGS) /T $(_PROJ_BIN_DEPS)
 
 # ------------------------------------------------------------------------------
 !else
@@ -139,18 +164,18 @@ else
 
 # GNU make (gmake) specific commands.
 PROJECT ?= experiment
-BIN ?= $(PROJECT)
-SOURCES ?= $(BIN).cpp
+BIN_NAME ?= $(PROJ_NAME)
+SRC_NAME ?= $(BIN_NAME).cpp
 
 # For usage of bash commands like `read`.
 SHELL := /bin/bash
 ROOT_DIR := ../
 OBJ_DIR := $(ROOT_DIR)obj/
 BIN_DIR := $(ROOT_DIR)bin/
-PROJECT_OBJ_DIR := $(OBJ_DIR)$(PROJECT)/
-PROJECT_SRC_DIR := $(ROOT_DIR)$(PROJECT)/
-PROJECT_BIN := $(BIN_DIR)$(PROJECT)/$(BIN)
-PROJECT_BIN_DIR := $(BIN_DIR)$(PROJECT)/
+PROJECT_OBJ_DIR := $(OBJ_DIR)$(PROJ_NAME)/
+PROJECT_SRC_DIR := $(ROOT_DIR)$(PROJ_NAME)/
+PROJ_BIN := $(BIN_DIR)$(PROJ_NAME)/$(BIN_NAME)
+PROJ_BIN_DIR := $(BIN_DIR)$(PROJ_NAME)/
 
 COMPILER ?= clang++
 COMPILER_FLAGS_INCLUDES := -I $(ROOT_DIR)rain/include -I $(ROOT_DIR)include\
@@ -159,7 +184,7 @@ COMPILER_FLAGS_COMMON := $(COMPILER_FLAGS_INCLUDES) -std=c++20 -pthread\
 	-Wall -Wextra -D_CONSOLE -masm=intel
 COMPILER_FLAGS_DEBUG := -D _DEBUG -g -O0
 COMPILER_FLAGS_RELEASE := -D NDEBUG -Ofast
-COMPILER_FLAGS_INSTRUMENT := $(COMPILER_FLAGS_DEBUG) /Fa$(PROJECT_OBJ_DIR)
+COMPILER_FLAGS_INSTRUMENT := $(COMPILER_FLAGS_DEBUG) /Fa$(PROJ_OBJ_DIR)
 COMPILER_FLAGS_64 := -m64
 COMPILER_FLAGS_86 := -m32
 
@@ -179,7 +204,6 @@ ifneq ($(shell uname -s), Darwin)
 	LINKER_FLAGS_LIBRARIES := $(LINKER_FLAGS_LIBRARIES) -lstdc++fs
 endif
 
-BUILD ?= 0
 ifeq ($(BUILD), 1)
 	COMPILER_FLAGS := $(COMPILER_FLAGS_COMMON) $(COMPILER_FLAGS_RELEASE)
 	LINKER_FLAGS := $(LINKER_FLAGS_COMMON) $(LINKER_FLAGS_RELEASE)
@@ -204,23 +228,23 @@ endif
 .SECONDEXPANSION:
 # Keep intermediate and output files.
 # Introduce list of project object intermediates parsed from the source
-# directory with SOURCES.
-PROJECT_OBJS := $(addprefix $(PROJECT_OBJ_DIR), $(addsuffix .o,\
-	$(basename $(notdir $(wildcard $(PROJECT_SRC_DIR)$(SOURCES))))))
-.SECONDARY: $(PROJECT_BIN) $(PROJECT_OBJS)
+# directory with SRC_NAME.
+PROJECT_OBJS := $(addprefix $(PROJ_OBJ_DIR), $(addsuffix .o,\
+	$(basename $(notdir $(wildcard $(PROJ_SRC_DIR)$(SRC_NAME))))))
+.SECONDARY: $(PROJ_BIN) $(PROJECT_OBJS)
 
 # Ensure files with the same name as fake targets do not trigger.
 .PHONY: __default _default build run clean
 _default: build
-build: $(PROJECT_BIN)
+build: $(PROJ_BIN)
 run: build
-	@cd $(BIN_DIR)$(PROJECT) && ./$(BIN) $(ARGS)
+	@cd $(BIN_DIR)$(PROJ_NAME) && ./$(BIN_NAME) $(ARGS)
 # Clean, but recreate in.txt file.
 clean:
 	@rm -rf $(OBJ_DIR) $(BIN_DIR)
 
 # Link rule.
-$(PROJECT_BIN): $(BIN_DIR)% : $(PROJECT_OBJS)
+$(PROJ_BIN): $(BIN_DIR)% : $(PROJECT_OBJS)
 	@mkdir -p $(@D)
 	@echo $@
 	@$(LINKER) $(PROJECT_OBJS) $(LINKER_FLAGS) -o $@
