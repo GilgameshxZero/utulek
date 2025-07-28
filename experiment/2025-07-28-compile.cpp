@@ -3,8 +3,12 @@
 
 // Specific header folder is not included because Intellisense would be hard.
 #include <2025-07-28-compile.cpp-assets/sub.hpp>
+#include <version.hpp>
+
+#include <iostream>
 
 int main() {
+	std::cout << "Build: " << UTULEK_VERSION_BUILD << ".\n";
 	foo();
 	return 0;
 }

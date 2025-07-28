@@ -28,9 +28,8 @@ ifdef MAKEDIR: # gmake: false; nmake: unused target
 !ifdef MAKEDIR # gmake: not seen; nmake: true
 # ------------------------------------------------------------------------------
 
-ROOT_DIR = ..^\
-
 # nmake specific commands.
+ROOT_DIR = ..^\
 REPO_NAME = utulek
 !IFNDEF PROJ
 PROJ_NAME = experiment
