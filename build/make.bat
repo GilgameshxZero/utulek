@@ -8,5 +8,6 @@ FOR /F "delims=" %%I IN ('DIR /B /S /AD ..\rain\include ..\include') DO (
 	SET "INCL=%%I\* !INCL!"
 )
 
-nmake /C %*
+@REM Suppresses CMD terminate prompt.
+nmake /C %* || CALL;
 ENDLOCAL
