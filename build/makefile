@@ -31,6 +31,7 @@ ifdef MAKEDIR: # gmake: false; nmake: unused target
 ROOT_DIR = ..^\
 
 # nmake specific commands.
+REPO_NAME = utulek
 !IFNDEF PROJ
 PROJ_NAME = experiment
 !ELSE
@@ -65,12 +66,13 @@ INCL = $(INCL) $(ROOT_DIR)experiment\$(BIN_NAME).cpp-assets\*
 
 # The directory structure here must be consistent with macro substitution
 # structure utilized later.
-OBJ_DIR = $(ROOT_DIR)obj^\
 BIN_DIR = $(ROOT_DIR)bin^\
-PROJ_OBJ_DIR = $(OBJ_DIR)$(PROJ_NAME)^\
-PROJ_SRC_DIR = $(ROOT_DIR)$(PROJ_NAME)^\
 PROJ_BIN = $(BIN_DIR)$(PROJ_NAME)\$(BIN_NAME).$(BUILD_NAME).x$(ARCH).exe
 PROJ_BIN_DIR = $(BIN_DIR)$(PROJ_NAME)^\
+OBJ_DIR = $(ROOT_DIR)obj^\
+PROJ_OBJ_DIR = $(OBJ_DIR)$(PROJ_NAME)^\
+PROJ_SRC_DIR = $(ROOT_DIR)$(PROJ_NAME)^\
+PROJ_SRC = $(patsubsti %,$(PROJ_SRC_DIR)\%,$(SRC_NAME))
 
 COMPILER = cl /c
 COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include\
@@ -124,7 +126,8 @@ LINKER_FLAGS = $(LINKER_FLAGS) $(LINKER_FLAGS_64)
 # Real targets.
 # Default/build target only compiles and links, but does not run.
 _default: build
-build: $(PROJ_BIN)
+# Ordering is important so that version is updated first.
+build: version.build.txt $(PROJ_BIN)
 # Build and run.
 run: build
 	@ECHO Running $(PROJ_BIN)...
@@ -135,13 +138,18 @@ clean:
 	@ECHO Cleaning...
 	@IF EXIST $(BIN_DIR) RD /Q /S $(BIN_DIR)
 	@IF EXIST $(OBJ_DIR) RD /Q /S $(OBJ_DIR)
+# Updates version if any project dependency has changed.
+# Mark files as up-to-date after.
+# Order dependencies so that output is ordered; not super important.
+version.build.txt: $(INCL) $(PROJ_SRC)
+	@FOR %%I IN ($?) DO @ECHO Outdated: %%I.
+	@version.bat $(uppercase $(REPO_NAME))
+	@$(MAKE) /$(MAKEFLAGS) /T version.build.txt
 
 # Build target.
 # First compile all outdated files (with /MP), then link everything together.
 # Need additional variable to parse dependencies correctly.
-_PROJ_BIN_DEPS = $(patsubsti %,$(PROJ_SRC_DIR)\%,$(SRC_NAME))
-$(PROJ_BIN): $(_PROJ_BIN_DEPS)
-	@FOR %%I IN ($?) DO @ECHO Outdated: %%I.
+$(PROJ_BIN): $(PROJ_SRC)
 	@IF NOT EXIST $(PROJ_BIN_DIR) MD $(PROJ_BIN_DIR)
 	@IF NOT EXIST $(PROJ_OBJ_DIR) MD $(PROJ_OBJ_DIR)
 	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME) MD $(PROJ_OBJ_DIR)$(BUILD_NAME)
@@ -155,9 +163,7 @@ $(PROJ_BIN): $(_PROJ_BIN_DEPS)
 		$(patsubsti $(PROJ_SRC_DIR)\%,$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\\%,$**))
 
 # Mark source files as out of date if any headers have changed.
-$(_PROJ_BIN_DEPS): $(INCL)
-	@FOR %%I IN ($?) DO @ECHO Outdated: %%I.
-	@$(MAKE) /$(MAKEFLAGS) /T $(_PROJ_BIN_DEPS)
+$(PROJ_SRC): $(INCL)
 
 # ------------------------------------------------------------------------------
 !else
