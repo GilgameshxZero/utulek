@@ -1,3 +1,5 @@
+#include <rain.hpp>
+
 #include <iostream>
 
 void foo() {

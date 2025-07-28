@@ -1,7 +1,8 @@
 # GNU make (gmake) & nmake shared makefile.
 # Conditional logic implemented with differing end-of-line comment syntax.
 # To enable multithreaded compilation, nmake compiles all files together with
-# /MP, while gmake compiles separately with -jN.
+# 	/MP, while gmake compiles separately with -jN.
+# Files are pre-compiled with pch.cpp.
 
 # Variables:
 # PROJ: a repository can have multiple *project*s, each in their own directory
@@ -12,6 +13,7 @@
 # BUILD: 0 (default), 1, or 2, specifying the type of build.
 # ARCH: 64 (default) or 86, specifying the architecture to build for. The
 # 	environment may need to be initialized accordingly (e.g. for cl.exe).
+# PCH: 0 or 1 (default), whether or not to use precompiled pch.cpp
 # ARGS: command-line arguments to pass to the executable to be run.
 # INCL: set from caller on Windows, enumerates header file directory wildcards.
 
@@ -58,6 +60,9 @@ BUILD_NAME = debug
 !IFNDEF ARCH
 ARCH = 64
 !ENDIF
+!IFNDEF PCH
+PCH = 1
+!ENDIF
 # Makefile fails if directory doesn't exist.
 !IF [IF EXIST $(ROOT_DIR)experiment\$(BIN_NAME).cpp-assets\ EXIT /B 1] == 1
 INCL = $(INCL) $(ROOT_DIR)experiment\$(BIN_NAME).cpp-assets\*
@@ -77,9 +82,7 @@ COMPILER = cl /c
 COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include\
 	/I $(ROOT_DIR)experiment
 COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++20 /D _CONSOLE\
-	/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb\
-	/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\ \
-	/Fp$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pch\
+	/Fp$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pch\
 	/fp:fast /MP /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
 	/GS /W3 /WX- /wd4250 /wd4068 /sdl /diagnostics:column /EHsc /Gm- /nologo
 COMPILER_FLAGS_DEBUG = /D _DEBUG /MDd /Od /RTC1 /JMC /ZI
@@ -139,11 +142,22 @@ clean:
 	@IF EXIST $(OBJ_DIR) RD /Q /S $(OBJ_DIR)
 # Updates version if any project dependency has changed.
 # Mark files as up-to-date after.
+# Updated version may not be propagated until clean.
 # Order dependencies so that output is ordered; not super important.
-version.build.txt: $(INCL) $(PROJ_SRC)
+version.build.txt: $(INCL) $(PROJ_SRC_DIR)pch.cpp $(PROJ_SRC)
 	@FOR %%I IN ($?) DO @ECHO Outdated: %%I.
 	@version.bat $(uppercase $(REPO_NAME))
 	@$(MAKE) /$(MAKEFLAGS) /T version.build.txt
+# Precompiled headers.
+$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pch: $(PROJ_SRC_DIR)pch.cpp
+	@IF NOT EXIST $(PROJ_OBJ_DIR) MD $(PROJ_OBJ_DIR)
+	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME) MD $(PROJ_OBJ_DIR)$(BUILD_NAME)
+	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\
+		MD $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)
+	@$(COMPILER) $(COMPILER_FLAGS) /Yc\
+		/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pdb\
+		/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.obj $(PROJ_SRC_DIR)pch.cpp
+$(PROJ_SRC_DIR)pch.cpp: $(INCL)
 
 # Build target.
 # First compile all outdated files (with /MP), then link everything together.
@@ -155,14 +169,32 @@ $(PROJ_BIN): $(PROJ_SRC)
 	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\
 		MD $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)
 	@ECHO Building $(PROJ_BIN)...
-	@$(COMPILER) $(COMPILER_FLAGS) $?
+!IF $(PCH) == 0
+	@$(COMPILER) $(COMPILER_FLAGS)\
+		/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb\
+		/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\ \
+		$?
+!ELSE
+# PDB and IDB should be derived from the PCH versions.
+	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb\
+		CP $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pdb\
+			$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb
+	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).idb\
+		CP $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.idb\
+			$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).idb
+	@$(COMPILER) $(COMPILER_FLAGS)\
+		/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb\
+		/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\ \
+		/Yu"rain.hpp" $?
+!ENDIF
 	@ECHO Linking $(PROJ_BIN)...
 # It's unclear why some of the wildcards need to be escaped, but it works.
-	@$(LINKER) $(LINKER_FLAGS) $(patsubsti %.cpp,%.obj,\
+	@$(LINKER) $(LINKER_FLAGS) $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.obj\
+		$(patsubsti %.cpp,%.obj,\
 		$(patsubsti $(PROJ_SRC_DIR)\%,$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\\%,$**))
 
 # Mark source files as out of date if any headers have changed.
-$(PROJ_SRC): $(INCL)
+$(PROJ_SRC): $(INCL) $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pch
 
 # ------------------------------------------------------------------------------
 !else
