@@ -1,5 +1,6 @@
 @REM Increments build version number at compile-time, and updates the version
-@REM number into all relevant files for compilation
+@REM number into all relevant files for compilation. Created files are not
+@REM ignored to preserve build "completeness", even though it is redundant.
 @ECHO OFF
 @REM LF newline variable.
 (SET \n=^
