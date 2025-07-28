@@ -27,7 +27,7 @@
 				"BIN=${fileBasenameNoExtension}"
 			],
 			"problemMatcher": ["$gcc"],
-			"windows": { "command": "nmake", "problemMatcher": ["$msCompile"] }
+			"windows": { "problemMatcher": ["$msCompile"] }
 		},
 		{
 			/* Build the open file in debug mode. */
@@ -45,7 +45,7 @@
 				"ARCH=86"
 			],
 			"problemMatcher": ["$gcc"],
-			"windows": { "command": "nmake", "problemMatcher": ["$msCompile"] }
+			"windows": { "problemMatcher": ["$msCompile"] }
 		},
 		{
 			/* Build the open file in release mode. */
@@ -63,7 +63,7 @@
 				"BUILD=1"
 			],
 			"problemMatcher": ["$gcc"],
-			"windows": { "command": "nmake", "problemMatcher": ["$msCompile"] }
+			"windows": { "problemMatcher": ["$msCompile"] }
 		},
 		{
 			/* Build the open file in release mode. */
@@ -82,7 +82,7 @@
 				"ARCH=86"
 			],
 			"problemMatcher": ["$gcc"],
-			"windows": { "command": "nmake", "problemMatcher": ["$msCompile"] }
+			"windows": { "problemMatcher": ["$msCompile"] }
 		}
 	]
 }

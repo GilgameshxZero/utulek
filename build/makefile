@@ -10,16 +10,15 @@
 # SRC: target filenames (can be multiple) to link, starting from the project
 # 	directory (default = BIN.cpp).
 # BUILD: 0 (default), 1, or 2, specifying the type of build.
-# ARCH: 64 (default) or 86, specifying the architecture to build for.
-# 	There may be more options in the future.
+# ARCH: 64 (default) or 86, specifying the architecture to build for. The
+# 	environment may need to be initialized accordingly (e.g. for cl.exe).
 # ARGS: command-line arguments to pass to the executable to be run.
+# INCL: set from caller on Windows, enumerates header file directory wildcards.
 
 # Targets:
 # build (default): compile & link.
 # run: compile, link, and run.
 # clean: remove intermediates directory.
-
-# On Windows, DEPS enumerates all header file directories.
 
 # Default target defined before any "fake" targets.
 __default: _default
@@ -70,16 +69,16 @@ OBJ_DIR = $(ROOT_DIR)obj^\
 BIN_DIR = $(ROOT_DIR)bin^\
 PROJ_OBJ_DIR = $(OBJ_DIR)$(PROJ_NAME)^\
 PROJ_SRC_DIR = $(ROOT_DIR)$(PROJ_NAME)^\
-PROJ_BIN = $(BIN_DIR)$(PROJ_NAME)\$(BIN_NAME).$(BUILD_NAME).exe
+PROJ_BIN = $(BIN_DIR)$(PROJ_NAME)\$(BIN_NAME).$(BUILD_NAME).x$(ARCH).exe
 PROJ_BIN_DIR = $(BIN_DIR)$(PROJ_NAME)^\
 
 COMPILER = cl /c
 COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include\
 	/I $(ROOT_DIR)experiment
 COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++20 /D _CONSOLE\
-	/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\$(BIN_NAME).pdb\
-	/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\ \
-	/Fp$(PROJ_OBJ_DIR)$(BUILD_NAME)\$(BIN_NAME).pch\
+	/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb\
+	/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\ \
+	/Fp$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pch\
 	/fp:fast /MP /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
 	/GS /W3 /WX- /wd4250 /wd4068 /sdl /diagnostics:column /EHsc /Gm- /nologo
 COMPILER_FLAGS_DEBUG = /D _DEBUG /MDd /Od /RTC1 /JMC /ZI
@@ -91,11 +90,11 @@ COMPILER_FLAGS_86 =
 LINKER = link
 LINKER_FLAGS_LIBRARIES =
 LINKER_FLAGS_COMMON = $(LINKER_FLAGS_LIBRARIES) /OUT:$(PROJ_BIN)\
-	/PDB:$(PROJ_OBJ_DIR)$(BIN_NAME).$(BUILD_NAME).pdb\
-	/ILK:$(PROJ_OBJ_DIR)$(BIN_NAME).$(BUILD_NAME).ilk\
+	/PDB:$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb\
+	/ILK:$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).ilk\
 	/MANIFESTUAC:"level='asInvoker' uiAccess='false'"\
-	/MANIFESTFILE:$(PROJ_OBJ_DIR)$(BIN_NAME).$(BUILD_NAME).exe.intermediate.manifest\
-	/LTCGOUT:$(PROJ_OBJ_DIR)$(BIN_NAME).$(BUILD_NAME).iobj\
+	/MANIFESTFILE:$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).exe.intermediate.manifest\
+	/LTCGOUT:$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).iobj\
 	/SUBSYSTEM:CONSOLE /NOLOGO
 LINKER_FLAGS_DEBUG = /DEBUG
 LINKER_FLAGS_RELEASE = /INCREMENTAL:NO /OPT:ICF /OPT:REF /LTCG:incremental
@@ -129,7 +128,8 @@ build: $(PROJ_BIN)
 # Build and run.
 run: build
 	@ECHO Running $(PROJ_BIN)...
-	@CD $(BIN_DIR)$(PROJ_NAME) && $(BIN_NAME).$(BUILD_NAME).exe $(ARGS)
+	@CD $(BIN_DIR)$(PROJ_NAME) &&\
+		$(BIN_NAME).$(BUILD_NAME).x$(ARCH).exe $(ARGS)
 # Clean target removes all intermediates, but remakes the in.txt file.
 clean:
 	@ECHO Cleaning...
@@ -145,12 +145,14 @@ $(PROJ_BIN): $(_PROJ_BIN_DEPS)
 	@IF NOT EXIST $(PROJ_BIN_DIR) MD $(PROJ_BIN_DIR)
 	@IF NOT EXIST $(PROJ_OBJ_DIR) MD $(PROJ_OBJ_DIR)
 	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME) MD $(PROJ_OBJ_DIR)$(BUILD_NAME)
+	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\
+		MD $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)
 	@ECHO Building $(PROJ_BIN)...
 	@$(COMPILER) $(COMPILER_FLAGS) $?
 	@ECHO Linking $(PROJ_BIN)...
 # It's unclear why some of the wildcards need to be escaped, but it works.
 	@$(LINKER) $(LINKER_FLAGS) $(patsubsti %.cpp,%.obj,\
-		$(patsubsti $(PROJ_SRC_DIR)\%,$(PROJ_OBJ_DIR)$(BUILD_NAME)\\%,$**))
+		$(patsubsti $(PROJ_SRC_DIR)\%,$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\\%,$**))
 
 # Mark source files as out of date if any headers have changed.
 $(_PROJ_BIN_DEPS): $(INCL)
