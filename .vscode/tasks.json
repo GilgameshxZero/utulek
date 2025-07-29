@@ -18,7 +18,7 @@
 			"presentation": { "clear": true, "reveal": "silent" },
 
 			"command": "code",
-			"args": ["experiment/${input:new-name}"],
+			"args": ["../experiment/${input:new-name}"],
 		},
 		{
 			/* Build the open file in debug mode. */
