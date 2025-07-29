@@ -36,6 +36,9 @@ def show_img_ds(X, Y, pred=None, labels=None, shape=None, samples=None, scale=2)
     if labels is None:
         labels = [i for i in range(Y.argmax())]
 
+    if pred is None:
+        pred = Y
+
     plt.figure(figsize=(shape[1] * scale, shape[0] * scale))
     for i in range(shape[0]):
         for j in range(shape[1]):
