@@ -1,2 +1,3 @@
-# Do not expose inner functions directly.
+__all__ = ["fetch"]
+
 from . import *
