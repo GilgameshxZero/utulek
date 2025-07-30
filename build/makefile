@@ -83,7 +83,8 @@ COMPILER_FLAGS_INCLUDES = /I $(ROOT_DIR)rain\include /I $(ROOT_DIR)include\
 	/I $(ROOT_DIR)experiment
 COMPILER_FLAGS_COMMON = $(COMPILER_FLAGS_INCLUDES) /std:c++20 /D _CONSOLE\
 	/Fp$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pch\
-	/fp:fast /MP /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
+	/fp:fast /MP /permissive-\
+	/Zc:__cplusplus /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
 	/GS /W3 /WX- /wd4250 /wd4068 /sdl /diagnostics:column /EHsc /Gm- /nologo
 COMPILER_FLAGS_DEBUG = /D _DEBUG /MDd /Od /RTC1 /JMC /ZI
 COMPILER_FLAGS_RELEASE = /D NDEBUG /MT /O2 /Oi /GL /Gy /Zi
