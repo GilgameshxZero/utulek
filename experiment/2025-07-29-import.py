@@ -1,6 +1,3 @@
-import utulek.fetch
+import utulek
 
 print(utulek.fetch)
-print(utulek.fetch.fetch_ds_cifar_10)
-
-utulek.fetch
