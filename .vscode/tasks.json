@@ -25,7 +25,7 @@
 			"label": "build-debug-x64",
 			"type": "shell",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true },
+			"presentation": { "clear": true, "reveal": "silent" },
 			"group": { "kind": "build", "isDefault": true },
 
 			"command": "make",
@@ -42,7 +42,7 @@
 			"label": "build-debug-x86",
 			"type": "shell",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true },
+			"presentation": { "clear": true, "reveal": "silent" },
 			"group": { "kind": "build", "isDefault": true },
 
 			"command": "make",
@@ -60,7 +60,7 @@
 			"label": "build-release-x64",
 			"type": "shell",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true },
+			"presentation": { "clear": true, "reveal": "silent" },
 			"group": "build",
 
 			"command": "make",
@@ -78,7 +78,7 @@
 			"label": "build-release-x86",
 			"type": "shell",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true },
+			"presentation": { "clear": true, "reveal": "silent" },
 			"group": "build",
 
 			"command": "make",
