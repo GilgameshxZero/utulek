@@ -5,7 +5,7 @@
 
 // Specific header folder is not included because Intellisense would be hard.
 #include <2025-07-28-compile.cpp-assets/sub.hpp>
-#include <version.hpp>
+#include "../build/version.hpp"
 
 #include <iostream>
 
