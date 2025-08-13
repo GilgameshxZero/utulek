@@ -34,7 +34,7 @@ ifdef MAKEDIR: # gmake: false; nmake: unused target
 # ------------------------------------------------------------------------------
 
 # nmake specific commands.
-ROOT_DIR = ..^\
+ROOT_DIR = $(MAKEDIR)\..^\
 REPO_NAME = utulek
 !IFNDEF PROJ
 PROJ = experiment
@@ -169,7 +169,7 @@ $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pch: $(PROJ_SRC_DIR)pch.cpp
 	@$(COMPILER) $(COMPILER_FLAGS) /Yc\
 		/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pdb\
 		/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.obj $(PROJ_SRC_DIR)pch.cpp
-$(PROJ_SRC_DIR)pch.cpp: $(INCL)
+$(PROJ_SRC_DIR)pch.cpp: $(INCL_PCH)
 
 # Build target.
 # First compile all outdated files (with /MP), then link everything together.
@@ -196,8 +196,9 @@ $(PROJ_BIN): $(PROJ_SRC)
 		CP $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pdb\
 			$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb
 	@IF NOT EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).idb\
-		CP $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.idb\
-			$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).idb
+		IF EXIST $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.idb\
+			CP $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.idb\
+				$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).idb
 	@$(COMPILER) $(COMPILER_FLAGS)\
 		/Fd$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\$(BIN_NAME).pdb\
 		/Fo$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\ \
