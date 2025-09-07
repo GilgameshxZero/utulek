@@ -80,10 +80,10 @@ INCL = $(INCL) $(ROOT_DIR)experiment\$(BIN_NAME).cpp.assets\*
 
 # The directory structure here must be consistent with macro substitution
 # structure utilized later.
-BIN_DIR = $(ROOT_DIR)bin^\
+BIN_DIR = $(ROOT_DIR).bin^\
 PROJ_BIN = $(BIN_DIR)$(PROJ_NAME)\$(BIN_NAME).$(BUILD_NAME).x$(ARCH).exe
 PROJ_BIN_DIR = $(BIN_DIR)$(PROJ_NAME)^\
-OBJ_DIR = $(ROOT_DIR)obj^\
+OBJ_DIR = $(ROOT_DIR).obj^\
 PROJ_OBJ_DIR = $(OBJ_DIR)$(PROJ_NAME)^\
 PROJ_SRC_DIR = $(ROOT_DIR)$(PROJ_NAME)^\
 PROJ_SRC = $(patsubsti %,$(PROJ_SRC_DIR)\%,$(SRC_NAME))
@@ -259,10 +259,10 @@ PCH := 0
 
 INCL := $(call rwildcard,$(ROOT_DIR)rain/include,*.hpp) $(call rwildcard,$(ROOT_DIR)include,*.hpp) $(call rwildcard,$(ROOT_DIR)experiment,*.hpp)
 
-BIN_DIR := $(ROOT_DIR)bin/
+BIN_DIR := $(ROOT_DIR).bin/
 PROJ_BIN := $(BIN_DIR)$(PROJ_NAME)/$(BIN_NAME).$(BUILD_NAME).x$(ARCH)
 PROJ_BIN_DIR := $(BIN_DIR)$(PROJ_NAME)/
-OBJ_DIR := $(ROOT_DIR)obj/
+OBJ_DIR := $(ROOT_DIR).obj/
 PROJ_OBJ_DIR := $(OBJ_DIR)$(PROJ_NAME)/
 PROJ_SRC_DIR := $(ROOT_DIR)$(PROJ_NAME)/
 PROJ_SRC = $(patsubst %,$(PROJ_SRC_DIR)%,$(SRC_NAME))

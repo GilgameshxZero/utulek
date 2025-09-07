@@ -19,17 +19,15 @@ LRESULT CALLBACK lowLevelMouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	timePrev = time;
 	bool dir{data <= std::numeric_limits<WORD>::max() / 2},
 		dirSame{dir == dirPrev};
-	// It is unlikely that two mistaken events happen in a row.
-	dirPrev = dir;
 
-	// Ignore if different direction and the switch was too fast.
+	// Ignore if different direction and the switch was too fast. Allow multiple
+	// rejections in a row.
 	Rain::Console::log("Scroll: (", dir, ", ", timeDelta, ").");
 	if (!dirSame && timeDelta <= timeDeltaThresh) {
 		Rain::Console::log("Rejected!");
-		// Next event is always accepted.
-		timePrev = 0;
 		return -1;
 	}
+	dirPrev = dir;
 	return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
