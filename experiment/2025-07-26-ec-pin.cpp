@@ -20,8 +20,8 @@
 
 // Driver Name
 #define OLS_DRIVER_ID _T("WinRing0_1_2_0")
-#define OLS_DRIVER_FILE_NAME_WIN_NT _T("WinRing0.sys")
-#define OLS_DRIVER_FILE_NAME_WIN_NT_X64 _T("WinRing0x64.sys")
+#define OLS_DRIVER_FILE_NAME_WIN_NT _T(".WinRing0.tmp.sys")
+#define OLS_DRIVER_FILE_NAME_WIN_NT_X64 _T(".WinRing0x64.tmp.sys")
 
 // IOCTL Function Code
 #define OLS_TYPE 40000	// The Device type code
