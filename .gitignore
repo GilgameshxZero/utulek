@@ -1,3 +1,7 @@
+# Temporary until new patterns are migrated over.
+**/.*.tmp.*
+**/.*.tmp
+
 # Python.
 **/.ipynb_checkpoints/
 **/__pycache__/
@@ -9,8 +13,8 @@
 **/.venv
 
 # C++.
-**/bin/
-**/obj/
+**/.bin/
+**/.obj/
 
 # General.
 **/.DS_Store

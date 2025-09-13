@@ -156,7 +156,7 @@ clean:
 # Updated version may not be propagated until clean.
 # Order dependencies so that output is ordered; not super important.
 version.build.txt: $(INCL) $(PROJ_SRC)
-	@FOR %%I IN ($?) DO @ECHO Outdated: %%I.
+# @FOR %%I IN ($?) DO @ECHO Outdated: %%I.
 	@version.bat $(uppercase $(REPO_NAME))
 	@$(MAKE) /C /T version.build.txt
 # Precompiled headers.
