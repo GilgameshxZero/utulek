@@ -1,20 +1,43 @@
-# Temporary until new patterns are migrated over.
+// Syncthing.
+**/*local.syncthing*
+**/*archive.syncthing*
+**/.stfolder
+**/.stignore
+**/.stversions
+
+// Personal temporary.
 **/.*.tmp.*
 **/.*.tmp
 
-# Python.
-**/.ipynb_checkpoints/
-**/__pycache__/
-**/*.egg-info/
+// General temporary.
+**/*~
+**/*.crdownload
+**/*.part
+**/.*.swp
+**/._*
+**/.DS_Store
+**/.Spotlight-V100
+**/.Trashes
+**/.aps
+**/.db
+**/.dropbox.attr
+**/.stackdump
+**/.user
+**/desktop.ini
+**/ehthumbs.db
+**/Thumbs.db
+
+// Personal development.
 **/.venv/
 **/.data/
-
-# Symbolic links to WSL 2 virtualenvs are not directories.
-**/.venv
-
-# C++.
 **/.bin/
 **/.obj/
 
-# General.
-**/.DS_Store
+// General development.
+**/.vs/
+**/.ipynb_checkpoints/
+**/__pycache__/
+**/*.egg-info/
+**/node_modules/
+**/jspm_packages/
+**/*.nebo-files/
