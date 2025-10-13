@@ -1,3 +1,6 @@
+# Project.
+juice.log
+
 # Syncthing.
 **/*local.syncthing*
 **/*archive.syncthing*
