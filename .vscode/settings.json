@@ -1,6 +1,6 @@
 {
 	"debug.console.closeOnEnd": false,
-	"editor.rulers": [80, 120],
+	"editor.rulers": [60, 80, 120],
 	"editor.insertSpaces": false,
 	"editor.tabSize": 2,
 
