@@ -14,7 +14,7 @@ A collection of slides demonstrating `silverine`.
 
 ## Introduction
 
-![](2025-05-18-silverine.0.md-assets/iris.png#small)
+![alt text](2025_11_12-silverine.md.assets/1763010151381.image.png#small)
 *Iris.EXE, from the game Mega Man Battle Network 6.*
 
 Does Iris deserve sympathy, despite being a robot?
@@ -98,7 +98,7 @@ While printing, ensure that headers/footers are OFF and background graphics are 
 
 You are awesome for coming to my presentation.
 For more `silverine`, please visit <https://github.com/gilgameshxzero/silver>.
-The Markdown source for these slides can be found at <>.
+The Markdown source for these slides can be found at <https://github.com/GilgameshxZero/utulek/blob/master/experiment/2025_11_12-silverine.md>.
 Thank you.
 
 </section>
