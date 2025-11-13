@@ -1,8 +1,6 @@
 <link rel="stylesheet" href="../.vscode/default.css">
-<link rel="stylesheet" href="../silver/selective/silverine.css">
 <link rel="stylesheet" href="../silver/selective/h1.subtitle.css">
-
-<input type="checkbox" class="silver-theme-toggle" />
+<link rel="stylesheet" href="../silver/selective/silverine.css">
 
 <section class="silver-center">
 
@@ -10,16 +8,16 @@
 
 and the rights of robots
 
-❄ · 2025-05-18
+A collection of slides demonstrating `silverine`.
 
 </section><section>
 
 ## Introduction
 
 ![](2025-05-18-silverine.0.md-assets/iris.png#small)
-*Iris.EXE, from the hit game Mega Man Battle Network 6*
+*Iris.EXE, from the game Mega Man Battle Network 6.*
 
-Does Iris deserve sympathy?
+Does Iris deserve sympathy, despite being a robot?
 
 </section><section class="silver-center">
 
@@ -31,7 +29,7 @@ lives lost in the volcanic collapse of Wily’s lab—but who to answer for it?
 
 </section><section>
 
-## On what code does Iris run?
+## On what language does Iris run?
 
 ```c++
 template <std::size_t INDEX>
@@ -49,11 +47,12 @@ class CTFibonacciExplicit : public CTSizeT<
 															CTFibonacciExplicit<INDEX - 2>::get()> {};
 ```
 
-Probably C++17. 尽然通过compiler能够算出Fibonacci数字！
+
+应该是 C++17. Or it could be Chinese!
 
 </section><section>
 
-Should Iris be the product of two ideals, $A=(\alpha,(\alpha+\alpha\delta)/2),B=(\beta,(\beta+\beta\delta)/2),\delta=\sqrt{-5}$, then she would be
+Suppose Iris has two ideals: $A=(\alpha,(\alpha+\alpha\delta)/2),B=(\beta,(\beta+\beta\delta)/2),\delta=\sqrt{-5}$. She would find their product as
 
 $$\begin{aligned}
 (AB)&=(\alpha\beta, \frac{1}{2}(\alpha\beta+\alpha\beta\delta), \frac{1}{2}(\alpha\beta+\alpha\beta\delta), \frac{1}{4}(\alpha\beta-5\alpha\beta+2\alpha\beta\delta))\\
@@ -67,39 +66,39 @@ $$\frac{\alpha\beta}{2}(1+\delta+2-\delta)=\frac{3\alpha\beta}{2}\in (AB)\tag{1.
 but also $\alpha\beta\in (AB)$, so it must be that $\alpha\beta/2\in (AB)$. Thus,
 
 $$(\alpha\beta/2)\subseteq (AB)\subseteq(\alpha\beta/2)
-\tag{poggers}$$
+\tag{look at this tag!}$$
 
-and hence $(AB)=(\alpha\beta/2)$ and is a principal ideal. That’s pretty cute.
+and hence $(AB)=(\alpha\beta/2)$ and is a principal ideal.
 
 </section><section>
 
-## One might ask, what happens with long titles? Or what do I think of Iris’s thighs? Or why are there no right-aligned images?
+## One might ask, what happens with long titles? Or why are there no right-aligned images?
 
-1. I think they’re quite nice.
+1. They wrap.
 2. I cannot say for sure about the images.
+3. Check out this table.
 
-&nbsp;|Emilia|Rem|Beatrice|Elsa
--|-|-|-|-
-Smile|5|5|1|5
-Eyes|4|2|2|3
-Dress|4|3|4|5
+&nbsp;|Iris|LLMs
+-|-|-
+Sandbagging?|✗|✔
+Deceptive?|✔|✔
+Robust?|✗|✗
 
 </section><section class="silver-center">
 
-> **Theorem: $x\in\text{Iris}\implies x\in\text{cute}$.**
->
-> **Proof**: Take any $x\not\in\text{cute}$. Then it must be ugly. But nothing in $\text{Iris}$ is ugly. Thus the contrapositive is true and the original claim is as well. $\blacksquare$
-
 > **Theorem: 2D Maximum Subsquare $\Longleftrightarrow$ APSP**
 >
-> We know from Tamaki et al. [1998] that 2D Maximum Subarray reduces to APSP. Williams et al. [2016] shows the other direction for equivalence. Restriction to squares is not necessarily an easier problem, but iterating on diagonals shows that it satisfies a Min-Plus structure, which is well-known to be equivalent to APSP.
+> We know from Tamaki et al. [1998] that 2D Maximum Subarray reduces to APSP. Williams et al. [2016] shows the other direction for equivalence. Restriction to squares is not necessarily an easier problem, but iterating on diagonals shows that it satisfies a Min-Plus structure, which is well-known to be equivalent to APSP.$\blacksquare$
+
+While printing, ensure that headers/footers are OFF and background graphics are ON. Using a Chromium browser also helps.
 
 </section>
 
-</section><section class="silver-bottom silver-right tangerine">
+</section><section class="silver-bottom silver-right silver-tangerine">
 
 You are awesome for coming to my presentation.
-For more, please visit <https://github.com/gilgameshxzero/silver> (experimental).
+For more `silverine`, please visit <https://github.com/gilgameshxzero/silver>.
+The Markdown source for these slides can be found at <>.
 Thank you.
 
 </section>
