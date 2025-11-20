@@ -5,13 +5,13 @@
 python -m venv .venv
 
 # .venv\Scripts\activate on Windows.
-activate
+source .venv/bin/activate
 
 # Common pre-install requirements. `python -m` here avoids permissions errors.
 python -m pip install --upgrade -r requirements/pre.txt
 
 # `gpu.txt` should be used instead when a suitable CUDA and cuDNN install is available.
-pip install --upgrade -r requirements/cpu.txt
+python -m pip install --upgrade -r requirements/cpu.txt
 ```
 
 `utulek` support is always pinned to a single version of all major dependencies. The table below describes the current pinned versions. These versions are guaranteed to be available on up-to-date Manjaro/ Arch.
@@ -21,6 +21,7 @@ Query the current CUDA version with `nvcc -V` or `pacman -Q cuda`. Query the cur
 Dependency|Version
 -|-
 `python`|`3.11.9`
+`pip`|`23.0`
 `CUDA`|`12.4.1`
 `cuDNN`|`8.9.7`
 `tensorflow`|`2.16.1`
