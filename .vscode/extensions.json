@@ -4,7 +4,7 @@
 		"ms-toolsai.jupyter",
 		"ms-python.python",
 		"esbenp.prettier-vscode",
-		"kylinideteam.cppdebug",
+		"vadimcn.vscode-lldb",
 		"llvm-vs-code-extensions.vscode-clangd",
 		"streetsidesoftware.code-spell-checker",
 		"ms-python.isort",
