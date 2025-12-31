@@ -9,7 +9,6 @@
 	"files.eol": "\n",
 	"files.associations": {
 		"requirements/*.txt": "pip-requirements",
-		"settings.json.DEFAULT": "jsonc",
 		"*.vstemplate": "xml"
 	},
 

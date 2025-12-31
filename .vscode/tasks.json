@@ -3,31 +3,29 @@
 	"tasks": [
 		{
 			/* Remove the intermediates directory obj/ and the output directory bin/. */
-			"label": "clean-cpp",
 			"type": "shell",
+			"label": "clean-cpp",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent" },
-			"group": "build",
+			"presentation": { "clear": true, "reveal": "never", "close": true },
 
 			"command": "make",
 			"args": ["clean"],
 		},
 		{
-			"label": "experiment-new",
 			"type": "shell",
+			"label": "experiment-new",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent" },
-			"group": "build",
+			"presentation": { "clear": true, "reveal": "never", "close": true },
 
 			"command": "code",
 			"args": ["../experiment/${input:new-name}"],
 		},
 		{
 			/* Build the open file in debug mode. */
-			"label": "build-debug-x64",
 			"type": "shell",
+			"label": "build-debug-x64",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent" },
+			"presentation": { "clear": true, "reveal": "never" },
 			"group": { "kind": "build", "isDefault": true },
 
 			"command": "make",
@@ -40,29 +38,11 @@
 			"windows": { "problemMatcher": ["$msCompile"] }
 		},
 		{
-			/* Build the open file in debug mode. */
-			"label": "build-debug-x86",
-			"type": "shell",
-			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent" },
-			"group": "build",
-
-			"command": "make",
-			"args": [
-				"PROJECT=${relativeFileDirname}",
-				"SOURCES=${fileBasename}",
-				"BIN=${fileBasenameNoExtension}",
-				"ARCH=86"
-			],
-			"problemMatcher": ["$gcc"],
-			"windows": { "problemMatcher": ["$msCompile"] }
-		},
-		{
 			/* Build the open file in release mode. */
-			"label": "build-release-x64",
 			"type": "shell",
+			"label": "build-release-x64",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent" },
+			"presentation": { "clear": true, "reveal": "never" },
 			"group": "build",
 
 			"command": "make",
@@ -71,25 +51,6 @@
 				"SOURCES=${fileBasename}",
 				"BIN=${fileBasenameNoExtension}",
 				"BUILD=1"
-			],
-			"problemMatcher": ["$gcc"],
-			"windows": { "problemMatcher": ["$msCompile"] }
-		},
-		{
-			/* Build the open file in release mode. */
-			"label": "build-release-x86",
-			"type": "shell",
-			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent" },
-			"group": "build",
-
-			"command": "make",
-			"args": [
-				"PROJECT=${relativeFileDirname}",
-				"SOURCES=${fileBasename}",
-				"BIN=${fileBasenameNoExtension}",
-				"BUILD=1",
-				"ARCH=86"
 			],
 			"problemMatcher": ["$gcc"],
 			"windows": { "problemMatcher": ["$msCompile"] }

@@ -10,6 +10,8 @@
 	AccessModifierOffset: 0,
 	IndentCaseLabels: true,
 
+	# `clang-format` may be missing a feature to align chained method calls properly.
+	# <https://stackoverflow.com/questions/39779985/how-to-control-clang-format-indentation-of-chained-method-calls>.
 	AlignAfterOpenBracket: AlwaysBreak,
 	AlignOperands: false,
 	ContinuationIndentWidth: 2,
@@ -25,5 +27,5 @@
 	ColumnLimit: 80,
 
 	IncludeBlocks: Preserve,
-	SortUsingDeclarations: false,
+	SortUsingDeclarations: false
 }

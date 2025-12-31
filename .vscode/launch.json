@@ -1,65 +1,38 @@
+// May require `sudo DevToolsSecurity -enable` on MacOS.
 {
 	"version": "0.2.0",
 	"configurations": [
 		{
 			"name": "debug-interactive-x64",
-			"type": "cppdbg",
+			"type": "lldb",
 			"request": "launch",
 			"preLaunchTask": "build-debug-x64",
 			"program": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}.debug.x64",
 			"cwd": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}",
-			"args": [],
 			"console": "integratedTerminal",
+			"terminal": "integrated",
+			"internalConsoleOptions": "neverOpen",
 			"stopAtEntry": false,
-			"MIMode": "gdb",
 
-			"windows": { "type": "cppvsdbg" },
-			"osx": { "MIMode": "lldb" }
-		},
-		{
-			"name": "debug-interactive-x86",
-			"type": "cppdbg",
-			"request": "launch",
-			"preLaunchTask": "build-debug-x86",
-			"program": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}.debug.x86",
-			"cwd": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}",
-			"args": [],
-			"console": "integratedTerminal",
-			"stopAtEntry": false,
-			"MIMode": "gdb",
-
-			"windows": { "type": "cppvsdbg" },
-			"osx": { "MIMode": "lldb" }
+			"windows": {
+				"program": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}.debug.x64.exe"
+			}
 		},
 		{
 			"name": "release-interactive-x64",
-			"type": "cppdbg",
+			"type": "lldb",
 			"request": "launch",
 			"preLaunchTask": "build-release-x64",
 			"program": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}.release.x64",
 			"cwd": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}",
-			"args": [],
-			"console": "internalTerminal",
+			"console": "integratedTerminal",
+			"terminal": "integrated",
+			"internalConsoleOptions": "neverOpen",
 			"stopAtEntry": false,
-			"MIMode": "gdb",
 
-			"windows": { "type": "cppvsdbg" },
-			"osx": { "MIMode": "lldb" }
-		},
-		{
-			"name": "release-interactive-x86",
-			"type": "cppdbg",
-			"request": "launch",
-			"preLaunchTask": "build-release-x86",
-			"program": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}.release.x86",
-			"cwd": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}",
-			"args": [],
-			"console": "internalTerminal",
-			"stopAtEntry": false,
-			"MIMode": "gdb",
-
-			"windows": { "type": "cppvsdbg" },
-			"osx": { "MIMode": "lldb" }
+			"windows": {
+				"program": "${workspaceFolder}${pathSeparator}.bin${pathSeparator}${relativeFileDirname}${pathSeparator}${fileBasenameNoExtension}.release.x64.exe"
+			}
 		}
 	]
 }
