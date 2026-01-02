@@ -1,5 +1,5 @@
 # Requires at least CUDA 11.1.1, cuDNN 8.1.0, and if using WSL 2, either Windows 11 or latest Windows 10. Supports compute capability up to 8.6 (tested on 5.0 (GTX 960M)).
-# Consider running with --no-cache-dir on memory-constrained systems until pip implements constant-size cache loading. 16GB should barely cut it (with WSL 2 memory adjustment for default 8GB limit).
+# Consider running with --no-cache-dir on memory-constrained systems until pip implements constant-size cache loading. 16GB should barely cut it (with WSL 2 memory adjustment for default 8GB limit). TEMPDIR environment variable can also be used to bypass this.
 
 -r common.txt
 
@@ -11,14 +11,14 @@ nvidia-cuda-cupti-cu12
 nvidia-cuda-nvcc-cu12
 nvidia-cuda-nvrtc-cu12
 
-pynvml
+nvidia-ml-py
 
-# Pytorch.
---extra-index-url https://download.pytorch.org/whl/cu129
-torch==2.0.1
+# Pytorch. CUDA 12.6 necessary to support compute capability 6.1 (1080 Ti).
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch
 torchvision
 torchaudio
 
 # Jax.
 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-jax[cuda12]==0.6.2; platform_system!="Windows"
+jax[cuda12]; platform_system!="Windows"

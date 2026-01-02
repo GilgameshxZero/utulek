@@ -19,6 +19,7 @@ selenium
 flask
 fonttools
 brotli
+librosa
 
 # Style.
 pylint
@@ -50,9 +51,11 @@ clu; platform_system!="Windows"
 flax
 neural-tangents
 adversarial-robustness-toolbox
+openai-whisper
+whispercpp
 
 # Tensorflow. Check platform/version/Python support before updating pin.
-tensorflow==2.19.0; platform_system!="Windows"
+tensorflow; platform_system!="Windows"
 tensorflow-datasets
 tensorflow-probability
 tf-keras
