@@ -3,6 +3,20 @@
 
 -r common.txt
 
+# TF.
+tensorflow[and-cuda]==2.20.0; platform_system!="Darwin"
+tensorflow[and-cuda]; platform_system=="Darwin"
+
+# Pytorch. CUDA 12.6 necessary to support compute capability 6.1 (1080 Ti).
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch==2.9.1; platform_system!="Darwin"
+torch; platform_system=="Darwin"
+
+# Jax.
+-f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+jax[cuda12]==0.8.2; platform_system!="Darwin"
+jax[cuda12]; platform_system=="Darwin"
+
 # CUDA.
 nvidia-pyindex
 nvidia-cublas-cu12
@@ -12,13 +26,3 @@ nvidia-cuda-nvcc-cu12
 nvidia-cuda-nvrtc-cu12
 
 nvidia-ml-py
-
-# Pytorch. CUDA 12.6 necessary to support compute capability 6.1 (1080 Ti).
---extra-index-url https://download.pytorch.org/whl/cu126
-torch==2.9.1
-torchvision
-torchaudio
-
-# Jax.
--f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-jax[cuda12]; platform_system!="Windows"

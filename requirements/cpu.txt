@@ -1,11 +1,15 @@
 -r common.txt
 
+# TF
+tensorflow==2.20.0; platform_system!="Darwin"
+tensorflow; platform_system=="Darwin"
+
 # Pytorch.
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.9.1
-torchvision
-torchaudio
+torch==2.9.1; platform_system!="Darwin"
+torch; platform_system=="Darwin"
 
 # Jax.
 -f https://storage.googleapis.com/jax-releases/jax_releases.html
-jax==0.6.2; platform_system!="Windows"
+jax==0.8.2; platform_system!="Darwin"
+jax; platform_system=="Darwin"

@@ -31,3 +31,7 @@ Dependency|Version
 When version pinning is updated, corresponding pins in `requirements/*` should also be updated. Upgrade packages on Arch with something like `sudo pacman -Syu --ignore cuda --ignore cudnn` to avoid losing the pin.
 
 Python should be formatted using `black`.
+
+Darwin systems are lagging in `tensorflow`, `torch`, and `jax` versions. We case for this via the `platform_system` marker. Darwin is not actively supported/tested.
+
+Currently (2026_01_02), CUDA is only officially tested and supported on Linux. Windows and Darwin systems should use the CPU version of requirements.

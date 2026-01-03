@@ -6,26 +6,28 @@
 			"type": "shell",
 			"label": "clean-cpp",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "never", "close": true },
+			"presentation": { "clear": true, "reveal": "silent", "close": true },
 
 			"command": "make",
-			"args": ["clean"],
+			"args": ["clean"]
 		},
 		{
 			"type": "shell",
 			"label": "experiment-new",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "never", "close": true },
+			"presentation": { "clear": true, "reveal": "silent", "close": true },
 
 			"command": "code",
-			"args": ["../experiment/${input:new-name}"],
+			"args": ["../experiment/${input:new-name}"]
 		},
 		{
 			/* Build the open file in debug mode. */
 			"type": "shell",
 			"label": "build-debug-x64",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "never" },
+			/* Reveal integrated terminal in view only on problem.
+			Terminals in editor will always be revealed. */
+			"presentation": { "clear": true, "reveal": "silent" },
 			"group": { "kind": "build", "isDefault": true },
 
 			"command": "make",
@@ -42,7 +44,9 @@
 			"type": "shell",
 			"label": "build-release-x64",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "never" },
+			/* Reveal integrated terminal in view only on problem.
+			Terminals in editor will always be revealed. */
+			"presentation": { "clear": true, "reveal": "silent" },
 			"group": "build",
 
 			"command": "make",
