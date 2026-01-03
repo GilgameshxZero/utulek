@@ -17,6 +17,7 @@ def import_global(
     else:
         context_module = __import__(context_module_name, fromlist=[object_name])
         global_scope[short_name] = getattr(context_module, object_name)
+    return global_scope[short_name]
 
 
 def import_globals(global_scope: typing.Dict[str, str]):
@@ -25,9 +26,10 @@ def import_globals(global_scope: typing.Dict[str, str]):
     Typically, call at the top of the notebook."""
     from .filesystem import get_notebook_name, get_notebook_assets_path
 
-    import_global(global_scope, "os")
+    os = import_global(global_scope, "os")
     import_global(global_scope, "glob")
     import_global(global_scope, "pathlib")
+    dotenv = import_global(global_scope, "dotenv")
     import_global(global_scope, "pp", "", "pprint")
     import_global(global_scope, "json")
     import_global(global_scope, "tqdm", "", "tqdm.auto")
@@ -40,9 +42,9 @@ def import_globals(global_scope: typing.Dict[str, str]):
     import_global(global_scope, "librosa")
     import_global(global_scope, "soundfile")
 
-    import_global(global_scope, "jax")
-    import_global(global_scope, "tensorflow", "tf")
-    import_global(global_scope, "torch")
+    jax = import_global(global_scope, "jax")
+    tf = import_global(global_scope, "tensorflow", "tf")
+    torch = import_global(global_scope, "torch")
     import_global(global_scope, "transformers")
     import_global(global_scope, "whisper")
 
@@ -50,23 +52,28 @@ def import_globals(global_scope: typing.Dict[str, str]):
     global_scope["NOTEBOOK_NAME"] = get_notebook_name(global_scope=global_scope)
     global_scope["ASSETS_PATH"] = get_notebook_assets_path(global_scope=global_scope)
 
+    # Progressively load up the directory tree.
+    cur_path = global_scope["ASSETS_PATH"]
+    while cur_path != os.path.dirname(cur_path):
+        env_path = os.path.join(cur_path, ".env")
+        if dotenv.load_dotenv(env_path):
+            print(f"Loaded `{env_path}`.")
+        cur_path = os.path.dirname(cur_path)
+
     # Debug.
     print("ASSETS_PATH:", global_scope["ASSETS_PATH"])
     try:
         print(
             "torch:",
-            [
-                global_scope["torch"].cuda.get_device_name(i)
-                for i in range(global_scope["torch"].cuda.device_count())
-            ],
+            [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())],
         )
     except:
         pass
     try:
-        print("tf:", global_scope["tf"].test.gpu_device_name())
+        print("tf:", tf.test.gpu_device_name())
     except:
         pass
     try:
-        print("jax:", global_scope["jax"].local_devices())
+        print("jax:", jax.local_devices())
     except:
         pass

@@ -1,7 +1,6 @@
 # I Was Surrounded by “Final Girls” in School, Knowing I’d Never Be One
 
 Whitney Washington
-Yang Yan
 February 13, 2023
 <https://electricliterature.com/i-was-surrounded-by-final-girls-in-school-while-knowing-id-never-become-one/>
 
