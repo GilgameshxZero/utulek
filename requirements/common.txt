@@ -20,6 +20,7 @@ flask
 fonttools
 brotli
 librosa
+pyogg
 
 # Style.
 pylint
@@ -34,7 +35,7 @@ ipywidgets
 jupyterlab
 
 # Scientific computing.
-numpy
+numpy==2.2.6
 pandas
 matplotlib
 scikit-learn
@@ -55,7 +56,7 @@ openai-whisper
 whispercpp
 
 # Tensorflow. Check platform/version/Python support before updating pin.
-tensorflow; platform_system!="Windows"
+tensorflow==2.20.0; platform_system!="Windows"
 tensorflow-datasets
 tensorflow-probability
 tf-keras
