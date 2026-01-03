@@ -9,23 +9,7 @@ def import_global(
     context_module_name: str = "",
 ):
     """Use this statement to import inside a function,
-    but effective as import at the top of the module.
-
-    Args:
-        object_name: the object name want to import,
-                     could be module or function
-        short_name: the short name for the import
-        context_module_name: the context module name in the import
-
-    example usage:
-    import os -> global_imports("os")
-    import numpy as np -> global_imports("numpy", "np")
-    from collections import Counter ->
-        global_imports("Counter", None, "collections")
-    from google.cloud import storage ->
-        global_imports("storage", None, "google.cloud")
-
-    """
+    but effective as import at the top of the module."""
     if short_name == "":
         short_name = object_name
     if context_module_name == "":
@@ -36,7 +20,9 @@ def import_global(
 
 
 def import_globals(global_scope: typing.Dict[str, str]):
-    """Import commonly used globals under standard namespaces. Should pass `globals()` as the first argument."""
+    """Import commonly used globals under standard namespaces. Should pass `globals()` as the first argument.
+
+    Typically, call at the top of the notebook."""
     from .filesystem import get_notebook_name, get_notebook_assets_path
 
     import_global(global_scope, "os")
@@ -51,22 +37,36 @@ def import_globals(global_scope: typing.Dict[str, str]):
     import_global(global_scope, "typing")
     import_global(global_scope, "numpy", "np")
 
-    import_global(global_scope, "transformers")
-    import_global(global_scope, "torch")
-    import_global(global_scope, "whisper")
-
     import_global(global_scope, "librosa")
     import_global(global_scope, "soundfile")
 
+    import_global(global_scope, "jax")
+    import_global(global_scope, "tensorflow", "tf")
+    import_global(global_scope, "torch")
+    import_global(global_scope, "transformers")
+    import_global(global_scope, "whisper")
+
     # Global variables.
-    global_scope["NOTEBOOK_NAME"] = get_notebook_name()
-    global_scope["ASSETS_PATH"] = get_notebook_assets_path()
+    global_scope["NOTEBOOK_NAME"] = get_notebook_name(global_scope=global_scope)
+    global_scope["ASSETS_PATH"] = get_notebook_assets_path(global_scope=global_scope)
 
     # Debug.
-    print(global_scope["ASSETS_PATH"])
-    print(
-        [
-            global_scope["torch"].cuda.get_device_name(i)
-            for i in range(global_scope["torch"].cuda.device_count())
-        ]
-    )
+    print("ASSETS_PATH:", global_scope["ASSETS_PATH"])
+    try:
+        print(
+            "torch:",
+            [
+                global_scope["torch"].cuda.get_device_name(i)
+                for i in range(global_scope["torch"].cuda.device_count())
+            ],
+        )
+    except:
+        pass
+    try:
+        print("tf:", global_scope["tf"].test.gpu_device_name())
+    except:
+        pass
+    try:
+        print("jax:", global_scope["jax"].local_devices())
+    except:
+        pass

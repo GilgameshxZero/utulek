@@ -20,7 +20,6 @@ flask
 fonttools
 brotli
 librosa
-pyogg
 
 # Style.
 pylint
@@ -35,7 +34,7 @@ ipywidgets
 jupyterlab
 
 # Scientific computing.
-numpy==2.2.6
+numpy
 pandas
 matplotlib
 scikit-learn
@@ -48,7 +47,7 @@ opencv-python
 cox
 ml-collections
 # Dependency on jaxlib which has no Windows wheels as of yet.
-clu; platform_system!="Windows"
+clu
 flax
 neural-tangents
 adversarial-robustness-toolbox
@@ -56,10 +55,14 @@ openai-whisper
 whispercpp
 
 # Tensorflow. Check platform/version/Python support before updating pin.
-tensorflow==2.20.0; platform_system!="Windows"
+# Tensorflow > 2.10 does not offer GPU support on Windows. We install it anyway.
 tensorflow-datasets
 tensorflow-probability
 tf-keras
+
+# Pytorch.
+torchvision
+torchaudio
 
 # Frameworks.
 transformers
