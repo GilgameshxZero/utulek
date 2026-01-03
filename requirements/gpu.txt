@@ -15,7 +15,7 @@ nvidia-ml-py
 
 # Pytorch. CUDA 12.6 necessary to support compute capability 6.1 (1080 Ti).
 --extra-index-url https://download.pytorch.org/whl/cu126
-torch
+torch==2.9.1
 torchvision
 torchaudio
 
