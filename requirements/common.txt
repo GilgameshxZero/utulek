@@ -46,7 +46,6 @@ opencv-python
 # ML utility.
 cox
 ml-collections
-# Dependency on jaxlib which has no Windows wheels as of yet.
 clu
 flax
 neural-tangents
