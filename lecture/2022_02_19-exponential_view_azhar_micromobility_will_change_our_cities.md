@@ -1,5 +1,6 @@
 # Micromobility Will Change Our Cities
 
+Azeem Azhar
 February 19, 2022
 <https://www.exponentialview.co/micromobility-will-change-our-cities/>
 

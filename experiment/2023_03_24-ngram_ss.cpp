@@ -16,7 +16,7 @@ int main() {
 	std::unordered_map<Sequence, std::array<std::size_t, 128>, SequenceHash>
 		nGramCounts;
 	{
-		std::ifstream in("../experiments/2023-03-24-ngram-ss.cpp-assets/titus-andronicus.txt");
+		std::ifstream in("../experiments/2023_03_24-ngram_ss.cpp.assets/titus-andronicus.txt");
 		Sequence seq;
 		char cur;
 		seq.fill(0);

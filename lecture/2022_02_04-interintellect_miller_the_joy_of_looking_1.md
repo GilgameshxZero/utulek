@@ -1,5 +1,6 @@
 # The Joy of Looking: Collisions with Visual Art and Collective Perspectives
 
+Alexa Miller
 February 4, 2022
 <https://interintellect.com/series/the-joy-of-looking-collisions-with-visual-art-and-collective-perspectives-with-alexa-miller/>
 
@@ -32,7 +33,7 @@ Visual thinking strategy (VTS) elements:
   * “You *could be* saying this,” allowing you to externalize it, and move it around.
 * concluding
 
-![](2022-02-04-miller-interintellect-the-joy-of-looking-1.md-assets/2022-02-04-19-57-09.png)
+![](2022_02_04-interintellect_miller_the_joy_of_looking_1.md.assets/2022-02-04-19-57-09.png)
 
 Very much influenced by Gestalt school of visual analysis.
 Recommend attending VTS Look Club: <https://vtshome.org/calendar/event/a164P00000Du0mNQAR/>.

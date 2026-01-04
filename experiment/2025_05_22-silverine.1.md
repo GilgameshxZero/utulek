@@ -21,7 +21,7 @@ Prozac: The Enemy, or the Truth?
 
 </section><section class="center">
 
-![alt text](2025-05-22-silverine.1.md-assets/1747854043459.image.png#large)
+![alt text](2025_05_22-silverine.1.md.assets/1747854043459.image.png#large)
 
 </section><section class="bottom right">
 

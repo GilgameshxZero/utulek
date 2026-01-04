@@ -1,5 +1,6 @@
 # The Triumph and Terror of Wang Huning
 
+N.S. Lyons
 October 23, 2021
 <https://palladiummag.com/2021/10/11/the-triumph-and-terror-of-wang-huning>
 

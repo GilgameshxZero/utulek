@@ -47,7 +47,7 @@ and $m$ is a matrix in $k\times l$, where $l$ is the dimension of the output spa
 
 ---
 
-![alt text](2025-04-14-jasmine-yang.md-assets/image.png)
+![alt text](2025_04_14-jasmine_yang.md.assets/image.png)
 
 1. $I_b(x)$ is defined over $x$ degrees.
 2. $I_b(x)$ is much larger near a peak, and much smaller elsewhere.
