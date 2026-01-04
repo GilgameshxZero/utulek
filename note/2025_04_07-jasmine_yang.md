@@ -5,7 +5,7 @@ XRD as CSVs ->
 1. Based on how the light exits the material, and how intense it is, we try to estimate the structure of the material.
 	1. Based on where the peaks are, we know roughly where the atoms are. A thing without structure would be a full horizontal line; the other limit is only the peaks.
   
-		![alt text](2025-04-07-jasmine-yang.md-assets/image.png)
+		![alt text](2025_04_07-jasmine_yang.md.assets/image.png)
 
 2. Jasmine’s idea: real materials won’t have very clean lines, due to defects in the material.
 	1. Separate out the contribution from the defects?

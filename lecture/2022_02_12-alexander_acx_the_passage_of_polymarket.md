@@ -1,5 +1,6 @@
 # The Passage of Polymarket
 
+Astral Codex X
 February 12, 2022
 <https://astralcodexten.substack.com/p/the-passage-of-polymarket>
 

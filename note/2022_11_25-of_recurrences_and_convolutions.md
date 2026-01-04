@@ -1,10 +1,12 @@
 # Of Recurrences and Convolutions
 
+Yang Yan
 November 25, 2022
+<>
 
 It’s difficult to overstate the cumulative weight and subsequent deliverance of all manner of wrongs and wrongdoings, in the three years since my last writing. Unfortunately, I remain the most qualified detective for all things myself.
 
-![](2022-11-25-of-recurrences-and-convolutions.md-assets/amelia-watson.png)
+![](2022_11_25-of_recurrences_and_convolutions.md.assets/amelia-watson.png)
 *Amelia Watson, a detective of trivial namesake, from Hololive’s first generation of English VTubers, denoted *Myth*.*
 
 To kick off this investigation, then, I’d like to briefly explore the following technical problem.

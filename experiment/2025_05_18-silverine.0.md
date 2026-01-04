@@ -16,7 +16,7 @@ and the rights of robots
 
 ## Introduction
 
-![](2025-05-18-silverine.0.md-assets/iris.png#small)
+![](2025_05_18-silverine.0.md.assets/iris.png#small)
 *Iris.EXE, from the hit game Mega Man Battle Network 6*
 
 Does Iris deserve sympathy?

@@ -1,5 +1,6 @@
 # The World's Fair
 
+Praxis Society
 October 23, 2021
 <https://www.praxissociety.com/content/the-worlds-fair>
 
