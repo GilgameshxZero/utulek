@@ -4,7 +4,6 @@ import setuptools
 setuptools.setup(
     name="utulek",
     packages=["utulek"],
-
-    # Default requires are are skimped versions of what is required from the utulek library environment.
-    install_requires=["numpy", "matplotlib", "scikit-learn", "tensorflow-datasets"]
+    # Ideally, this should be filled out, but I can't be bothered.
+    install_requires=[],
 )
