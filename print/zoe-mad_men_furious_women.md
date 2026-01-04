@@ -1,7 +1,8 @@
 # Mad Men. Furious Women.
 
-Zoe | Yang Yan
-February 13, 2023 | <https://zoescaman.substack.com/p/mad-men-furious-women>
+Zoe Scaman
+February 13, 2023
+<https://zoescaman.substack.com/p/mad-men-furious-women>
 
 I suppose my most immediate visceral reaction is that of defensiveness. There is hardly any reason, I think, to be so deeply stooped in anecdotes and unverifiable claims. But perhaps I should try attacking specific portions first.
 

@@ -1,7 +1,8 @@
 # [Tutorial] Math note — linear sieve
 
-Nisiyama_Suzune | Yang Yan
-February 20, 2023 | <https://codeforces.com/blog/entry/54090>
+Nisiyama_Suzune
+February 20, 2023
+<https://codeforces.com/blog/entry/54090>
 
 Most surprising to me is the correctness of the linear sieve:
 

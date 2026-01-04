@@ -2,7 +2,7 @@
 
 Frederick Mosteller
 November 30, 2022
-Annotated by Yang Yan
+<>
 
 ## 1
 

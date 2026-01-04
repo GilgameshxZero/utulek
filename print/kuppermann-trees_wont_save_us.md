@@ -1,7 +1,8 @@
 # Trees Won’t Save Us
 
-Jacon Sujin Kuppermann | Yang Yan
-February 13, 2023 | <https://reboothq.substack.com/p/trees-wont-save-us>
+Jacon Sujin Kuppermann
+February 13, 2023
+<https://reboothq.substack.com/p/trees-wont-save-us>
 
 For a magazine centered on *tech-optimism*, there is a fair amount of pessimism. Kuppermann challenges the notion of tree planting, and using trees planted as a metric to measure the effectiveness of an environmental campaign. The central exampled used is Mr. Beast’s 20 million tree campaign. Kuppermann argues that trees are simply not enough to influence environmental change, and must be part of a grander ecological plan. What, then is that plan? Kuppermann does not answer this, and offers few alternatives until the final two paragraphs.
 

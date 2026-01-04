@@ -1,6 +1,8 @@
 # Support Vector Machines 
 
+Alex J. Smola
 September 8, 2021
+<>
 
 Support vector (SV) machines (SVM) build on (Vapnik-Chervonenkis) VC theory to perform regression and thus classification. Classification estimates the relationship between a set of independent variables and a categorical dependent; regression is a generalization where the dependent is not necessarily categorical (though commonly Borel-measurable).
 

@@ -1,5 +1,6 @@
 # The Last Thing You’ll Ever Have to Read about Who Asian Women Fuck
 
+Lynn Wang
 February 2, 2022
 <https://lynnspiracy.medium.com/the-last-thing-youll-ever-have-to-read-about-who-asian-women-fuck-55bf1a3895aa>
 

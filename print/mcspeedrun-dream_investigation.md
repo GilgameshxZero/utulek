@@ -1,7 +1,8 @@
 # Dream Investigation Results
 
-Minecraft Speedrunning Team | Yang Yan
+Minecraft Speedrunning Team
 March 28, 2023
+<https://archive.org/details/dream_investigation_results>
 
 Most notable in this print is the use of various methods of addressing bias, primarily in Section 8. Four biases are addressed:
 
