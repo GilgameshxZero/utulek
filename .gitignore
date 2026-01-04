@@ -1,5 +1,6 @@
 # Project.
-juice.log
+**/juice.log
+**/.env
 
 # Syncthing.
 **/*local.syncthing*
