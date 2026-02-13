@@ -17,8 +17,17 @@
 			"options": { "cwd": "${workspaceFolder}/build" },
 			"presentation": { "clear": true, "reveal": "silent", "close": true },
 
-			"command": "code",
-			"args": ["../experiment/${input:new-name}"]
+			"command": "make",
+			"args": ["new", "TYPE=experiment", "NAME=${input:experiment_new-name}"]
+		},
+		{
+			"type": "shell",
+			"label": "note-new",
+			"options": { "cwd": "${workspaceFolder}/build" },
+			"presentation": { "clear": true, "reveal": "silent", "close": true },
+
+			"command": "make",
+			"args": ["new", "TYPE=note", "NAME=${input:note_new-name}"]
 		},
 		{
 			/* Build the open file in debug mode. */
@@ -62,7 +71,13 @@
 	],
 	"inputs": [
 		{
-			"id": "new-name",
+			"id": "experiment_new-name",
+			"description": "Name:",
+			"default": "",
+			"type": "promptString"
+		},
+		{
+			"id": "note_new-name",
 			"description": "Name:",
 			"default": "",
 			"type": "promptString"

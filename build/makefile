@@ -151,6 +151,9 @@ clean:
 	@ECHO Cleaning...
 	@IF EXIST $(BIN_DIR) RD /Q /S $(BIN_DIR)
 	@IF EXIST $(OBJ_DIR) RD /Q /S $(OBJ_DIR)
+new:
+	@FOR /F "TOKENS=1-3 DELIMS=- " %A IN ('DATE /T') DO\
+		code ..\$(TYPE)\%A_%B_%C-$(NAME)
 # Updates version if any project dependency has changed.
 # Mark files as up-to-date after.
 # Updated version may not be propagated until clean.
@@ -333,6 +336,8 @@ run: build
 clean:
 	@echo Cleaning...
 	@rm -rf $(OBJ_DIR) $(BIN_DIR)
+new:
+	@code ../$(TYPE)/$$(date "+%Y_%m_%d")-$(NAME)
 # No MAKEFLAGS because passing -j8 causes warning.
 tests: version.build.txt
 	@for i in $(PROJ_SRC_DIR)*.cpp; do\
