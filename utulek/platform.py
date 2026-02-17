@@ -76,6 +76,7 @@ def import_globals_notebook(global_scope: typing.Dict[str, str]):
     import_global(global_scope, base_module)
 
     import_global(global_scope, "os")
+    import_global(global_scope, "re")
     import_global(global_scope, "glob")
     import_global(global_scope, "pathlib")
     import_global(global_scope, "dotenv")
