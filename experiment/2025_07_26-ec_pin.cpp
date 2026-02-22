@@ -802,7 +802,7 @@ BOOL EmbeddedController::status(BYTE flag) {
 #include <rain.hpp>
 
 // Generated with `xxd -i WinRing0x64.sys WinRing0x64.sys.hpp`.
-#include <2025_07_26-ec_pin.cpp.assets/WinRing0x64.sys.hpp>
+#include "2025_07_26-ec_pin.cpp.assets/WinRing0x64.sys.hpp"
 
 std::string const MUTEX_NAME_BASE{"utulek/experiment/2025_07_26-ec_pin.cpp"},
 	MUTEX_NAME_HOLD{MUTEX_NAME_BASE + "HOLD"},
