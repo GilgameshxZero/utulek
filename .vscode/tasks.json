@@ -41,8 +41,7 @@
 
 			"command": "make",
 			"args": [
-				"PROJECT=${relativeFileDirname}",
-				"SOURCES=${fileBasename}",
+				"PROJ=${relativeFileDirname}",
 				"BIN=${fileBasenameNoExtension}"
 			],
 			"problemMatcher": ["$gcc"],
@@ -60,8 +59,7 @@
 
 			"command": "make",
 			"args": [
-				"PROJECT=${relativeFileDirname}",
-				"SOURCES=${fileBasename}",
+				"PROJ=${relativeFileDirname}",
 				"BIN=${fileBasenameNoExtension}",
 				"BUILD=1"
 			],
