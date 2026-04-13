@@ -330,7 +330,7 @@ info:
 	@ECHO "LINKER_FLAGS=$(LINKER_FLAGS)"
 new:
 	@FOR /F "TOKENS=1-3 DELIMS=- " %A IN ('DATE /T') DO\
-		code ..\$(TYPE)\%A_%B_%C-$(NAME)
+		xdg-open ..\$(TYPE)\%A_%B_%C-$(NAME)
 
 # Updates version if any project dependency has changed.
 # Mark files as up-to-date after.
@@ -672,7 +672,8 @@ info:
 	@echo COMPILER_FLAGS=$(COMPILER_FLAGS)
 	@echo LINKER_FLAGS=$(LINKER_FLAGS)
 new:
-	@code ../$(TYPE)/$$(date "+%Y_%m_%d")-$(NAME)
+	@touch ../$(TYPE)/$$(date "+%Y_%m_%d")-$(NAME)
+	@xdg-open ../$(TYPE)/$$(date "+%Y_%m_%d")-$(NAME)
 
 version.build.txt: $(INCL_PCH_HPP) $(INCL_HPP) $(PROJ_SRC)
 ifeq ($(VERSIONING),1)
