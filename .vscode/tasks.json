@@ -6,7 +6,11 @@
 			"type": "shell",
 			"label": "clean-cpp",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent", "close": true },
+			"presentation": {
+				"clear": true,
+				"reveal": "silent",
+				"close": true
+			},
 
 			"command": "make",
 			"args": ["clean"]
@@ -15,28 +19,42 @@
 			"type": "shell",
 			"label": "experiment-new",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent", "close": true },
+			"presentation": {
+				"clear": true,
+				"reveal": "silent",
+				"close": true
+			},
 
-			"command": "make",
-			"args": ["new", "TYPE=experiment", "NAME=${input:experiment_new-name}"]
+			"command": "DESKTOP_SESSION=plasma make",
+			"args": [
+				"new",
+				"TYPE=experiment",
+				"NAME=${input:experiment_new-name}"
+			]
 		},
 		{
 			"type": "shell",
 			"label": "note-new",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": { "clear": true, "reveal": "silent", "close": true },
+			"presentation": {
+				"clear": true,
+				"reveal": "silent",
+				"close": true
+			},
 
-			"command": "make",
-			"args": ["new", "TYPE=note", "NAME=${input:note_new-name}"]
+			"command": "DESKTOP_SESSION=plasma make",
+			"args": [
+				"new",
+				"TYPE=note",
+				"NAME=${input:note_new-name}"
+			]
 		},
 		{
 			/* Build the open file in debug mode. */
 			"type": "shell",
 			"label": "build-debug-x64",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			/* Reveal integrated terminal in view only on problem.
-			Terminals in editor will always be revealed. */
-			"presentation": { "clear": true, "reveal": "silent" },
+			"presentation": { "clear": true, "reveal": "never" },
 			"group": { "kind": "build", "isDefault": true },
 
 			"command": "make",
@@ -44,7 +62,7 @@
 				"PROJ=${relativeFileDirname}",
 				"BIN=${fileBasenameNoExtension}"
 			],
-			"problemMatcher": ["$gcc"],
+			"problemMatcher": ["$codelldb-rustc"],
 			"windows": { "problemMatcher": ["$msCompile"] }
 		},
 		{
@@ -52,9 +70,7 @@
 			"type": "shell",
 			"label": "build-release-x64",
 			"options": { "cwd": "${workspaceFolder}/build" },
-			/* Reveal integrated terminal in view only on problem.
-			Terminals in editor will always be revealed. */
-			"presentation": { "clear": true, "reveal": "silent" },
+			"presentation": { "clear": true, "reveal": "never" },
 			"group": "build",
 
 			"command": "make",
@@ -63,7 +79,7 @@
 				"BIN=${fileBasenameNoExtension}",
 				"BUILD=1"
 			],
-			"problemMatcher": ["$gcc"],
+			"problemMatcher": ["$codelldb-rustc"],
 			"windows": { "problemMatcher": ["$msCompile"] }
 		}
 	],
