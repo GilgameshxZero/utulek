@@ -5,7 +5,11 @@
 			/* Remove the intermediates directory obj/ and the output directory bin/. */
 			"type": "shell",
 			"label": "clean-cpp",
-			"options": { "cwd": "${workspaceFolder}/build" },
+			"options": {
+				"cwd": "${workspaceFolder}/build",
+				// Empty "args" guarantees clean shell command.
+				"shell": { "args": [] }
+			},
 			"presentation": {
 				"clear": true,
 				"reveal": "silent",
@@ -18,14 +22,17 @@
 		{
 			"type": "shell",
 			"label": "experiment-new",
-			"options": { "cwd": "${workspaceFolder}/build" },
+			"options": {
+				"cwd": "${workspaceFolder}/build",
+				"shell": { "args": [] }
+			},
 			"presentation": {
 				"clear": true,
 				"reveal": "silent",
 				"close": true
 			},
 
-			"command": "DESKTOP_SESSION=plasma make",
+			"command": "make",
 			"args": [
 				"new",
 				"TYPE=experiment",
@@ -35,14 +42,13 @@
 		{
 			"type": "shell",
 			"label": "note-new",
-			"options": { "cwd": "${workspaceFolder}/build" },
-			"presentation": {
-				"clear": true,
-				"reveal": "silent",
-				"close": true
+			"options": {
+				"cwd": "${workspaceFolder}/build",
+				"shell": { "args": [] }
 			},
+			"presentation": {},
 
-			"command": "DESKTOP_SESSION=plasma make",
+			"command": "make",
 			"args": [
 				"new",
 				"TYPE=note",
@@ -53,7 +59,10 @@
 			/* Build the open file in debug mode. */
 			"type": "shell",
 			"label": "build-debug-x64",
-			"options": { "cwd": "${workspaceFolder}/build" },
+			"options": {
+				"cwd": "${workspaceFolder}/build",
+				"shell": { "args": [] }
+			},
 			"presentation": { "clear": true, "reveal": "never" },
 			"group": { "kind": "build", "isDefault": true },
 
@@ -69,7 +78,10 @@
 			/* Build the open file in release mode. */
 			"type": "shell",
 			"label": "build-release-x64",
-			"options": { "cwd": "${workspaceFolder}/build" },
+			"options": {
+				"cwd": "${workspaceFolder}/build",
+				"shell": { "args": [] }
+			},
 			"presentation": { "clear": true, "reveal": "never" },
 			"group": "build",
 

@@ -1,31 +1,19 @@
-# For Python 3.11.9.
-# Packages dependent on `jaxlib` are not available on Windows.
+# Version verification date: 2026_04_28.
+# For Python 3.11.9-3.11.15.
 -r pre.txt
 
 # General.
-six
 dill
 requests
-py7zr
 python-dotenv
-lxml
 
 # Utility.
 magic-wormhole
-qrcode
-zstandard
-gdown
 selenium
 flask
-fonttools
-brotli
-librosa
 
 # Style.
-pylint
-autopep8
 yapf
-jedi
 
 # Jupyter.
 tqdm
@@ -39,29 +27,6 @@ pandas
 matplotlib
 scikit-learn
 scipy
-colormath
-plotly
-opencv-python
-
-# ML utility.
-cox
-ml-collections
-clu
-flax
-neural-tangents
-adversarial-robustness-toolbox
-openai-whisper
-whispercpp
-
-# Tensorflow. Check platform/version/Python support before updating pin.
-# Tensorflow > 2.10 does not offer GPU support on Windows. We install it anyway.
-tensorflow-datasets
-tensorflow-probability
-tf-keras
-
-# Pytorch.
-torchvision
-torchaudio
 
 # Frameworks.
 transformers
@@ -70,3 +35,44 @@ openai
 
 # Utulek.
 -e .
+
+# To deprecate.
+six
+py7zr
+lxml
+
+qrcode
+zstandard
+gdown
+fonttools
+brotli
+librosa
+
+pylint
+autopep8
+jedi
+
+colormath
+plotly
+opencv-python
+
+cox
+ml-collections
+clu
+# flax->orbax_checkpoint->uvloop not supported on Windows.
+flax; platform_system!="Windows"
+neural-tangents
+adversarial-robustness-toolbox
+# 20250930 has build issue on Windows. Can't find compatible version.
+openai-whisper; platform_system!="Windows"
+whispercpp
+# 0.47.0 has build issue on Darwin.
+llvmlite; platform_system!="Darwin"
+llvmlite<=0.46.0; platform_system=="Darwin"
+
+tensorflow-datasets
+tensorflow-probability
+tf-keras
+
+torchvision
+torchaudio

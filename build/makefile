@@ -425,13 +425,13 @@ $(PROJ_BIN): $(PROJ_SRC) $(NMAKE_INCL_PCH) $(NMAKE_INCL)
 		@IF "%%~xI" NEQ ".obj" (\
 			$(MAKE) /C $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\%%~I.sentinel.tmp\
 				NMAKE_COMPILE_TARGET="%%~I"\
-				@.nmake.tmp.txt\
+				@$(NMAKE_TMP)\
 		) ELSE (\
 			$(MAKE) /C $(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\%%~I\
 				NMAKE_COMPILE_TARGET="%%~I"\
-				@.nmake.tmp.txt\
+				@$(NMAKE_TMP)\
 		)
-	@DEL .nmake.tmp.txt
+	@DEL $(NMAKE_TMP)
 	@ECHO Linking $(PROJ_BIN)...
 	@$(LINKER) $(LINKER_FLAGS) $(LINKER_FLAGS_PCH)\
 		$(patsubst %.cpp,%.obj,\

@@ -1,16 +1,15 @@
 {
 	"recommendations": [
-		"ms-python.black-formatter",
 		"ms-toolsai.jupyter",
 		"ms-python.python",
 		"esbenp.prettier-vscode",
 		"vadimcn.vscode-lldb",
 		"llvm-vs-code-extensions.vscode-clangd",
 		"streetsidesoftware.code-spell-checker",
-		"ms-python.isort",
 		"ms-toolsai.jupyter-keymap",
 		"ms-toolsai.jupyter-renderers",
 		"yzhang.markdown-all-in-one",
-		"ms-python.debugpy"
+		"ms-python.debugpy",
+		"eeyore.yapf"
 	]
 }

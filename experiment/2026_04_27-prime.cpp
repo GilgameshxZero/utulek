@@ -1,5 +1,3 @@
-#include "rain/time/timeout.hpp"
-#include <atomic>
 #include <rain.hpp>
 
 using namespace std;
