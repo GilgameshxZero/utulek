@@ -332,7 +332,7 @@ info:
 	@ECHO "LINKER_FLAGS=$(LINKER_FLAGS)"
 new:
 	@FOR /F "TOKENS=1-3 DELIMS=- " %A IN ('DATE /T') DO\
-		xdg-open ..\$(TYPE)\%A_%B_%C-$(NAME)
+		code ..\$(TYPE)\%A_%B_%C-$(NAME)
 
 # Updates version if any project dependency has changed.
 # Mark files as up-to-date after.

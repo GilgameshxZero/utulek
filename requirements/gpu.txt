@@ -1,22 +1,16 @@
 # Version verification date: 2026_04_28.
+# Realistically only supported on Linux.
 -r common.txt
 
 # TF.
-# Tensorflow > 2.10 does not offer GPU support on Windows. We install it anyway.
-tensorflow[and-cuda]<=2.21.0; platform_system!="Darwin"
+# tensorflow > 2.10 does not offer GPU support on Windows. However, lower versions are no longer available.
+tensorflow[and-cuda]<=2.21.0; platform_system=="Linux"
 
 # Pytorch. CUDA 12.6 necessary to support compute capability 6.1 (1080 Ti).
 --extra-index-url https://download.pytorch.org/whl/cu126
 torch<=2.11.0; platform_system!="Darwin"
 
 # Jax.
+# jaxlib, required by jax[cuda], does not support Windows.
 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-jax[cuda12]<=0.10.0; platform_system!="Darwin" and platform_system!="Windows"
-
-# To deprecate.
-nvidia-cublas-cu12
-nvidia-cuda-runtime-cu12
-nvidia-cuda-cupti-cu12
-nvidia-cuda-nvcc-cu12
-nvidia-cuda-nvrtc-cu12
-nvidia-ml-py
+jax[cuda12]<=0.10.0; platform_system=="Linux"

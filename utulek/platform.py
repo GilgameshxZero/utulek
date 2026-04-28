@@ -119,14 +119,10 @@ def import_globals_notebook(
 	import_global(global_scope, "typing")
 	import_global(global_scope, "numpy", "np")
 
-	import_global(global_scope, "librosa")
-	import_global(global_scope, "soundfile")
-
 	import_global(global_scope, "jax")
 	import_global(global_scope, "tensorflow", "tf")
 	import_global(global_scope, "torch")
 	import_global(global_scope, "transformers")
-	import_global(global_scope, "whisper")
 
 	# Global variables.
 	def import_and_print(name: str, value: typing.Any):

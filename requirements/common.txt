@@ -8,9 +8,9 @@ requests
 python-dotenv
 
 # Utility.
-magic-wormhole
 selenium
 flask
+magic-wormhole
 
 # Style.
 yapf
@@ -35,44 +35,3 @@ openai
 
 # Utulek.
 -e .
-
-# To deprecate.
-six
-py7zr
-lxml
-
-qrcode
-zstandard
-gdown
-fonttools
-brotli
-librosa
-
-pylint
-autopep8
-jedi
-
-colormath
-plotly
-opencv-python
-
-cox
-ml-collections
-clu
-# flax->orbax_checkpoint->uvloop not supported on Windows.
-flax; platform_system!="Windows"
-neural-tangents
-adversarial-robustness-toolbox
-# 20250930 has build issue on Windows. Can't find compatible version.
-openai-whisper; platform_system!="Windows"
-whispercpp
-# 0.47.0 has build issue on Darwin.
-llvmlite; platform_system!="Darwin"
-llvmlite<=0.46.0; platform_system=="Darwin"
-
-tensorflow-datasets
-tensorflow-probability
-tf-keras
-
-torchvision
-torchaudio
