@@ -143,7 +143,6 @@ optional<Networking::Smtp::Response> sendMail() {
 			"00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
 			"00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
 			"00 "
-			// TLS_RSA_WITH_AES_256_CBC_SHA. WORKS
 			// TLS_RSA_WITH_AES_128_CBC_SHA. WORKS (002f)
 			"00 02 00 2f "
 			"01 00 "
