@@ -52,7 +52,7 @@ def get_notebook_assets_path(
 	basename_prefix = basename.rsplit(".", 2)[0]
 	return os.path.join(
 		dirpath,
-		basename_prefix + ".ipynb.assets" + os.path.sep)
+		basename_prefix + ".ipynb.asset" + os.path.sep)
 
 
 def import_global(
@@ -139,8 +139,8 @@ def import_globals_notebook(
 		value=get_notebook_name(global_scope),
 	)
 	import_and_print(
-		"ASSETS_PATH",
-		value=get_notebook_assets_path(global_scope),
+		"ASSET_PATH",
+		value=get_notebook_asset_path(global_scope),
 	)
 
 	# Progressively load up the directory tree.
