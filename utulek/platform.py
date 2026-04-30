@@ -29,13 +29,13 @@ def get_notebook_name(
 	return os.path.basename(session_name)
 
 
-def get_notebook_assets_path(
+def get_notebook_asset_path(
 	global_scope: typing.Optional[typing.Dict[str,
 	str]] = None,
 ) -> str:
 	"""
-	Notebooks of the name `NAME.ID.ipynb` all share an assets
-	directory of `NAME.ipynb.assets`.
+	Notebooks of the name `NAME.ID.ipynb` all share an asset
+	directory of `NAME.ipynb.asset`.
 	"""
 
 	import os
@@ -98,7 +98,7 @@ def import_globals_notebook(
 	Code notebook editors as well as the standard JupyterLab
 	interface in the browser.
 	"""
-	
+
 	base_module = __name__.split(".", 1)[0]
 	print("base_module =", base_module)
 	import_global(global_scope, base_module)
@@ -144,7 +144,7 @@ def import_globals_notebook(
 	)
 
 	# Progressively load up the directory tree.
-	cur_path = global_scope[base_module].ASSETS_PATH
+	cur_path = global_scope[base_module].ASSET_PATH
 	while cur_path != os.path.dirname(cur_path):
 		env_path = os.path.join(cur_path, ".env")
 		if dotenv.load_dotenv(env_path):
