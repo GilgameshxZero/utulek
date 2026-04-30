@@ -105,6 +105,7 @@ def import_globals_notebook(
 
 	import_global(global_scope, "os")
 	import_global(global_scope, "re")
+	import_global(global_scope, "math")
 	import_global(global_scope, "glob")
 	import_global(global_scope, "pathlib")
 	import_global(global_scope, "dotenv")
