@@ -27,7 +27,7 @@ int main() {
 	// <https://bigprimes.org/primality-test>.
 	{
 		auto timeBegin{std::chrono::steady_clock::now()};
-		static size_t const LOG_BITS{12}, MAX_THREADS{1};
+		static size_t const LOG_BITS{10}, MAX_THREADS{32};
 		auto FIND_TIMEOUT{600s};
 		BIFU result;
 		std::atomic_bool stop{false};
@@ -56,7 +56,7 @@ int main() {
 			tp.queueTask(findPrime);
 		}
 
-		if (!tp.blockForTasks(FIND_TIMEOUT)) {
+		if (!tp.blockForTasks()) {
 			cout << "Found " << result << " in " << cIt
 					 << " iterations!" << endl;
 		} else {

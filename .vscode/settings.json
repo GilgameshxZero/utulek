@@ -1,7 +1,7 @@
 {
 	"debug.console.closeOnEnd": false,
 
-	"editor.rulers": [60, 80, 120],
+	"editor.rulers": [60, 80],
 	"editor.insertSpaces": false,
 	"editor.tabSize": 2,
 
@@ -13,8 +13,6 @@
 	},
 
 	"python.defaultInterpreterPath": "",
-
-	"search.useIgnoreFiles": false,
 
 	// Cannot be placed in `.clangd` since we need to reference absolute path ${workspaceFolder}.
 	"clangd.fallbackFlags": [
