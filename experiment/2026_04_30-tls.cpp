@@ -169,8 +169,10 @@ int main() {
 				ProtocolVersion::_1_0,
 				new Handshake(new ClientHello(
 					ProtocolVersion::_1_2,
+					// Random.
 					{{}},
-					0,
+					// Session ID.
+					{{}},
 					// Just three ciphersuites is enough.
 					// Increasing order of perceived difficulty to
 					// implement.
@@ -179,10 +181,17 @@ int main() {
 							TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 						CipherSuite::
 							TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384},
+					// Compression methods.
 					{0},
 					{{new Extension::ServerName({hostNode}),
-						new Extension::SupportedGroups(),
-						new Extension::SignatureAlgorithms()}})))};
+						new Extension::SupportedGroups(
+							{Extension::SupportedGroups::SECP256R1,
+								Extension::SupportedGroups::SECP384R1}),
+						new Extension::SignatureAlgorithms(
+							{Extension::SignatureAlgorithms::
+									RSA_PKCS1_SHA256,
+								Extension::SignatureAlgorithms::
+									ECDSA_SECP256R1_SHA256})}})))};
 			{
 				stringstream sss;
 				plaintext.sendWith(sss);
@@ -228,6 +237,25 @@ int main() {
 						 << static_cast<uint16_t>(
 									serverHello->cipherSuite)
 						 << dec << setfill(' ') << endl;
+
+					// Oh, visualstudio.com fails this?
+					/*
+					[0060]  16  03  03  0f  bb  02  00  00  4c  03  03
+					69  f4  32  f0  15  d3  cd  58  9d  03  c1  14  49
+					60  4c  85  57  8e  4c  33  3d  e1  58  d9  44  4f
+					57  4e  47  52  44  01  20  82  12  00  00  33  f6
+					e6  08  e4  ab  50  4d  8a  ce  1b  f0  1d  8e  9e
+					35  0b  bc  7e  75  0e  9a  13  3e  76  61  52  ca
+					c0  30  00  00  04  00  00  00  00  0b  00  0d  f6
+					00  0d  f3  00  08  3d  30
+					*/
+					// Plaintext certificate(sss);
+					// {
+					// 	stringstream ssss;
+					// 	certificate.sendWith(ssss);
+					// 	showHexStr(ssss.str(), ss);
+					// 	ss << endl;
+					// }
 					pass = true;
 				}
 			}
