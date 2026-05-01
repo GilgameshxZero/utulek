@@ -5,13 +5,13 @@ using namespace Networking;
 using namespace Tls;
 using namespace std;
 
-void showHexStr(string const &res) {
-	cout << "[" << hex << setw(4) << setfill('0')
-			 << res.length() << "]\t";
+void showHexStr(string const &res, ostream &stream) {
+	stream << "[" << hex << setw(4) << setfill('0')
+				 << res.length() << "]\t";
 	for (auto &i : res) {
-		cout << hex << setw(2) << (int)(uint8_t)i << "\t";
+		stream << hex << setw(2) << (int)(uint8_t)i << "\t";
 	}
-	cout << dec << setfill(' ');
+	stream << dec << setfill(' ');
 }
 
 // PP-chain by deriving Plaintext/* classes.
@@ -20,11 +20,11 @@ class MyPlaintext : public Plaintext {
 
 	public:
 	// PP-chains.
-	MyPlaintext(std::istream &stream) : Plaintext(stream) {
+	MyPlaintext(istream &stream) : Plaintext(stream) {
 		std::stringstream ss;
 		Plaintext::sendWith(ss);
 		cout << "RECV ";
-		showHexStr(ss.str());
+		showHexStr(ss.str(), cout);
 		cout << endl;
 	}
 
@@ -32,7 +32,7 @@ class MyPlaintext : public Plaintext {
 		std::stringstream ss;
 		Plaintext::sendWith(ss);
 		cout << "SEND ";
-		showHexStr(ss.str());
+		showHexStr(ss.str(), cout);
 		cout << endl;
 		Plaintext::sendWith(stream);
 	}
@@ -118,75 +118,137 @@ int main() {
 			"usaco.org",
 			"codeforces.com",
 			"tiktok.com",
-			"hp.com"}};
-	size_t passed{};
-	for (auto const &hostNode : hostNodes) {
-		cout << hostNode << endl;
-		Tls::Client<Http::Client<>> client(
-			1024, 1024, 1000, 1000, Host{hostNode, 443});
-		client << MyPlaintext(
-			ProtocolVersion::_1_0,
-			new Handshake(new ClientHello(
-				ProtocolVersion::_1_2,
-				{{}},
-				0,
-				{CipherSuite::
-						TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-					CipherSuite::
-						TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					CipherSuite::TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
-					CipherSuite::
-						TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-					CipherSuite::
-						TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-					CipherSuite::
-						TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-					CipherSuite::
-						TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-
-					CipherSuite::TLS_RSA_WITH_AES_128_CBC_SHA},
-				{0},
-				{{new Extension::RenegotiationInfo(),
-					new Extension::ServerName({hostNode}),
-					new Extension::EcPointFormats(),
-					new Extension::SupportedGroups(),
-					new Extension::StatusRequest(),
-					new Extension::SignatureAlgorithms()}})));
-		string s;
-		while (true) {
-			string r;
-			client.recv(r, 1s);
-			s += r;
-			if (r.empty()) {
-				break;
+			"hp.com",
+			"quora.com",
+			"bilibili.com",
+			"baidu.com",
+			"mihoyo.com",
+			"usa.gov",
+			"whitehouse.gov",
+			"adobe.com",
+			"alpaca.markets",
+			"archive.org",
+			"archlinux.org",
+			"armorgames.com",
+			"artofproblemsolving.com",
+			"chase.com",
+			"numer.ai",
+			"parsec.app",
+			"cs.rin.ru",
+			"spoj.com",
+			"zoom.us",
+			"qq.com",
+			"nytimes.com",
+			"mitfcu.org",
+			"mega.nz",
+			"lichess.org",
+			"jlist.com",
+			"xnxx.com",
+			"pornhub.com",
+			"nhentai.net",
+			"xvideos.com",
+			"hellopoetry.com",
+			"goodreads.com",
+			"ebay.com",
+			"deshaw.com",
+			"boox.com",
+			"atcoder.jp",
+			"www.gov.cn",
+			"empireblue.com",
+			"cses.fi"}};
+	atomic_size_t passed{};
+	mutex ssm;
+	stringstream failedss;
+	auto makeTask{[&](string const &hostNode) {
+		return [&]() {
+			stringstream ss;
+			ss << hostNode << endl;
+			Tls::Client<Http::Client<>> client(
+				Host{hostNode, 443});
+			auto plaintext{Plaintext(
+				ProtocolVersion::_1_0,
+				new Handshake(new ClientHello(
+					ProtocolVersion::_1_2,
+					{{}},
+					0,
+					// Just three ciphersuites is enough.
+					// Increasing order of perceived difficulty to
+					// implement.
+					{CipherSuite::TLS_RSA_WITH_AES_128_CBC_SHA,
+						CipherSuite::
+							TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+						CipherSuite::
+							TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384},
+					{0},
+					{{new Extension::ServerName({hostNode}),
+						new Extension::SupportedGroups(),
+						new Extension::SignatureAlgorithms()}})))};
+			{
+				stringstream sss;
+				plaintext.sendWith(sss);
+				showHexStr(sss.str(), ss);
+				ss << endl;
 			}
-		}
-		showHexStr(s.substr(0, 96));
-		cout << endl;
-		stringstream ss;
-		ss << s;
+			client << plaintext;
+			string s;
+			while (true) {
+				string r;
+				client.recv(r, 2s);
+				s += r;
+				if (r.empty()) {
+					break;
+				}
+			}
+			showHexStr(s.substr(0, 96), ss);
+			ss << endl;
+			stringstream sss;
+			sss << s;
 
-		// Replay it back.
-		MyPlaintext response(ss);
-		if (
-			response.fragment->contentType() ==
-			ContentType::HANDSHAKE) {
-			auto handshake{
-				dynamic_cast<Handshake *>(response.fragment.get())};
+			// Replay it back.
+			Plaintext response(sss);
+			{
+				stringstream ssss;
+				response.sendWith(ssss);
+				showHexStr(ssss.str(), ss);
+				ss << endl;
+			}
+
+			bool pass{false};
 			if (
-				handshake->body->handshakeType() ==
-				HandshakeType::SERVER_HELLO) {
-				auto serverHello{dynamic_cast<ServerHello *>(
-					handshake->body.get())};
-				cout << "Cipher: " << hex << setfill('0') << setw(4)
+				response.fragment->contentType() ==
+				ContentType::HANDSHAKE) {
+				auto handshake{dynamic_cast<Handshake *>(
+					response.fragment.get())};
+				if (
+					handshake->body->handshakeType() ==
+					HandshakeType::SERVER_HELLO) {
+					auto serverHello{dynamic_cast<ServerHello *>(
+						handshake->body.get())};
+					ss << "Cipher: " << hex << setfill('0') << setw(4)
 						 << static_cast<uint16_t>(
 									serverHello->cipherSuite)
 						 << dec << setfill(' ') << endl;
-				passed++;
+					pass = true;
+				}
 			}
-		}
+			passed += pass;
+			if (!pass) {
+				lock_guard lg(ssm);
+				failedss << hostNode << endl;
+			}
+
+			cout << ss.str() << endl;
+		};
+	}};
+
+	Multithreading::ThreadPool tp;
+	for (auto &hostNode : hostNodes) {
+		tp.queueTask(makeTask(hostNode));
 	}
+
+	tp.blockForTasks();
 	cout << "Passed " << passed << " of " << hostNodes.size()
-			 << "." << endl;
+			 << "." << endl
+			 << failedss.str() << endl;
 	return 0;
 }
