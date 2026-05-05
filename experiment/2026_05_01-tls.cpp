@@ -52,27 +52,28 @@ bool doHandshake(
 				<< "." << dec << setfill(' ') << endl;
 	}
 
-	{
-		Plaintext plaintext(buffer);
-		if (
-			plaintext.fragment->contentType() !=
-			ContentType::HANDSHAKE) {
-			log << "Failed to parse Certificate::Plaintext.\n";
-			return true;
-		}
-		auto handshake{
-			dynamic_cast<Handshake *>(plaintext.fragment.get())};
-		if (
-			handshake->body->handshakeType() !=
-			HandshakeType::CERTIFICATE) {
-			log << "Failed to parse Certificate::Handshake.\n";
-			return true;
-		}
-		auto certificate{
-			dynamic_cast<Certificate *>(handshake->body.get())};
-		log << "Certificates: "
-				<< certificate->certificates.size() << "." << endl;
-	}
+	// {
+	// 	Plaintext plaintext(buffer);
+	// 	if (
+	// 		plaintext.fragment->contentType() !=
+	// 		ContentType::HANDSHAKE) {
+	// 		log << "Failed to parse Certificate::Plaintext.\n";
+	// 		return true;
+	// 	}
+	// 	auto handshake{
+	// 		dynamic_cast<Handshake
+	// *>(plaintext.fragment.get())}; 	if (
+	// 		handshake->body->handshakeType() !=
+	// 		HandshakeType::CERTIFICATE) {
+	// 		log << "Failed to parse Certificate::Handshake.\n";
+	// 		return true;
+	// 	}
+	// 	auto certificate{
+	// 		dynamic_cast<Certificate *>(handshake->body.get())};
+	// 	log << "Certificates: "
+	// 			<< certificate->certificates.size() << "." <<
+	// endl;
+	// }
 
 	return false;
 }
@@ -94,9 +95,9 @@ auto makeTask(
 				{{}},
 				{CipherSuite::TLS_RSA_WITH_AES_128_CBC_SHA,
 					CipherSuite::
-						TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+						TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 					CipherSuite::
-						TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384},
+						TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 				{0},
 				{{new Extension::ServerName({hostNode}),
 					new Extension::SupportedGroups(
@@ -119,7 +120,8 @@ auto makeTask(
 			lock_guard failureMtxLg(failureMtx);
 			failures.push_back(hostNode);
 		}
-		cout << log.rdbuf() << endl;
+		log << endl;
+		cout << log.rdbuf();
 	};
 }
 
