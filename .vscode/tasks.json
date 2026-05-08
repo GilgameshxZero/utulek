@@ -46,7 +46,11 @@
 				"cwd": "${workspaceFolder}/build",
 				"shell": { "args": [] }
 			},
-			"presentation": {},
+			"presentation": {
+				"clear": true,
+				"reveal": "silent",
+				"close": true
+			},
 
 			"command": "make",
 			"args": [
