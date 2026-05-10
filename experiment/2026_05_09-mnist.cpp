@@ -4,6 +4,7 @@
 
 using namespace Rain;
 using namespace Algorithm;
+using namespace Data;
 using namespace Math;
 using namespace Error;
 using namespace std;
@@ -86,6 +87,29 @@ int main(int, char const *const *const) {
 	auto trainXFlat{
 		trainX.asReshape<2>({trainX.size()[0], 0})};
 	cout << trainXFlat.size() << endl;
+
+	{
+		stringstream ss;
+		{
+			Serializer serializer(ss.rdbuf());
+			serializer << trainX << trainY << testX << testY;
+		}
+		Serializer serializer(assetPath / "mnist.hfm");
+		HuffmanStreamBuf encoderBuf(
+			*serializer.rdbuf(), ss.str());
+		ostream encoder(&encoderBuf);
+		encoder << ss.rdbuf();
+	}
+
+	{
+		ifstream fStream(assetPath / "mnist.hfm");
+		HuffmanStreamBuf decoderBuf(*fStream.rdbuf());
+		Deserializer deserializer(&decoderBuf);
+		trainX = decltype(trainX)();
+		cout << trainX.size() << endl;
+		deserializer >> trainX >> trainY >> testX >> testY;
+		cout << trainX.size() << endl;
+	}
 
 	return 0;
 }
