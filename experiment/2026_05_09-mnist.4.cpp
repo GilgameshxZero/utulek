@@ -20,7 +20,7 @@ using LD = long double;
 
 size_t constexpr C_CLASSES{10};
 LD constexpr STEP_SIZE{1e-3},
-	EPS{numeric_limits<LD>::min()}, LOSS_MAX{1024.0L};
+	EPS{numeric_limits<LD>::min()};
 
 template<typename Value>
 char pixelToChar(Value pixel) {
@@ -101,12 +101,11 @@ pair<Tensor<LD, 2>, Tensor<LD, 1>> update(
 				(1 - r1) * (1 - r2).asLog().clamp();
 		},
 		yHatG)};
-	LD loss{L.mean()};
+	LD logLoss{clamp(log(clamp(L.mean())))};
 	cout << "L[:4] = " << L.asSlice({{{0, 4}}}) << '.'
 			 << endl;
-	cout << "loss = " << loss << '.' << endl;
-	auto scaledStepSize{
-		clamp(loss, 0.0L, LOSS_MAX) * STEP_SIZE};
+	cout << "logLoss = " << logLoss << '.' << endl;
+	auto scaledStepSize{logLoss * STEP_SIZE};
 	cout << "scaledStepSize = " << scaledStepSize << '.'
 			 << endl;
 
