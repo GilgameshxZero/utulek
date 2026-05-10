@@ -53,8 +53,7 @@ pair<Tensor<LD, 2>, Tensor<LD, 1>> update(
 	Tensor<LD, 1> const &B,
 	bool showX = false) {
 	auto yHat{X.product<1>(W, {1}, {0})
-			.applyOver<1>(
-				[&](Tensor<LD, 1> &yHatI) { yHatI += B; })
+			.applyOver<1>([&](Tensor<LD, 1> &left) { left += B; })
 			.clamp()};
 	if (showX) {
 		cout << "X[:4] = " << endl;
@@ -72,24 +71,18 @@ pair<Tensor<LD, 2>, Tensor<LD, 1>> update(
 			 << '.' << endl;
 
 	// Prediction.
-	auto yHatNorm{yHat
-			.asApplyOver<1>([](Tensor<LD, 1> &left) {
-				// TODO: Activation f via clamp working?
-				left.clamp(0);
-				left -= left.max();
-			})
-			.clamp()};
+	// TODO: Activation f via clamp working?
+	auto yHatNorm{yHat.clamp(0).asApplyOver<1>(
+		[](Tensor<LD, 1> &left) { left -= left.max(); })};
 	cout << "yHatNorm[:4] = "
 			 << yHatNorm.asSlice({{{0, 4}, {}}}) << '.' << endl;
 	auto yHatG{yHatNorm.asExp().clamp()};
 	cout << "exp(yHatNorm)[:4] = "
 			 << yHatG.asSlice({{{0, 4}, {}}}) << '.' << endl;
-	Tensor<LD, 1> G({yHatG.size()[0]});
-	G.applyOver<0>(
-		[](LD &left, Tensor<LD, 1> const &right) {
-			left = right.sum();
-		},
-		yHatG);
+	auto G{
+		yHatG.asContract<>(1, [](Tensor<LD, 1> const &right) {
+			return right.sum();
+		})};
 	cout << "G[:4] = " << G.asSlice({{{0, 4}}}) << '.'
 			 << endl;
 	yHatG.applyOver<1>(
@@ -101,19 +94,13 @@ pair<Tensor<LD, 2>, Tensor<LD, 1>> update(
 			 << '.' << endl;
 
 	// Loss.
-	Tensor<LD, 1> L({X.size()[0]});
-	L.applyOver<0>(
-		[&](
-			LD &left,
-			Tensor<LD, 1> const &r1,
-			Tensor<LD, 1> const &r2) {
-			// TODO: Why is clamp important here?
-			left =
-				-(r1 * r2.asLog().clamp() +
-					(1 - r1) * (1 - r2).asLog().clamp());
+	auto L{-Y.asContract<>(
+		1,
+		[](Tensor<LD, 1> const &r1, Tensor<LD, 1> const &r2) {
+			return r1 * r2.asLog().clamp() +
+				(1 - r1) * (1 - r2).asLog().clamp();
 		},
-		Y,
-		yHatG);
+		yHatG)};
 	LD loss{L.mean()};
 	cout << "L[:4] = " << L.asSlice({{{0, 4}}}) << '.'
 			 << endl;
@@ -124,24 +111,23 @@ pair<Tensor<LD, 2>, Tensor<LD, 1>> update(
 			 << endl;
 
 	// Pressure.
-	auto PB{(Y - yHatG).applyOver<1>(
-		[](Tensor<LD, 1> &left, Tensor<LD, 1> const &right) {
-			left.divideElementWise(right);
-		},
-		yHatG.asMultiplyElementWise(1 - yHatG) + EPS)};
-	Tensor<LD, 1> pB({Y.size()[1]});
-	pB.applyOver<0>(
-		[&](LD &left, Tensor<LD, 1> const &right) {
-			left = right.mean();
-		},
-		PB.asTranspose({1, 0}));
-	Tensor<LD, 1> XCentroid({X.size()[1]});
-	XCentroid.applyOver<0>(
-		[](LD &left, Tensor<LD, 1> const &right) {
-			left = right.mean();
-		},
-		X.asTranspose({1, 0}));
-	auto pW{XCentroid.productOuter(pB)};
+	auto pB{(Y - yHatG)
+			.divideElementWise(
+				yHatG.asMultiplyElementWise(1 - yHatG) + EPS)
+			.asContract<>(
+				0,
+				[](Tensor<LD, 1> const &right) {
+					return right.mean();
+				})
+			.clamp()};
+	auto pW{
+		X.asContract<>(
+			 0,
+			 [](Tensor<LD, 1> const &right) {
+				 return right.mean();
+			 })
+			.productOuter(pB)
+			.clamp()};
 	auto WMod{(W + scaledStepSize * pW).clamp()};
 	auto BMod{(B + scaledStepSize * pB).clamp()};
 	cout << "BMod = " << BMod << '.' << endl;
