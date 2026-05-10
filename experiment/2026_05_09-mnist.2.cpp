@@ -151,7 +151,7 @@ int main(int, char const *const *const) {
 				.clamp(CLAMP_MIN, CLAMP_MAX)};
 		// Might temporarily exceed INF.
 		auto pW{x.productOuter(pB).clamp(CLAMP_MIN, CLAMP_MAX)};
-		pW *= 0;
+		// pW *= 0;
 		// Loss step size scalar needs to be clamped; sometimes
 		// loss is ~INF because the original prediction is close
 		// to (absolutely wrong).
