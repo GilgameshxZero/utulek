@@ -18,7 +18,7 @@ using LD = long double;
 		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL};     \
 		x != _to;                                              \
 		x += _delta)
-size_t constexpr C_CLASS{10}, C_EPOCH{32}, BATCH_SIZE{32};
+size_t constexpr C_CLASS{10}, C_EPOCH{32}, BATCH_SIZE{256};
 LD constexpr STEP_SIZE{1e-3};
 
 template<typename Value>
@@ -88,38 +88,66 @@ int main(int, char const *const *const) {
 				make_shared<Activation::Normalization<LD>>(),
 				make_shared<Activation::Softmax<LD>>()});
 
-		LD stepSizeScaler{1.0L};
+		// LD stepSizeScaler{1.0L};
 		Loss::CrossEntropy<LD> L;
 		RF(j, 0, C_EPOCH) {
 			LD lossMean{};
-			size_t c_batch{30000 / BATCH_SIZE};
-			RF(i, 0, c_batch) {
+			size_t cBatch{trainXDbl.size()[0] / BATCH_SIZE};
+			// size_t cBatch{1};
+			RF(i, 0, cBatch) {
 				auto X{trainXDbl.asSlice(
 					{{{i * BATCH_SIZE, (i + 1) * BATCH_SIZE}, {}}})},
 					Y{trainYOneHot.asSlice(
 						{{{i * BATCH_SIZE, (i + 1) * BATCH_SIZE},
 							{}}})};
-				auto artifact{network.asApplyWithArtifact(X)};
-				// cout << artifact.back() << endl;
-				auto loss{L.asApply(Y, artifact.back())};
-				// cout << "LOSS " << loss << endl;
+				auto activation{network.asApply(X)};
+				// cout << activation.back() << endl;
+				auto loss{L.asApply(Y, activation.back())};
+				cout << loss << '\r';
 				lossMean += loss;
-				network.stepWithGradient(
-					L, Y, artifact, STEP_SIZE * stepSizeScaler);
-				// return 0;
+				auto activationGradient{
+					network.getActivationGradient(L, Y, activation)};
+				network.stepWithActivationGradient(
+					activation, activationGradient, STEP_SIZE);
 			}
-			cout << j << ": " << lossMean / c_batch << '.'
-					 << endl;
-			stepSizeScaler *= 0.98;
+			cout << "Epoch " << j << ": " << lossMean / cBatch
+					 << '.' << endl;
 		}
 
-		RF(i, 0, 4) {
+		RF(i, 0, 8) {
 			auto x{testXDbl[i]}, y{testYOneHot[i]};
 			showImg(x.asReshape<2>({Math::sqrt(x.size()[0]), 0}));
 			cout << y << endl;
-			auto artifact{network.asApplyWithArtifact(x)};
-			cout << artifact.back() << endl;
-			cout << L.asApply(y, artifact.back()) << endl;
+			auto activationBack{network.asApply(x).back()};
+			cout << activationBack << endl;
+			cout << L.asApply(y, activationBack) << endl;
+		}
+
+		Tensor<size_t, 1> score({testXDbl.size()[0]});
+		{
+			size_t cBatch{testXDbl.size()[0] / BATCH_SIZE};
+			RF(i, 0, cBatch) {
+				auto X{testXDbl.asSlice(
+					{{{i * BATCH_SIZE, (i + 1) * BATCH_SIZE}, {}}})};
+				auto activationBack{network.asApply(X).back()};
+				score
+					.asSlice(
+						{{{i * BATCH_SIZE, (i + 1) * BATCH_SIZE}}})
+					.applyOver<0>(
+						[](
+							size_t &left,
+							uint8_t const &r1,
+							Tensor<LD, 1> const &r2) {
+							left = r1 == r2.argMax();
+						},
+						testY.slice(
+							{{{i * BATCH_SIZE, (i + 1) * BATCH_SIZE}}}),
+						activationBack);
+			}
+			cout << "Score: "
+					 << (LD)score.sum() / (cBatch * BATCH_SIZE) << '.'
+					 << endl;
+			cout << score.asSlice({{{0, 8}}}) << endl;
 		}
 
 		{
@@ -129,7 +157,7 @@ int main(int, char const *const *const) {
 				serializer << network;
 			}
 			Serializer serializer(
-				assetPath / ".data/network.7.hfm");
+				assetPath / ".data/network.8.hfm");
 			HuffmanStreamBuf encoderBuf(
 				*serializer.rdbuf(), ss.str());
 			ostream encoder(&encoderBuf);
