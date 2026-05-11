@@ -88,8 +88,8 @@ int main(int, char const *const *const) {
 				make_shared<Activation::Normalization<LD>>(),
 				make_shared<Activation::Softmax<LD>>()});
 
-		RF(j, 0, 64) {
-			RF(i, 0, 4096) {
+		RF(j, 0, 32) {
+			RF(i, 0, 16384) {
 				auto x{trainXDbl[i]}, y{trainYOneHot[i]};
 				// cout << y << endl;
 				Loss::CrossEntropy<LD> l(y);
@@ -99,7 +99,7 @@ int main(int, char const *const *const) {
 				cout << l.asApply(artifact.back()) << endl;
 				network.stepWithGradient(l, artifact, STEP_SIZE);
 			}
-			STEP_SIZE *= 0.99;
+			STEP_SIZE *= 0.98;
 		}
 		cout << STEP_SIZE << endl;
 
