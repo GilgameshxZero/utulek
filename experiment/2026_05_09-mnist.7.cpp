@@ -19,7 +19,7 @@ using LD = long double;
 		x != _to;                                              \
 		x += _delta)
 size_t constexpr C_CLASSES{10};
-LD STEP_SIZE{1e-3};
+LD constexpr STEP_SIZE{1e-3};
 
 template<typename Value>
 char pixelToChar(Value pixel) {
@@ -41,28 +41,6 @@ void showImg(
 		});
 		stream << '\n';
 	});
-}
-
-template<typename Value, std::size_t ORDER>
-auto readTensor(filesystem::path file) {
-	ifstream fTensor(file);
-	// Ignore type.
-	fTensor.ignore(3);
-	// Tensor order.
-	releaseAssert(fTensor.get() == ORDER);
-
-	array<size_t, ORDER> shape;
-	RF(i, 0, ORDER) {
-		shape[i] = readBytes<uint32_t>(fTensor, endian::big);
-	}
-
-	Tensor<uint8_t, ORDER> tensor(shape);
-	// Special case where data is well-formatted so we don't
-	// need applyOver.
-	fTensor.read(
-		reinterpret_cast<char *>(tensor.data().get()),
-		tensor.sizeProduct());
-	return tensor;
 }
 
 int main(int, char const *const *const) {
@@ -97,10 +75,6 @@ int main(int, char const *const *const) {
 			left[right] = 1;
 		},
 		testY);
-	cout << trainXDbl.size() << endl
-			 << trainYOneHot.size() << endl
-			 << testXDbl.size() << endl
-			 << testYOneHot.size() << endl;
 
 	{
 		Network::FeedForward<LD> network(
@@ -114,29 +88,29 @@ int main(int, char const *const *const) {
 				make_shared<Activation::Normalization<LD>>(),
 				make_shared<Activation::Softmax<LD>>()});
 
+		LD stepSizeScaler{1.0L};
 		RF(j, 0, 32) {
-			RF(i, 0, 1) {
+			LD lossMean{};
+			RF(i, 0, 1024) {
 				auto x{trainXDbl[i]}, y{trainYOneHot[i]};
-				// cout << y << endl;
-				Loss::CrossEntropy<LD> l(y);
+				Loss::CrossEntropy<LD> l;
 				auto artifact{network.asApplyWithArtifact(x)};
-				// cout << artifact << endl;
-				// cout << artifact.back() << endl;
-				cout << l.asApply(artifact.back()) << endl;
-				network.stepWithGradient(l, artifact, STEP_SIZE);
+				network.stepWithGradient(
+					l, y, artifact, STEP_SIZE * stepSizeScaler);
+				lossMean += l.asApply(y, artifact.back());
 			}
-			STEP_SIZE *= 0.98;
+			cout << j << ": " << lossMean / 1024 << '.' << endl;
+			stepSizeScaler *= 0.98;
 		}
-		cout << STEP_SIZE << endl;
 
-		RF(i, 59995, 60000) {
-			auto x{trainXDbl[i]}, y{trainYOneHot[i]};
-			showImg(x.asReshape<2>({28, 28}));
+		RF(i, 0, 4) {
+			auto x{testXDbl[i]}, y{testYOneHot[i]};
+			showImg(x.asReshape<2>({Math::sqrt(x.size()[0]), 0}));
 			cout << y << endl;
-			Loss::CrossEntropy<LD> l(y);
+			Loss::CrossEntropy<LD> l;
 			auto artifact{network.asApplyWithArtifact(x)};
 			cout << artifact.back() << endl;
-			cout << l.asApply(artifact.back()) << endl;
+			cout << l.asApply(y, artifact.back()) << endl;
 		}
 
 		{
@@ -146,64 +120,7 @@ int main(int, char const *const *const) {
 				serializer << network;
 			}
 			Serializer serializer(
-				assetPath / ".data/network.6.hfm");
-			HuffmanStreamBuf encoderBuf(
-				*serializer.rdbuf(), ss.str());
-			ostream encoder(&encoderBuf);
-			encoder << ss.rdbuf();
-			encoder.flush();
-		}
-	}
-
-	{
-		Network::FeedForward<LD> network(
-			{make_shared<Activation::Linear<LD>>(),
-				make_shared<Activation::Relu<LD>>(),
-				make_shared<Activation::Linear<LD>>(),
-				make_shared<Activation::Normalization<LD>>(),
-				make_shared<Activation::Softmax<LD>>()});
-
-		{
-			ifstream fStream(assetPath / ".data/network.6.hfm");
-			HuffmanStreamBuf decoderBuf(*fStream.rdbuf());
-			Deserializer deserializer(&decoderBuf);
-			deserializer >> network;
-		}
-
-		RF(i, 59995, 60000) {
-			auto x{trainXDbl[i]}, y{trainYOneHot[i]};
-			showImg(x.asReshape<2>({28, 28}));
-			cout << y << endl;
-			Loss::CrossEntropy<LD> l(y);
-			auto artifact{network.asApplyWithArtifact(x)};
-			cout << artifact.back() << endl;
-			cout << l.asApply(artifact.back()) << endl;
-		}
-	}
-
-	{
-		auto trainX{readTensor<uint8_t, 3>(
-			assetPath / ".data/train-images-idx3-ubyte")};
-		cout << "trainX shape: " << trainX.size() << '.'
-				 << endl;
-		auto trainY{readTensor<uint8_t, 1>(
-			assetPath / ".data/train-labels-idx1-ubyte")};
-		cout << "trainY	shape: " << trainY.size() << '.'
-				 << endl;
-		auto testX{readTensor<uint8_t, 3>(
-			assetPath / ".data/t10k-images-idx3-ubyte")};
-		cout << "testX shape: " << testX.size() << '.' << endl;
-		auto testY{readTensor<uint8_t, 1>(
-			assetPath / ".data/t10k-labels-idx1-ubyte")};
-		cout << "testY shape: " << testY.size() << '.' << endl;
-
-		{
-			stringstream ss;
-			{
-				Serializer serializer(ss.rdbuf());
-				serializer << trainX << trainY << testX << testY;
-			}
-			Serializer serializer(assetPath / ".data/mnist.hfm");
+				assetPath / ".data/network.7.hfm");
 			HuffmanStreamBuf encoderBuf(
 				*serializer.rdbuf(), ss.str());
 			ostream encoder(&encoderBuf);
