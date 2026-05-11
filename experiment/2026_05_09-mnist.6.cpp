@@ -89,7 +89,7 @@ int main(int, char const *const *const) {
 				make_shared<Activation::Softmax<LD>>()});
 
 		RF(j, 0, 32) {
-			RF(i, 0, 16384) {
+			RF(i, 0, 1) {
 				auto x{trainXDbl[i]}, y{trainYOneHot[i]};
 				// cout << y << endl;
 				Loss::CrossEntropy<LD> l(y);
@@ -112,6 +112,21 @@ int main(int, char const *const *const) {
 			cout << artifact.back() << endl;
 			cout << l.asApply(artifact.back()) << endl;
 		}
+
+		// {
+		// 	stringstream ss;
+		// 	{
+		// 		Serializer serializer(ss.rdbuf());
+		// 		serializer << network;
+		// 	}
+		// 	Serializer serializer(assetPath /
+		// ".data/network.6.hfm"); 	HuffmanStreamBuf encoderBuf(
+		// 		*serializer.rdbuf(), ss.str());
+		// 	ostream encoder(&encoderBuf);
+		// 	encoder << ss.rdbuf();
+		// 	encoder.flush();
+		// }
 	}
+
 	return 0;
 }
