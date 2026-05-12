@@ -19,7 +19,7 @@ using LD = long double;
 		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL};     \
 		x != _to;                                              \
 		x += _delta)
-size_t constexpr C_THREAD{8}, C_CLASS{10}, C_EPOCH{32},
+size_t constexpr C_THREAD{8}, C_CLASS{10}, C_EPOCH{128},
 	BATCH_SIZE{256}, MINI_BATCH_SIZE{BATCH_SIZE / C_THREAD};
 LD constexpr STEP_SIZE{3e-4};
 
@@ -85,7 +85,12 @@ int main(int, char const *const *const) {
 			make_shared<Activation::Relu<LD>>(),
 			make_shared<Activation::Normalization<LD>>(),
 			make_shared<Activation::Linear<LD>>(
-				Tensor<LD, 2>({256, 32}, gen, dist),
+				Tensor<LD, 2>({256, 84}, gen, dist),
+				Tensor<LD, 1>({84}, gen, dist)),
+			make_shared<Activation::Relu<LD>>(),
+			make_shared<Activation::Normalization<LD>>(),
+			make_shared<Activation::Linear<LD>>(
+				Tensor<LD, 2>({84, 32}, gen, dist),
 				Tensor<LD, 1>({32}, gen, dist)),
 			make_shared<Activation::Relu<LD>>(),
 			make_shared<Activation::Normalization<LD>>(),
