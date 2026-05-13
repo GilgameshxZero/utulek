@@ -49,14 +49,15 @@ int main(int, char const *const *const) {
 	auto assetPath{getAssetPath(__FILE__)};
 	cout << "Asset path: " << assetPath << '.' << endl;
 
-	random_device rd;
+	// random_device rd;
 	mt19937 gen(0);
 	uniform_real_distribution<LD> dist;
 
 	Tensor<uint8_t, 3> trainX, testX;
 	Tensor<uint8_t, 1> trainY, testY;
 	{
-		ifstream fStream(assetPath / ".data/mnist.hfm");
+		ifstream fStream(
+			assetPath / ".data" / "mnist.hfm", ios::binary);
 		HuffmanStreamBuf decoderBuf(*fStream.rdbuf());
 		Deserializer deserializer(&decoderBuf);
 		deserializer >> trainX >> trainY >> testX >> testY;
@@ -221,7 +222,7 @@ int main(int, char const *const *const) {
 			serializer << network << lossV << scoreV;
 		}
 		Serializer serializer(
-			assetPath / ".data/network.9.hfm");
+			assetPath / ".data" / "network.9.hfm");
 		HuffmanStreamBuf encoderBuf(
 			*serializer.rdbuf(), ss.str());
 		ostream encoder(&encoderBuf);

@@ -12,5 +12,5 @@ inline std::filesystem::path getAssetPath(
 	return std::filesystem::path(
 		fileStr.substr(
 			0, std::min(lastPeriod, secondLastPeriod)) +
-		".cpp.asset/");
+		".cpp.asset/").make_preferred();
 }
