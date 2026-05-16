@@ -197,7 +197,7 @@ COMPILER_FLAGS_INCLUDES=\
 	$(patsubst %,/I$(ROOT_DIR)\%,$(INCL_PCH))\
 	$(patsubst %,/I$(ROOT_DIR)\%,$(INCL))
 COMPILER_FLAGS_COMMON=$(COMPILER_FLAGS_INCLUDES)\
-	/std:c++20 /D_CONSOLE\
+	/std:c++23preview /D_CONSOLE\
 	/Fp$(PROJ_OBJ_DIR)$(BUILD_NAME)\x$(ARCH)\pch.pch\
 	/fp:fast /MP /permissive-\
 	/Zc:__cplusplus /Zc:wchar_t /Zc:forScope /Zc:inline /Zf\
@@ -569,7 +569,7 @@ COMPILER_FLAGS_INCLUDES:=\
 	$(patsubst %,-I$(ROOT_DIR)%,$(INCL_PCH))\
 	$(patsubst %,-I$(ROOT_DIR)%,$(INCL))
 COMPILER_FLAGS_COMMON:=$(COMPILER_FLAGS_INCLUDES)\
-	-std=c++20 -pthread\
+	-std=c++23 -pthread\
 	-Wall -Wextra -D_CONSOLE -masm=intel
 COMPILER_FLAGS_DEBUG:=-D_DEBUG -g -O0
 COMPILER_FLAGS_RELEASE:=-DNDEBUG -O3 -ffast-math
