@@ -23,8 +23,8 @@ using CF = Clamped<float>;
 		x != _to;                                              \
 		x += _delta)
 
-size_t constexpr C_CLASS{10}, C_EPOCH{32};
-CF constexpr STEP_SIZE{1e-1};
+size_t constexpr C_CLASS{10}, C_EPOCH{128};
+CF constexpr STEP_SIZE{2e-1};
 
 template<typename Value>
 char pixelToChar(Value pixel) {
@@ -57,7 +57,10 @@ int main() {
 
 	mt19937 gen(0);
 	// Variance is dependent on network depth.
-	normal_distribution<LD> dist(0.0L, 0.01L);
+	// Too low and gradient doesn't reach through the entire
+	// network. Too high and gradients explode and become
+	// directionless (?)
+	normal_distribution<LD> dist(0.0L, 8e-2);
 
 	auto assetPath{getAssetPath(__FILE__)};
 	filesystem::create_directories(assetPath / ".data");
@@ -153,6 +156,9 @@ int main() {
 							activationGradientV[jInner] =
 								network.getActivationGradient(
 									L, Y, activationV[jInner]);
+							// cout <<
+							// activationGradientV[jInner].back()[9] <<
+							// endl;
 
 							loss +=
 								L.asApply(Y, activationV[jInner].back());
@@ -169,7 +175,7 @@ int main() {
 						network.stepWithActivationGradient(
 							activationV[j],
 							activationGradientV[j],
-							STEP_SIZE / (k + 1));
+							STEP_SIZE / (k + C_EPOCH));
 					}
 				}
 			}

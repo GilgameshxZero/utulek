@@ -23,8 +23,8 @@ using CF = Clamped<float>;
 		x != _to;                                              \
 		x += _delta)
 
-size_t constexpr C_CLASS{10}, C_EPOCH{32};
-CF constexpr STEP_SIZE{1e-2};
+size_t constexpr C_CLASS{10}, C_EPOCH{128};
+CF constexpr STEP_SIZE{2e-1};
 
 template<typename Value>
 char pixelToChar(Value pixel) {
@@ -57,7 +57,7 @@ int main() {
 
 	mt19937 gen(0);
 	// Variance is dependent on network depth.
-	normal_distribution<LD> dist(0.0L, 0.01L);
+	normal_distribution<LD> dist(0.0L, 4e-2);
 
 	auto assetPath{getAssetPath(__FILE__)};
 	filesystem::create_directories(assetPath / ".data");
@@ -161,7 +161,7 @@ int main() {
 						network.stepWithActivationGradient(
 							activationV[j],
 							activationGradientV[j],
-							STEP_SIZE / (k + 1));
+							STEP_SIZE / (k + C_EPOCH));
 					}
 				}
 			}
@@ -222,7 +222,7 @@ int main() {
 				}
 				ofstream encoderStream(
 					assetPath / ".data" /
-					(string("c10.network.1.epoch.") + to_string(k) +
+					(string("c10.1-network-epoch_") + to_string(k) +
 						".hfm"));
 				HuffmanStreamBuf encoderBuf(
 					*encoderStream.rdbuf(), ss.str());
