@@ -22,15 +22,15 @@ using CF = Clamped<float>;
 		x != _to;                                              \
 		x += _delta)
 
-size_t constexpr C_CLASS{10}, C_EPOCH{128};
-CF constexpr STEP_SIZE{1e-3};
+size_t constexpr C_CLASS{10}, C_EPOCH{16};
+CF constexpr STEP_SIZE{1e-1};
 
 int main(int, char const *const *const) {
 	size_t C_THREAD{
 		max(1_zu, (size_t)thread::hardware_concurrency())},
 		// 1_zu},
-		BATCH_SIZE{C_THREAD * 32},
-		// BATCH_SIZE{1_zu},
+		BATCH_SIZE{C_THREAD * 32_zu},
+		// BATCH_SIZE{C_THREAD * 1_zu},
 		MINI_BATCH_SIZE{BATCH_SIZE / C_THREAD};
 	cout << "Threads: " << C_THREAD << '.' << endl;
 
@@ -39,7 +39,7 @@ int main(int, char const *const *const) {
 	cout << "Asset path: " << assetPath << '.' << endl;
 
 	mt19937 gen(0);
-	normal_distribution<LD> dist(0.0L);
+	normal_distribution<LD> dist(0.0L, 0.1L);
 	// normal_distribution<LD> dist(1000.0L);
 
 	Tensor<uint8_t, 3> trainX, testX;
@@ -79,11 +79,11 @@ int main(int, char const *const *const) {
 	Network::FeedForward<CF> network(
 		// {make_shared<Activation::Normalization<CF>>(),
 		{make_shared<Activation::Linear<CF>>(
-			 Tensor<CF, 2>({784, 10}, gen, dist),
-			 Tensor<CF, 1>({10}, gen, dist)),
+			 Tensor<CF, 2>({784, 96}, gen, dist),
+			 Tensor<CF, 1>({96}, gen, dist)),
 			make_shared<Activation::Relu<CF>>(),
 			make_shared<Activation::Linear<CF>>(
-				Tensor<CF, 2>({10, 10}, gen, dist),
+				Tensor<CF, 2>({96, 10}, gen, dist),
 				Tensor<CF, 1>({10}, gen, dist)),
 			make_shared<Activation::Softmax<CF>>()});
 	Loss::CrossEntropy<CF> L;
@@ -103,7 +103,7 @@ int main(int, char const *const *const) {
 			{
 				vector<vector<Tensor<CF, 2>>> activationV(C_THREAD),
 					activationGradientV(C_THREAD);
-				CF loss{};
+				atomic<float> loss{};
 
 				RF(i, 0, cBatchTrain) {
 					atomic_size_t jOuter{};
@@ -158,7 +158,7 @@ int main(int, char const *const *const) {
 							// 	}
 							// }
 
-							loss =
+							loss +=
 								L.asApply(Y, activationV[jInner].back());
 						});
 					}
@@ -166,7 +166,8 @@ int main(int, char const *const *const) {
 					tp.blockForTasks();
 					cout << "Mini-batch " << (i + 1) * C_THREAD
 							 << " / " << cBatchTrain * C_THREAD
-							 << ": loss = " << loss << ".    \r" << flush;
+							 << ": loss = " << loss / ((i + 1) * C_THREAD)
+							 << ".    \r" << flush;
 					// cout << endl;
 
 					RF(j, 0, C_THREAD) {
