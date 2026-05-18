@@ -23,10 +23,12 @@ namespace Utulek {
 		secondLastPeriod = secondLastPeriod > lastDivider
 			? secondLastPeriod
 			: std::string::npos;
+		// Forego trailing slash to enable `parent_path()` to do
+		// the right thing.
 		return std::filesystem::path(
 			fileStr.substr(
 				0, std::min(lastPeriod, secondLastPeriod)) +
-			".cpp.asset/")
+			".cpp.asset")
 			.make_preferred();
 	}
 }
