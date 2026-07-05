@@ -118,6 +118,7 @@ def import_globals_notebook(
 	import_global(global_scope, "display", "idisplay",
 		"IPython")
 	import_global(global_scope, "typing")
+	import_global(global_scope, "uuid")
 	import_global(global_scope, "numpy", "np")
 
 	import_global(global_scope, "jax")
