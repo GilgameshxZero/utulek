@@ -2,8 +2,6 @@
 # Realistically only supported on Linux.
 -r common.txt
 
-accelerate
-
 # TF.
 # tensorflow > 2.10 does not offer GPU support on Windows. However, lower versions are no longer available.
 tensorflow[and-cuda]<=2.21.0; platform_system=="Linux"

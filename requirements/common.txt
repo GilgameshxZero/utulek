@@ -32,6 +32,9 @@ scipy
 transformers
 datasets
 openai
+accelerate
+diffusers[torch]
+invisible_watermark
 
 # Utulek.
 -e .
