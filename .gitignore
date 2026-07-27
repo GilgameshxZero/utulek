@@ -1,6 +1,7 @@
 # Project.
 **/juice.log
 **/.env
+**/*.transient.*
 
 # Syncthing.
 **/*local.syncthing*

@@ -112,6 +112,7 @@ def import_globals_notebook(
 	import_global(global_scope, "pp", "", "pprint")
 	import_global(global_scope, "json")
 	import_global(global_scope, "tqdm", "", "tqdm.auto")
+	import_global(global_scope, "gc")
 	import_global(global_scope, "dill")
 	import_global(global_scope, "pyplot", "plt",
 		"matplotlib")
@@ -171,3 +172,12 @@ def import_globals_notebook(
 		print("jax:", jax.local_devices())
 	except:
 		pass
+
+
+def unload_model(model):
+	import gc
+
+	model.to("cpu")
+	del model
+	gc.collect()
+	torch.cuda.empty_cache()
