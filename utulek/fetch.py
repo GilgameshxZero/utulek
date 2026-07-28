@@ -19,9 +19,11 @@ def fetch_ds_cifar_10(cache_dir=".data/cifar-10"):
 	import urllib
 	import tarfile
 
-	REMOTE_PATH = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
-	LOCAL_PATH = os.path.join(cache_dir,
+	REMOTE_PATH = (
+		"https://www.cs.toronto.edu/~kriz/"
 		"cifar-10-python.tar.gz")
+	LOCAL_PATH = os.path.join(
+		cache_dir, "cifar-10-python.tar.gz")
 
 	if not os.path.exists(LOCAL_PATH):
 		os.makedirs(cache_dir, exist_ok=True)

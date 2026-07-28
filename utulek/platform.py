@@ -2,8 +2,10 @@ import typing
 
 
 def is_notebook_kernel_code(
-	global_scope: typing.Optional[typing.Dict[str,
-	str]] = None,
+	global_scope: typing.Optional[typing.Dict[
+		str,
+		str,
+	]] = None,
 ) -> bool:
 	"""Detect if current notebook kernel is from Code."""
 
@@ -11,8 +13,10 @@ def is_notebook_kernel_code(
 
 
 def get_notebook_name(
-	global_scope: typing.Optional[typing.Dict[str,
-	str]] = None,
+	global_scope: typing.Optional[typing.Dict[
+		str,
+		str,
+	]] = None,
 ) -> str:
 	"""
 	Guess the name of an `.ipynb` based on the session name of
@@ -30,8 +34,10 @@ def get_notebook_name(
 
 
 def get_notebook_asset_path(
-	global_scope: typing.Optional[typing.Dict[str,
-	str]] = None,
+	global_scope: typing.Optional[typing.Dict[
+		str,
+		str,
+	]] = None,
 ) -> str:
 	"""
 	Notebooks of the name `NAME.ID.ipynb` all share an asset
@@ -51,8 +57,7 @@ def get_notebook_asset_path(
 		basename = get_notebook_name(global_scope=global_scope)
 	basename_prefix = basename.rsplit(".", 2)[0]
 	return os.path.join(
-		dirpath,
-		basename_prefix + ".ipynb.asset" + os.path.sep)
+		dirpath, basename_prefix + ".ipynb.asset" + os.path.sep)
 
 
 def import_global(
@@ -77,10 +82,10 @@ def import_global(
 	elif context_module_name == "":
 		global_scope[short_name] = __import__(object_name)
 	else:
-		context_module = __import__(context_module_name,
-			fromlist=[object_name])
-		global_scope[short_name] = getattr(context_module,
-			object_name)
+		context_module = __import__(
+			context_module_name, fromlist=[object_name])
+		global_scope[short_name] = getattr(
+			context_module, object_name)
 
 	# Additionally, also import it into this scope.
 	globals()[short_name] = global_scope[short_name]
@@ -114,10 +119,9 @@ def import_globals_notebook(
 	import_global(global_scope, "tqdm", "", "tqdm.auto")
 	import_global(global_scope, "gc")
 	import_global(global_scope, "dill")
-	import_global(global_scope, "pyplot", "plt",
-		"matplotlib")
-	import_global(global_scope, "display", "idisplay",
-		"IPython")
+	import_global(global_scope, "pyplot", "plt", "matplotlib")
+	import_global(
+		global_scope, "display", "idisplay", "IPython")
 	import_global(global_scope, "typing")
 	import_global(global_scope, "uuid")
 	import_global(global_scope, "numpy", "np")
@@ -158,8 +162,8 @@ def import_globals_notebook(
 		print(
 			"torch:",
 			[
-			torch.cuda.get_device_name(i)
-			for i in range(torch.cuda.device_count())
+				torch.cuda.get_device_name(i)
+				for i in range(torch.cuda.device_count())
 			],
 		)
 	except:
@@ -172,12 +176,3 @@ def import_globals_notebook(
 		print("jax:", jax.local_devices())
 	except:
 		pass
-
-
-def unload_model(model):
-	import gc
-
-	model.to("cpu")
-	del model
-	gc.collect()
-	torch.cuda.empty_cache()
