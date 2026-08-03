@@ -6,7 +6,7 @@ November 25, 2022
 
 It’s difficult to overstate the cumulative weight and subsequent deliverance of all manner of wrongs and wrongdoings, in the three years since my last writing. Unfortunately, I remain the most qualified detective for all things myself.
 
-![](2022_11_25-of_recurrences_and_convolutions.md.assets/amelia-watson.png)
+![](2022_11_25-of_recurrences_and_convolutions.md.assets/amelia-watson.avif)
 *Amelia Watson, a detective of trivial namesake, from Hololive’s first generation of English VTubers, denoted *Myth*.*
 
 To kick off this investigation, then, I’d like to briefly explore the following technical problem.
@@ -48,7 +48,7 @@ As a contest problem with limits $K\leq N\leq 1e6$, we should compute the answer
 
 Like the unsuspecting 旅行者 thrust into the world of Teyvat, that we are accompanied first by Amber in Mondstadt is about as likely as being accompanied by Fourier in the unlikely context of modern graphical applications.
 
-![](2022-11-25-of-recurrences-and-convolutions.md-assets/2022-11-25-16-44-28.png)
+![](2022-11-25-of-recurrences-and-convolutions.md-assets/2022-11-25-16-44-28.avif)
 
 I do hope Díaz of his Pulitzer fame would find this writing a misappropriation of the prototypical hero’s journey, but perhaps such prosthetic beginnings are more suitably designated as deconstructions. There is, of course, little wiggle room from the world of 原神 to where I left off, three years ago.
 

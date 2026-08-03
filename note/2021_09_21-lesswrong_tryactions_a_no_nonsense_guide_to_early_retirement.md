@@ -29,4 +29,4 @@ Start converting some traditional funds to Roth if you'll need the money 5 years
   * Keep your expenses the same modulo inflation.
   * Do whatever you want!  Keep some level of professional activity / money-making to further reduce your risk.
 
-![](2021_09_21-lesswrong_tryactions_a_no_nonsense_guide_to_early_retirement.md.assets/2021-09-21-09-21-51.png#unbounded-height)
+![](2021_09_21-lesswrong_tryactions_a_no_nonsense_guide_to_early_retirement.md.assets/2021-09-21-09-21-51.avif#unbounded-height)

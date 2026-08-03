@@ -14,7 +14,7 @@ A collection of slides demonstrating `silverine`.
 
 ## Introduction
 
-![alt text](2025_11_12-silverine.md.assets/1763010151381.image.png#small)
+![alt text](2025_11_12-silverine.md.assets/1763010151381.image.avif#small)
 *Iris.EXE, from the game Mega Man Battle Network 6.*
 
 Does Iris deserve sympathy, despite being a robot?

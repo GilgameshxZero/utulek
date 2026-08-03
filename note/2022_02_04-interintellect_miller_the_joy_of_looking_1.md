@@ -33,7 +33,7 @@ Visual thinking strategy (VTS) elements:
   * “You *could be* saying this,” allowing you to externalize it, and move it around.
 * concluding
 
-![](2022_02_04-interintellect_miller_the_joy_of_looking_1.md.assets/2022-02-04-19-57-09.png)
+![](2022_02_04-interintellect_miller_the_joy_of_looking_1.md.assets/2022-02-04-19-57-09.avif)
 
 Very much influenced by Gestalt school of visual analysis.
 Recommend attending VTS Look Club: <https://vtshome.org/calendar/event/a164P00000Du0mNQAR/>.
