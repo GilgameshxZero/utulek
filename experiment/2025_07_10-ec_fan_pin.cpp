@@ -14,15 +14,15 @@
 	_T("WinRing0x64.sys")
 
 // IOCTL Function Code
-#define OLS_TYPE 40000	// The Device type code
+#define OLS_TYPE 40000 // The Device type code
 #define IOCTL_OLS_GET_REFCOUNT \
-	CTL_CODE(                    \
+	CTL_CODE( \
 		OLS_TYPE, 0x801, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_OLS_READ_IO_PORT_BYTE \
-	CTL_CODE(                         \
+	CTL_CODE( \
 		OLS_TYPE, 0x833, METHOD_BUFFERED, FILE_READ_ACCESS)
 #define IOCTL_OLS_WRITE_IO_PORT_BYTE \
-	CTL_CODE(                          \
+	CTL_CODE( \
 		OLS_TYPE, 0x836, METHOD_BUFFERED, FILE_WRITE_ACCESS)
 
 // DLL Status Code
@@ -126,15 +126,16 @@ BOOL DriverManager::manage(
 			}
 			break;
 		case OLS_DRIVER_SYSTEM_INSTALL:
-			if (isSystemInstallDriver(
-						hSCManager, DriverId, DriverPath))
+			if (
+				isSystemInstallDriver(
+					hSCManager, DriverId, DriverPath))
 				rCode = TRUE;
 			else {
 				if (!openDriver()) {
 					stopDriver(hSCManager, DriverId);
 					removeDriver(hSCManager, DriverId);
-					if (installDriver(
-								hSCManager, DriverId, DriverPath))
+					if (
+						installDriver(hSCManager, DriverId, DriverPath))
 						startDriver(hSCManager, DriverId);
 					openDriver();
 				}
@@ -474,12 +475,12 @@ constexpr BYTE BIG_ENDIAN = 1;
 constexpr BYTE READ = 0;
 constexpr BYTE WRITE = 1;
 
-constexpr BYTE EC_OBF = 0x01;	 // Output Buffer Full
-constexpr BYTE EC_IBF = 0x02;	 // Input Buffer Full
-constexpr BYTE EC_DATA = 0x62;	// Data Port
-constexpr BYTE EC_SC = 0x66;	// Status/Command Port
-constexpr BYTE RD_EC = 0x80;	// Read Embedded Controller
-constexpr BYTE WR_EC = 0x81;	// Write Embedded Controller
+constexpr BYTE EC_OBF = 0x01; // Output Buffer Full
+constexpr BYTE EC_IBF = 0x02; // Input Buffer Full
+constexpr BYTE EC_DATA = 0x62; // Data Port
+constexpr BYTE EC_SC = 0x66; // Status/Command Port
+constexpr BYTE RD_EC = 0x80; // Read Embedded Controller
+constexpr BYTE WR_EC = 0x81; // Write Embedded Controller
 
 typedef std::map<BYTE, BYTE> EC_DUMP;
 
@@ -650,7 +651,7 @@ VOID EmbeddedController::printDump() {
 	for (auto const &[address, value] : this->dump()) {
 		UINT16 nextAddress = address + 0x01;
 		stream << std::setw(2) << (UINT16)value << " ";
-		if (nextAddress % 0x10 == 0x00)	 // End of row
+		if (nextAddress % 0x10 == 0x00) // End of row
 			stream << std::endl << nextAddress << " | ";
 	}
 
@@ -659,7 +660,7 @@ VOID EmbeddedController::printDump() {
 						<< result.substr(
 								 0,
 								 result.size() -
-									 7)	 // Removing last 7 characters
+									 7) // Removing last 7 characters
 						<< std::endl;
 }
 
@@ -770,31 +771,31 @@ BOOL EmbeddedController::operation(
 	BYTE operationType = isRead ? RD_EC : WR_EC;
 
 	for (UINT16 i = 0; i < this->retry; i++)
-		if (this->status(EC_IBF))	 // Wait until IBF is free
+		if (this->status(EC_IBF)) // Wait until IBF is free
 		{
 			this->driver.writeIoPortByte(
 				this->scPort,
-				operationType);	 // Write operation type to the
-												 // Status/Command port
-			if (this->status(EC_IBF))	 // Wait until IBF is free
+				operationType); // Write operation type to the
+												// Status/Command port
+			if (this->status(EC_IBF)) // Wait until IBF is free
 			{
 				this->driver.writeIoPortByte(
 					this->dataPort,
-					bRegister);	 // Write register address to the Data
-											 // port
-				if (this->status(EC_IBF))	 // Wait until IBF is free
+					bRegister); // Write register address to the Data
+											// port
+				if (this->status(EC_IBF)) // Wait until IBF is free
 					if (isRead) {
-						if (this->status(
-									EC_OBF))	// Wait until OBF is full
+						if (this->status(EC_OBF)) // Wait until OBF is
+																			// full
 						{
 							*value = this->driver.readIoPortByte(
-								this->dataPort);	// Read from the Data port
+								this->dataPort); // Read from the Data port
 							return TRUE;
 						}
 					} else {
 						this->driver.writeIoPortByte(
 							this->dataPort,
-							*value);	// Write to the Data port
+							*value); // Write to the Data port
 						return TRUE;
 					}
 			}

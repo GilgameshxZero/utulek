@@ -2,6 +2,4 @@
 
 #include <iostream>
 
-void foo() {
-	std::cout << "Hello world!\n";
-}
+void foo() { std::cout << "Hello world!\n"; }

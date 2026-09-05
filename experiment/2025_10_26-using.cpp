@@ -7,7 +7,7 @@ class Policy {
 	using Value = int;
 };
 
-template <typename PolicyType>
+template<typename PolicyType>
 class Class {
 	public:
 	// using Value = typename PolicyType::Value;

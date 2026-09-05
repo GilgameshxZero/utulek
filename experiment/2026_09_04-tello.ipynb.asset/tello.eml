@@ -1,0 +1,571 @@
+Received: from o192254122167.outbound-mail.sendgrid.net (::ffff:192.254.122.167)
+	by gilgamesh.cc (Emilia)
+	with ESMTP
+	id 0
+	for <010c0ab4-3fac-4ff3-beae-c6dd2981cf6e@gilgamesh.cc>;
+	Thu, 03 Sep 2026 12:04:23 +0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=tello.com;
+	h=subject:from:mime-version:content-type:date:to:
+	content-transfer-encoding:cc:content-type:date:from:subject:to;
+	s=s1; t=1788437062;
+	bh=tq/4wTiF2jip2icmPRv2pUfTzHSkIStzz8FoIRBTJEk=;
+	b=LApgJOXTc5DFXiSLEP2T9j5IXpH7387/ZuGLxKuXKycn35UEli9CAh2g8jZbULThs21c
+	lpYxlbvYZL8O/KuRBu7RoeqN+kxojdwfTml+xrqmcx5jAdKBvlClmVUPcLXZYJe9J5fbJn
+	olMrJIJh46pU+tjOzosKEE/9Kqot+HVMKxnKKuI9UoHXue3PsfqyPaZUEpQf3+h4GYPWYs
+	7oPdAWK6TTHe6kNdttVpG0b2RJf2vzi6pp3qqYIuuQz/kJxuacYO56kHp/XguLs09rYvBF
+	1ntnya2vbEALFwDgtkI7ggKlmi6Oia2BwzLcf6lVBHchcq5vMxPRrMSyUUMilIVw==
+Received: by recvd-6cd9678977-vzhdm with SMTP id recvd-6cd9678977-vzhdm-1-6A996246-77
+	2026-09-03 12:04:22.290200718 +0000 UTC m=+3172330.962150560
+Received: from kc5-db-stores-01.keepcalling.net (unknown)
+	by geopod-ismtpd-66 (SG) with ESMTP id DM913AYrTSGDSzoerX61aQ
+	for <010c0ab4-3fac-4ff3-beae-c6dd2981cf6e@gilgamesh.cc>;
+	Thu, 03 Sep 2026 12:04:22.272 +0000 (UTC)
+Received: by kc5-db-stores-01.keepcalling.net (Postfix, from userid 33)
+	id 3183662C7F; Thu, 03 Sep 2026 08:04:22 -0400 (EDT)
+Subject: Your plan will renew
+From: "Tello.com" <customerservice@tello.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=us-ascii
+Message-Id: <20260903120422.3183662C7F@kc5-db-stores-01.keepcalling.net>
+Date: Thu, 03 Sep 2026 12:04:22 +0000 (UTC)
+X-SG-EID: 
+ =?us-ascii?Q?u001=2ET8zFy1kfHrmIAt84TVyuY=2Fx6kH5lOX6j8G=2FMntllU3lCq91budhFFWwb1?=
+ =?us-ascii?Q?6GzfJ2YDQ6Vi4aTyFeVvFNOFSDT0K6Q6Kv9tDI8?=
+ =?us-ascii?Q?SwyhTHZpEFo4391CjbcuqHsiRGD598H7QDBEF5R?=
+ =?us-ascii?Q?FnnjH5l6tEU+fSyO6PPLFBSBUHSG2xOfO4=2F=2FaC2?=
+ =?us-ascii?Q?P8cb=2F2XkEIfd5niRVXUgQlAbOfMCaomlIR3LUkE?=
+ =?us-ascii?Q?2rHTy2brYcUXIrv0sMpRo1qzBGP199V7yOHE9yL?=
+ =?us-ascii?Q?ZwKpBNrBvVA+RjotCf5cCEv8NDPJSNMc6rDHVRP?=
+ =?us-ascii?Q?XRwLTL5g=3D?=
+X-SG-ID: 
+ =?us-ascii?Q?u001=2ESdBcvi+Evd=2FbQef8eZF3BpTL9BgbK5wfSJMJGMsmprBB2ImWkz1klnGrA?=
+ =?us-ascii?Q?TTluihKYs6glB1ZdS4j9bIMLUBKLajIIwxyLns+?=
+ =?us-ascii?Q?=2FwLQAVOJgUvz0c8gBIwOMLOt3xlewY1BTdLLMTQ?=
+ =?us-ascii?Q?HAb0QSAngyHKkPkRzhAY0RnVrD6zpBzn4cQNNMn?=
+ =?us-ascii?Q?cbaBrBeFtxIS61Vj2=2F?=
+To: 010c0ab4-3fac-4ff3-beae-c6dd2981cf6e@gilgamesh.cc
+X-Entity-ID: u001.iz0pqTp8W0e4M16zFFsx4g==
+Content-Transfer-Encoding: 7bit
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xml:lang="en">
+<head>
+<title>Hurray, your plan will renew</title>
+<!--[if !mso]><!-->
+<meta http-equiv="X-UA-Compatible" content="IE=edge" /><!--<![endif]-->
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style type="text/css">
+/*<![CDATA[*/
+      #outlook a { padding:0; }
+      body { margin:0;padding:0;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%; }
+      table, td { border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt; }
+      img { border:0;height:auto;line-height:100%; outline:none;text-decoration:none;-ms-interpolation-mode:bicubic; }
+      p { display:block;margin:13px 0; }
+/*]]>*/
+</style>
+<!--[if mso]>
+    <noscript>
+    <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+    </xml>
+    </noscript>
+    <![endif]-->
+<!--[if lte mso 11]>
+    <style type="text/css">
+      .mj-outlook-group-fix { width:100% !important; }
+    </style>
+    <![endif]-->
+
+<style type="text/css">
+/*<![CDATA[*/
+      @media only screen and (min-width:640px) {
+        .mj-column-per-100 { width:100% !important; max-width: 100%; }
+..mj-column-per-50 { width:50% !important; max-width: 50%; }
+      }
+/*]]>*/
+</style>
+
+<style media="screen and (min-width:640px)">
+<![CDATA[
+      .moz-text-html .mj-column-per-100 { width:100% !important; max-width: 100%; }
+..moz-text-html .mj-column-per-50 { width:50% !important; max-width: 50%; }
+]]>
+</style>
+
+<style type="text/css">
+/*<![CDATA[*/
+
+    @media only screen and (max-width:639px) {
+      table.mj-full-width-mobile { width: 100% !important; }
+      td.mj-full-width-mobile { width: auto !important; }
+    }
+  
+/*]]>*/
+</style>
+
+<style type="text/css">
+/*<![CDATA[*/
+..heading-xl * {
+                                        font-size: 20px !important;
+                                        line-height: 28px !important;
+                                }
+                                .heading-2xl * {
+                                        font-size: 24px !important;
+                                        line-height: 32px !important;
+                                }
+                                .heading-3xl * {
+                                        font-size: 32px !important;
+                                        line-height: 40px !important;
+                                }
+                                .heading-4xl * {
+                                        font-size: 36px !important;
+                                        line-height: 48px !important;
+                                }
+                                .body-sm * {
+                                        font-size: 14px !important;
+                                        line-height: 20px !important;
+                                }
+                                .body-md * {
+                                        font-size: 16px !important;
+                                        line-height: 24px !important;
+                                }
+                                .body-lg * {
+                                        font-size: 18px !important;
+                                        line-height: 28px !important;
+                                }
+                                .body-xl * {
+                                        font-size: 20px !important;
+                                        line-height: 28px !important;
+                                }
+
+                                @media only screen and (max-width: 480px) {
+                                        .heading-xl * {
+                                                font-size: 16px !important;
+                                                line-height: 24px !important;
+                                        }
+                                        .heading-2xl * {
+                                                font-size: 18px !important;
+                                                line-height: 28px !important;
+                                        }
+                                        .heading-3xl * {
+                                                font-size: 20px !important;
+                                                line-height: 28px !important;
+                                        }
+                                        .heading-4xl * {
+                                                font-size: 24px !important;
+                                                line-height: 32px !important;
+                                        }
+                                        .body-sm *,
+                                        .body-md * {
+                                                font-size: 12px !important;
+                                                line-height: 16px !important;
+                                        }
+                                        .body-lg * {
+                                                font-size: 14px !important;
+                                                line-height: 20px !important;
+                                        }
+                                        .body-xl * {
+                                                font-size: 16px !important;
+                                                line-height: 24px !important;
+                                        }
+                                }
+
+                                .side-paddings-sm,
+                                .side-paddings-md,
+                                .side-paddings-lg,
+                                .side-paddings,
+                                .large-side-paddings,
+                                .larger-side-paddings {
+                                        box-sizing: border-box !important;
+                                }
+
+                                        .side-paddings-sm {
+                padding: 0 40px !important;
+        }
+        .side-paddings-md {
+                padding: 0 60px !important;
+        }
+        @media only screen and (max-width: 480px) {
+                .side-paddings-sm {
+                        padding: 0 20px !important;
+                }
+                .side-paddings-md {
+                        padding: 0 30px !important;
+                }
+        }
+/*]]>*/
+</style>
+</head>
+<body style="word-spacing:normal;">
+<div aria-label="Hurray, your plan will renew" aria-roledescription="email" style="" role="article" lang="en" dir="ltr" xml:lang="en"><!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:640px;" width="640" bgcolor="#ffffff" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div style="background:#ffffff;background-color:#ffffff;margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:20px 0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:640px;" ><![endif]-->
+<div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+<tbody>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:20px;line-height:20px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="color-graylight" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:16px;line-height:1;text-align:center;color:#999999;">Email not visible? Click <a href="https://u112048.ct.sendgrid.net/ls/click?upn=u001.HlLixIF88we6H4g-2FaWZEEXkw8TIEPodS6AuaZ30zPT9cG9-2FVdsX5z-2BO1-2BuB9nA3TZdZf2HcnK7UYsx8m1BzIHSYaTy3IMPAbGWUfnKmjCOA-3D92qo_pPTP3anQwIRbCFCwCv2q2SqFQA2Gcd-2F2l-2Bi7UfKI5ZmTCOa6GAGL6XC6bKsqsa8ibD13eqW2Z8xVmruiQ-2B-2BepL92NvxvgKiMmuteedRcPfo1G9fEZlDHWLGwhhk499Cf-2BvyAR5pq1cqOQiJzEQrwxDO0FC9j5S5FcNxU62il8yxvBCigaJOBCTvRyE8dqm-2FCVMS2hpy0soiC-2BSaCKXIR3noLyW5SJj4q8-2BpnUGOoFxhXvykUmqarjRFyt3UiNOa8BMJCU7lyzEFBfTily7WR0G6SxKxfn-2F7-2BtbQBY4yoCEKL430GcSm7N7SyjuIvnj13jgvWPqTS-2BprKUvEdcjxu6cf88a8YWabLYtqmeZDkyItNNY7JcdxJkPSFh-2FT9Bqtw3gZ9ybDVEjCRwB0sfXDdfg-3D-3D" style="color: #999999; text-decoration: underline;">here</a></div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:640px;" width="640" bgcolor="#F4F4F4" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div style="background:#F4F4F4;background-color:#F4F4F4;margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#F4F4F4;background-color:#F4F4F4;width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:20px 0;padding-left:40px;padding-right:40px;padding-top:20px;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="width:560px;" ><![endif]-->
+<div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr;"><!--[if mso | IE]><table border="0" cellpadding="0" cellspacing="0" role="presentation" ><tr><td style="vertical-align:middle;width:280px;" ><![endif]-->
+<div class="mj-column-per-50 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:50%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:middle;" width="100%">
+<tbody>
+<tr>
+<td align="left" style="font-size:0px;padding:0;word-break:break-word;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
+<tbody>
+<tr>
+<td style="width:80px;"><a href="https://u112048.ct.sendgrid.net/ls/click?upn=u001.KW7ctg2OSHEl-2Fdj4S3lBjbeTIH9xSZ-2ByfFJOq-2BvwcOo-3DfuNr_pPTP3anQwIRbCFCwCv2q2SqFQA2Gcd-2F2l-2Bi7UfKI5ZmTCOa6GAGL6XC6bKsqsa8ibD13eqW2Z8xVmruiQ-2B-2BepL92NvxvgKiMmuteedRcPfo1G9fEZlDHWLGwhhk499Cf-2BvyAR5pq1cqOQiJzEQrwxDO0FC9j5S5FcNxU62il8yxvBCigaJOBCTvRyE8dqm-2FCVMS2hpy0soiC-2BSaCKXIR3noLyW5SJj4q8-2BpnUGOoFxhXvykUmqarjRFyt3UiNOa87Wzplu4GSTkGN5Oo1zSUGab6DgpIcpu-2F9OWLAZpWZeLN2RRH9DditQ13mJK0IdmyCAmHKOYb7aqPwGOb-2BlSZxaIyBn7TocNM03xjQcNThk8I3DWcuvRR0LImjrqjKBneH-2BCj9l8QRLIXcZNDjx9dxA-3D-3D" target="_blank" style="color: #0C84D9; text-decoration: underline;"><img alt="Tello" src="https://tello.com/images/logo.png" style="border:0;display:block;outline:none;text-decoration:none;height:50px;width:100%;font-size:16px;" width="80" height="50" /></a></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td><td style="vertical-align:middle;width:280px;" ><![endif]-->
+<div class="mj-column-per-50 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:50%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:middle;" width="100%">
+<tbody>
+<tr>
+<td align="right" style="font-size:0px;padding:0;word-break:break-word;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;">
+<tbody>
+<tr>
+<td align="center" bgcolor="transparent" role="presentation" style="border:none;border-radius:3px;cursor:auto;mso-padding-alt:0;background:transparent;" valign="middle"><a href="https://u112048.ct.sendgrid.net/ls/click?upn=u001.KW7ctg2OSHEl-2Fdj4S3lBjRv3OHEnGl8EFwYdm0RU5Io6vxYCwmVFM-2F-2Fx5aVM6XngDDX9_pPTP3anQwIRbCFCwCv2q2SqFQA2Gcd-2F2l-2Bi7UfKI5ZmTCOa6GAGL6XC6bKsqsa8ibD13eqW2Z8xVmruiQ-2B-2BepL92NvxvgKiMmuteedRcPfo1G9fEZlDHWLGwhhk499Cf-2BvyAR5pq1cqOQiJzEQrwxDO0FC9j5S5FcNxU62il8yxvBCigaJOBCTvRyE8dqm-2FCVMS2hpy0soiC-2BSaCKXIR3noLyW5SJj4q8-2BpnUGOoFxhXvykUmqarjRFyt3UiNOa8cRMvS4tf5GRD4hh4qVhFp-2FSHvxVQLNJIbx-2BMatr0cgM97gPT3k5qlZ0DglOpKUf-2Frm3C9rvNrAvmXxoJbWc1uCQybMZtHjGNxZktN6aDIBXABB1zCGxTeCjaXXVhY4qr5wO88r84Zfk2J-2FXnemgmhA-3D-3D" style="display: inline-block; background: transparent; color: #0C84D9; font-family: 'Helvetica Neue', sans-serif; font-size: 16px; font-weight: 500; line-height: 24px; margin: 0; text-decoration: none; text-transform: none; padding: 0; mso-padding-alt: 0px; border-radius: 3px;" target="_blank">My Account</a></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></div>
+<!--[if mso | IE]></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:640px;" width="640" bgcolor="#F4F4F4" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div style="background:#F4F4F4;background-color:#F4F4F4;margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#F4F4F4;background-color:#F4F4F4;width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:640px;" ><![endif]-->
+<div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+<tbody>
+<tr>
+<td align="center" style="font-size:0px;padding:0;word-break:break-word;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;" class="mj-full-width-mobile">
+<tbody>
+<tr>
+<td style="width:640px;" class="mj-full-width-mobile"><a href="https://u112048.ct.sendgrid.net/ls/click?upn=u001.KW7ctg2OSHEl-2Fdj4S3lBjbeTIH9xSZ-2ByfFJOq-2BvwcOo-3D2qLi_pPTP3anQwIRbCFCwCv2q2SqFQA2Gcd-2F2l-2Bi7UfKI5ZmTCOa6GAGL6XC6bKsqsa8ibD13eqW2Z8xVmruiQ-2B-2BepL92NvxvgKiMmuteedRcPfo1G9fEZlDHWLGwhhk499Cf-2BvyAR5pq1cqOQiJzEQrwxDO0FC9j5S5FcNxU62il8yxvBCigaJOBCTvRyE8dqm-2FCVMS2hpy0soiC-2BSaCKXIR3noLyW5SJj4q8-2BpnUGOoFxhXvykUmqarjRFyt3UiNOa8dokRt9Fs21CCdMSVnRITMNUMEZmVYSixbiFaImBKogHB55952NDjqxnhNw639m2eZ969SmTeAQ6r00MKS2eKZdnoYJUL4p3R0zQCI6h1Q-2Fu6PhjXgI6o0qnWPy-2B8ep4cFJnsICTg5VHBzlDDuljGrw-3D-3D" target="_blank" style="color: #0C84D9; text-decoration: underline;"><img alt="" src="https://tello.com/images/twig_emails/content-images/system-recurring_charge_notification.png" style="border:0;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:16px;" width="640" height="auto" /></a></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:640px;" width="640" bgcolor="#F4F4F4" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div style="background:#F4F4F4;background-color:#F4F4F4;margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#F4F4F4;background-color:#F4F4F4;width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:20px 0;padding-bottom:0;padding-top:0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="side-paddings-md-outlook" width="640px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="side-paddings-md-outlook" role="presentation" style="width:640px;" width="640" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div class="side-paddings-md" style="margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:20px 0;padding-bottom:0;padding-top:0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:640px;" ><![endif]-->
+<div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+<tbody>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:40px;line-height:40px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="heading-4xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:36px;font-weight:700;line-height:48px;text-align:center;color:#222222;">Your plan will renew soon</div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:40px;line-height:40px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:20px;font-weight:400;line-height:28px;text-align:center;color:#555555;">Your mobile plan for</div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:16px;line-height:16px;">&#8202;</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table></td></tr><tr><td class="side-paddings-sm-outlook" width="640px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="side-paddings-sm-outlook" role="presentation" style="width:640px;" width="640" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div class="side-paddings-sm" style="margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:20px 0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:middle;width:640px;" ><![endif]-->
+<div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:100%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%" style="border-collapse:separate;">
+<tbody>
+<tr>
+<td style="background-color:#ffffff;border-radius:60px;vertical-align:middle;border-collapse:separate;padding:0px;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="" width="100%">
+<tbody>
+<tr>
+<td align="center" class="heading-3xl" style="font-size:0px;padding:20px 0;word-break:break-word;">
+<div style="font-family: 'Helvetica Neue', sans-serif; font-size: 16px; line-height: 1; text-align: center; color: #222222; font-weight: 700;">+1 (385) 267 9447</div>
+</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table></td></tr><tr><td class="side-paddings-md-outlook" width="640px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="side-paddings-md-outlook" role="presentation" style="width:640px;" width="640" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div class="side-paddings-md" style="margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:20px 0;padding-bottom:0;padding-top:0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:640px;" ><![endif]-->
+<div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+<tbody>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:16px;line-height:16px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:20px;font-weight:400;line-height:28px;text-align:center;color:#555555;">will renew on</div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:16px;line-height:16px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="heading-2xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:24px;font-weight:700;line-height:32px;text-align:center;color:#555555;">09/05/2026</div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:16px;line-height:16px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:20px;font-weight:400;line-height:28px;text-align:center;color:#555555;">&#8294;$7&#8297; + taxes (where applicable) will be deducted from your saved payment method.</div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:40px;line-height:40px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:20px;font-weight:400;line-height:28px;text-align:center;color:#555555;">No action needed &#8212; your plan will renew automatically and will be active for 30 days.</div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:40px;line-height:40px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:20px;font-weight:400;line-height:28px;text-align:center;color:#555555;">If you wish to make changes, you can:</div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:16px;line-height:16px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:20px;font-weight:400;line-height:28px;text-align:center;color:#555555;"><a href="https://u112048.ct.sendgrid.net/ls/click?upn=u001.HlLixIF88we6H4g-2FaWZEEWgA5-2B770dMxVNIiC24lVZLjCfPehBPaXV2EtCrxUfGj1JUu_pPTP3anQwIRbCFCwCv2q2SqFQA2Gcd-2F2l-2Bi7UfKI5ZmTCOa6GAGL6XC6bKsqsa8ibD13eqW2Z8xVmruiQ-2B-2BepL92NvxvgKiMmuteedRcPfo1G9fEZlDHWLGwhhk499Cf-2BvyAR5pq1cqOQiJzEQrwxDO0FC9j5S5FcNxU62il8yxvBCigaJOBCTvRyE8dqm-2FCVMS2hpy0soiC-2BSaCKXIR3noLyW5SJj4q8-2BpnUGOoFxhXvykUmqarjRFyt3UiNOa87auhCM9VVXvzoH-2BCTpl6UW8FYkScn8YJ5Knx585PJ0ccXRE0QGL-2BITnv9Z1dFf-2BnGyCLBh0W32Zs4fCYSWoVOwZAG45PoO17ag4Vzlz9JkQ-2Bv03H1ysLve42yUaNpt-2FDcm1n90QBgQOtygUZUuB1ww-3D-3D" style="color: #0C84D9; text-decoration: underline;">View or change your plan</a></div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:16px;line-height:16px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:20px;font-weight:400;line-height:28px;text-align:center;color:#555555;"><a href="https://u112048.ct.sendgrid.net/ls/click?upn=u001.HlLixIF88we6H4g-2FaWZEEWgA5-2B770dMxVNIiC24lVZJA2e6KzI7ydfl18EntkHwRZdP3_pPTP3anQwIRbCFCwCv2q2SqFQA2Gcd-2F2l-2Bi7UfKI5ZmTCOa6GAGL6XC6bKsqsa8ibD13eqW2Z8xVmruiQ-2B-2BepL92NvxvgKiMmuteedRcPfo1G9fEZlDHWLGwhhk499Cf-2BvyAR5pq1cqOQiJzEQrwxDO0FC9j5S5FcNxU62il8yxvBCigaJOBCTvRyE8dqm-2FCVMS2hpy0soiC-2BSaCKXIR3noLyW5SJj4q8-2BpnUGOoFxhXvykUmqarjRFyt3UiNOa8UZiV8S6fTrxs-2FL546VsUQsq8jbVxkF0v3vUCnEo8lqnk5ieOMl1wNAyIFlZvDTcHu7-2FK3Xq8e2WhunDG3u5VDL2DZp2p6xTPGde76663PiHlqboaqVHukBgi3wdl9nwby-2BTE3pRrHZI8a-2Frrj3RB9w-3D-3D" style="color: #0C84D9; text-decoration: underline;">Update your payment method</a></div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:16px;line-height:16px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-xl" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:20px;font-weight:400;line-height:28px;text-align:center;color:#555555;"><a href="https://u112048.ct.sendgrid.net/ls/click?upn=u001.HlLixIF88we6H4g-2FaWZEEWgA5-2B770dMxVNIiC24lVZJA2e6KzI7ydfl18EntkHwRezYp_pPTP3anQwIRbCFCwCv2q2SqFQA2Gcd-2F2l-2Bi7UfKI5ZmTCOa6GAGL6XC6bKsqsa8ibD13eqW2Z8xVmruiQ-2B-2BepL92NvxvgKiMmuteedRcPfo1G9fEZlDHWLGwhhk499Cf-2BvyAR5pq1cqOQiJzEQrwxDO0FC9j5S5FcNxU62il8yxvBCigaJOBCTvRyE8dqm-2FCVMS2hpy0soiC-2BSaCKXIR3noLyW5SJj4q8-2BpnUGOoFxhXvykUmqarjRFyt3UiNOa85v-2B3Y1g1DA1V11J4jEOhCf6qAUmGgWJ89-2BnvacDTX3UZ-2BrZMSoMfzYUza7LzKvdC7ZYZtWGV-2BcmDclHU0XH2ejHzdDT-2B8ykGlU-2FEw4Ry5rxZeLo0DdiN25YNeMVYUGn1NFnNvge0Qh6wPVPpNJ7Z8g-3D-3D" style="color: #0C84D9; text-decoration: underline;">Manage Autopay</a></div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:640px;" width="640" bgcolor="#F4F4F4" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div style="background:#F4F4F4;background-color:#F4F4F4;margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#F4F4F4;background-color:#F4F4F4;width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:20px 0;padding-top:0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="side-paddings-sm-outlook" width="640px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="side-paddings-sm-outlook" role="presentation" style="width:640px;" width="640" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div class="side-paddings-sm" style="margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:640px;" ><![endif]-->
+<div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%">
+<tbody>
+<tr>
+<td style="vertical-align:top;padding:0;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="" width="100%">
+<tbody>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:40px;line-height:40px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" style="font-size:0px;padding:0;word-break:break-word;">
+<p style="border-top:solid 1px #dddddd;font-size:1px;margin:0px auto;width:100%;"></p>
+<!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" style="border-top:solid 1px #dddddd;font-size:1px;margin:0px auto;width:640px;" role="presentation" width="640px" ><tr><td style="height:0;line-height:0;"> &nbsp;
+</td></tr></table><![endif]--></td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:20px;line-height:20px;">&#8202;</div>
+</td>
+</tr>
+<tr>
+<td align="center" class="body-sm" style="font-size:0px;padding:0;word-break:break-word;">
+<div style="font-family:'Helvetica Neue', sans-serif;font-size:14px;font-weight:400;line-height:20px;text-align:center;color:#999999;">&#169; 2026 Tello.com, All rights reserved.</div>
+</td>
+</tr>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:20px;line-height:20px;">&#8202;</div>
+</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:640px;" width="640" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+<div style="margin:0px auto;max-width:640px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+<tbody>
+<tr>
+<td style="direction:ltr;font-size:0px;padding:0;text-align:center;"><!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:640px;" ><![endif]-->
+<div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+<tbody>
+<tr>
+<td style="font-size:0px;word-break:break-word;">
+<div style="height:40px;line-height:40px;">&#8202;</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--[if mso | IE]></td></tr></table><![endif]--></div>
+<img src="https://u112048.ct.sendgrid.net/wf/open?upn=u001.fXjeSlkr47L2z-2BKDKeLSthGhm2XDS6bzaqif2P8TkN0RsGaaPkHjuh6HtutV2Qw22Ntg-2Fy0Oc7xVjS1bPLTlnO93k6SwV1Zyh2o5ZuLb3UkBSr7aV4mV54QOJQ4IsY-2BBmedafK7b8ojAMMzoCnshE11lYnYFx-2FEOoI6dGMvveqh-2F3L36wvYArVH7vLM9wA8sj9muTGyyL0BKea4WkK5NK6PFtPNj7QrDbE3qdCjJdJCdiomFiPe4FRCX6eBwog0YSKU3W4JhIciVnaYLiZkFbU3QC-2BmFrQe-2BSIqx0mKQajo4XXEnQ4xRdeK7OEpmEgJq4iR86rVc5LsIziS-2Bd6oMHABRG2uXVl2CY-2FreAiIPfrxFR8JOd0aRvYN-2F44J5ouBsgKZ9lLKLtIC9I126HEnExQ-3D-3D" alt="" width="1" height="1" border="0" style="height:1px !important;width:1px !important;border-width:0 !important;margin-top:0 !important;margin-bottom:0 !important;margin-right:0 !important;margin-left:0 !important;padding-top:0 !important;padding-bottom:0 !important;padding-right:0 !important;padding-left:0 !important;"/></body>
+</html>

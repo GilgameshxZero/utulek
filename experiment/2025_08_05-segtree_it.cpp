@@ -101,7 +101,8 @@ int main() {
 		// All pawns.
 		assert(tree.query(0, 6, 7) - tree.query(0, 5, 7) == 8);
 		// All non-pawn white pieces.
-		assert(tree.query(0, 7, 7) - tree.query(0, 6, 7) == 131);
+		assert(
+			tree.query(0, 7, 7) - tree.query(0, 6, 7) == 131);
 		// Entire board.
 		assert(tree.query(0, 7, 7) == 13 + 8 + 131);
 	}

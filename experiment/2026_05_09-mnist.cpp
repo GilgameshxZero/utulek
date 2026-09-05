@@ -12,10 +12,10 @@ using namespace std;
 using LL = long long;
 using LD = long double;
 
-#define RF(x, from, to)                                    \
-	for (                                                    \
-		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL};     \
-		x != _to;                                              \
+#define RF(x, from, to) \
+	for ( \
+		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL}; \
+		x != _to; \
 		x += _delta)
 
 char pixelToBlock(uint8_t pixel) {

@@ -13,10 +13,10 @@ using namespace std;
 using LL = long long;
 using LD = long double;
 
-#define RF(x, from, to)                                    \
-	for (                                                    \
-		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL};     \
-		x != _to;                                              \
+#define RF(x, from, to) \
+	for ( \
+		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL}; \
+		x != _to; \
 		x += _delta)
 size_t constexpr C_CLASS{10}, C_EPOCH{32}, BATCH_SIZE{256};
 LD constexpr STEP_SIZE{1e-3};

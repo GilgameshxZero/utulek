@@ -48,7 +48,7 @@ class F {
 array<string, F::_COUNT> constexpr fStr{
 	{"ONE", "THREE", "FIVE", "SEVEN"}};
 
-	// Not great for code maintenance.
+// Not great for code maintenance.
 class G {
 	public:
 	enum Value { ONE = 1, THREE = 3, FIVE = 5, SEVEN = 7 };

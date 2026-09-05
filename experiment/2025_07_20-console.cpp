@@ -27,9 +27,9 @@ int main() {
 	PointL position{size / 2};
 	Console::cout(
 		{.fgColor = Color::BLACK,
-		 .bgColor = Color::RED,
-		 .row = position.y,
-		 .col = position.x},
+			.bgColor = Color::RED,
+			.row = position.y,
+			.col = position.x},
 		'X');
 	RectangleL bounds{{1, 1}, size - 2};
 	Code c{Console::getch()};
@@ -55,9 +55,9 @@ int main() {
 		position = bounds.clamp(position);
 		Console::cout(
 			{.fgColor = Color::BLACK,
-			 .bgColor = Color::RED,
-			 .row = position.y,
-			 .col = position.x},
+				.bgColor = Color::RED,
+				.row = position.y,
+				.col = position.x},
 			'X');
 		c = Console::getch();
 	}

@@ -11,53 +11,59 @@ using namespace std;
 // 	using TypeThis = Vector<Value, SIZE>;
 // 	using TypeVector = std::array<Value, SIZE>;
 
-// 	// Slices keep the pointer so that they keep the underlying alive even if
+// 	// Slices keep the pointer so that they keep the
+// underlying alive even if
 // 	// the object they are sliced from goes out of scope.
 // 	std::shared_ptr<void> const UNDERLYING;
 // 	std::size_t const OFFSET;
 
 // 	public:
 // 	// TODO: Private.
-// 	Vector(std::shared_ptr<void> const underlying, std::size_t offset)
-// 			: UNDERLYING{underlying}, OFFSET{offset} {}
+// 	Vector(std::shared_ptr<void> const underlying,
+// std::size_t offset) 			: UNDERLYING{underlying},
+// OFFSET{offset} {}
 
-// 	// This form allows us to pass the parameters onto the aggregate initializer
+// 	// This form allows us to pass the parameters onto the
+// aggregate initializer
 // 	// for std::vector.
 // 	Vector(TypeVector &&values)
 // 			: UNDERLYING{new TypeVector{values}}, OFFSET{0} {}
 
 // 	inline Value &operator[](std::size_t i) {
-// 		return reinterpret_cast<TypeVector *>(this->UNDERLYING.get())
+// 		return reinterpret_cast<TypeVector
+// *>(this->UNDERLYING.get())
 // 			->at(this->OFFSET + i);
 // 	}
 // 	inline Value const &operator[](std::size_t i) const {
-// 		return reinterpret_cast<TypeVector *>(this->UNDERLYING.get())
+// 		return reinterpret_cast<TypeVector
+// *>(this->UNDERLYING.get())
 // 			->at(this->OFFSET + i);
 // 	}
 
-// 	constexpr inline std::size_t size() const { return SIZE; }
-// 	constexpr inline bool isEmpty() const { return this->size() == 0; }
+// 	constexpr inline std::size_t size() const { return SIZE;
+// } 	constexpr inline bool isEmpty() const { return
+// this->size() == 0; }
 
-// 	// TODO: Is there a way to return a permanent reference (view)?
-// 	template <std::size_t LENGTH>
-// 	inline Vector<Value, LENGTH> slice(std::size_t offset) {
-// 		return {this->UNDERLYING, offset};
+// 	// TODO: Is there a way to return a permanent reference
+// (view)? 	template <std::size_t LENGTH> 	inline
+// Vector<Value, LENGTH> slice(std::size_t offset) { return
+// {this->UNDERLYING, offset};
 // 	}
 // };
 
-// template <typename Value, std::size_t C_ROW, std::size_t C_COL = C_ROW>
-// class Matrix {
-// 	private:
-// 	using TypeThis = Matrix<Value, C_ROW, C_COL>;
-// 	using TypeVector = Vector<Value, C_COL>;
-// 	using TypeMatrix = Vector<TypeVector, C_ROW>;
+// template <typename Value, std::size_t C_ROW, std::size_t
+// C_COL = C_ROW> class Matrix { 	private: 	using TypeThis =
+// Matrix<Value, C_ROW, C_COL>; 	using TypeVector =
+// Vector<Value, C_COL>; 	using TypeMatrix =
+// Vector<TypeVector, C_ROW>;
 
 // 	// Allow a matrix to slice a view of another matrix.
 // 	std::shared_ptr<void> const UNDERLYING;
 // 	std::size_t OFFSET_ROW, OFFSET_COL;
 
 // 	public:
-// 	// template <typename std::enable_if<C_COL == C_ROW>::type * = nullptr>
+// 	// template <typename std::enable_if<C_COL ==
+// C_ROW>::type * = nullptr>
 // 	// static TypeThis I() {
 // 	// 	TypeThis x;
 // 	// 	for (std::size_t i{0}; i < x.size(); i++) {
@@ -76,21 +82,23 @@ using namespace std;
 // 				OFFSET_COL{offsetCol} {}
 
 // 	Matrix(TypeMatrix &&values)
-// 			: UNDERLYING{new TypeMatrix{values}}, OFFSET_ROW{0}, OFFSET_COL{0} {}
+// 			: UNDERLYING{new TypeMatrix{values}}, OFFSET_ROW{0},
+// OFFSET_COL{0} {}
 
 // 	inline TypeVector &operator[](std::size_t i) {
 // 		return (*reinterpret_cast<TypeMatrix *>(
 // 			this->UNDERLYING.get()))[this->OFFSET_ROW + i]
 // 			.slice<C_COL>(this->OFFSET_COL);
 // 	}
-// 	inline TypeVector const &operator[](std::size_t i) const {
-// 		return (*reinterpret_cast<TypeMatrix *>(
+// 	inline TypeVector const &operator[](std::size_t i) const
+// { 		return (*reinterpret_cast<TypeMatrix *>(
 // 			this->UNDERLYING.get()))[this->OFFSET_ROW + i]
 // 			.slice<C_COL>(this->OFFSET_COL);
 // 	}
 
-// 	constexpr inline std::size_t size() const { return C_ROW; }
-// 	constexpr inline bool isEmpty() const { return this->size() == 0; }
+// 	constexpr inline std::size_t size() const { return
+// C_ROW; } 	constexpr inline bool isEmpty() const { return
+// this->size() == 0; }
 
 // 	template <std::size_t LEN_ROW, std::size_t LEN_COL>
 // 	inline Matrix<Value, LEN_ROW, LEN_COL> slice(
@@ -137,15 +145,18 @@ using namespace std;
 // 	// 	}
 // 	// 	return x;
 // 	// }
-// 	// TypeThis &operator*=(Value const &other) { return *this = *this * other;
+// 	// TypeThis &operator*=(Value const &other) { return
+// *this = *this * other;
 // 	// }
 // 	// // TODO: Obviously, Strassen's.
 // 	// template <std::size_t C_R_COL>
-// 	// auto operator*(Matrix<Value, C_COL, C_R_COL> const &other) const {
+// 	// auto operator*(Matrix<Value, C_COL, C_R_COL> const
+// &other) const {
 // 	// 	Matrix<Value, C_ROW, C_R_COL> x;
 // 	// 	for (std::size_t i{0}; i < x.size(); i++) {
 // 	// 		for (std::size_t j{0}; j < x[i].size(); j++) {
-// 	// 			for (std::size_t k{0}; k < this->at(i).size(); k++) {
+// 	// 			for (std::size_t k{0}; k < this->at(i).size();
+// k++) {
 // 	// 				x[i][j] += this->at(i)[k] * other[k][j];
 // 	// 			}
 // 	// 		}
@@ -153,7 +164,8 @@ using namespace std;
 // 	// 	return x;
 // 	// }
 // 	// template <std::size_t C_R_COL>
-// 	// auto &operator*=(Matrix<Value, C_COL, C_R_COL> const &other) {
+// 	// auto &operator*=(Matrix<Value, C_COL, C_R_COL> const
+// &other) {
 // 	// 	return *this = *this * other;
 // 	// }
 
@@ -212,26 +224,31 @@ int main() {
 	// 	// cout << v << ' ' << v.slice<2>(1) << '\n';
 
 	// 	// Matrix<int, 4> m{
-	// 	// 	{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}}};
+	// 	// 	{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13,
+	// 14, 15, 16}}};
 	// }
 	// {
 	// 	// array<Vector<int, 2>, 2> a{{{1, 2}, {3, 4}}};
 	// 	// cout << a[0] << ' ' << a[1] << '\n';
-	// 	// Vector<Vector<int, 2>, 2> b{initializer_list<int>{1, 2},
-	// 	// initializer_list<int>{1, 2}}; cout << b << '\n'; Matrix<int, 2> m{{{{1,
+	// 	// Vector<Vector<int, 2>, 2>
+	// b{initializer_list<int>{1, 2},
+	// 	// initializer_list<int>{1, 2}}; cout << b << '\n';
+	// Matrix<int, 2> m{{{{1,
 	// 	// 2}}, {{3, 4}}}};
 	// }
 	// {
 	// 	any a{7};
 	// 	any b(in_place_type<int>, 2);
 	// 	any c(in_place_type<pair<int, int>>, 2, 3);
-	// 	// std::any myAny(std::in_place_type<std::array<int, 3>>, {5, 15, 25});
-	// 	shared_ptr<void>(new pair<int, int>{3, 5});
-	// 	shared_ptr<void> d(new array<int, 4>{3, 5, 3, 5});
-	// 	cout << reinterpret_cast<array<int, 4> *>(d.get())->at(3) << '\n';
+	// 	// std::any myAny(std::in_place_type<std::array<int,
+	// 3>>, {5, 15, 25}); 	shared_ptr<void>(new pair<int,
+	// int>{3, 5}); 	shared_ptr<void> d(new array<int, 4>{3,
+	// 5, 3, 5}); 	cout << reinterpret_cast<array<int, 4>
+	// *>(d.get())->at(3) << '\n';
 
 	// 	initializer_list<int> e{1, 2, 3, 4};
-	// 	array<int, 4> f{e.begin()[0], e.begin()[1], e.begin()[2], e.begin()[3]};
+	// 	array<int, 4> f{e.begin()[0], e.begin()[1],
+	// e.begin()[2], e.begin()[3]};
 	// 	// array<int, 4> g{e};
 	// }
 	// {
@@ -286,14 +303,17 @@ int main() {
 		}
 		cout << c << '\n';
 		cout << c.slice({{{4}, {4}}}) << '\n';
-		cout << c.slice({{{.start = 1, .stop = 8, .step = 3}, {.step = 2}}})
+		cout << c.slice(
+							{{{.start = 1, .stop = 8, .step = 3},
+								{.step = 2}}})
 				 << '\n';
 		cout << c.slice({{{4}, {.step = 2}}}) << '\n';
-		cout << c.slice({{{4}, {.step = 2}}}).slice({{{}, {.start = 1, .step = 2}}})
+		cout << c.slice({{{4}, {.step = 2}}})
+							.slice({{{}, {.start = 1, .step = 2}}})
 				 << '\n';
-		cout
-			<< c.slice({{{4}, {.step = 2}}}).slice({{{}, {.start = 1, .step = 2}}})[4]
-			<< '\n';
+		cout << c.slice({{{4}, {.step = 2}}})
+							.slice({{{}, {.start = 1, .step = 2}}})[4]
+				 << '\n';
 
 		Tensor<int, 3> d{{5, 5, 5}};
 		for (int i{0}; i < 5; i++) {
@@ -306,7 +326,9 @@ int main() {
 		cout << d << '\n';
 		cout << d[3] << '\n' << '\n';
 		cout << d.slice({{{.step = 2}}}) << "\n\n";
-		cout << d.slice({{{.step = 2}}}).slice({{{}, {.step = 3}}}) << "\n\n";
+		cout
+			<< d.slice({{{.step = 2}}}).slice({{{}, {.step = 3}}})
+			<< "\n\n";
 		cout << d.slice({{{.step = 2}}})
 							.slice({{{}, {.step = 3}}})
 							.slice({{{}, {}, {.step = 4}}})

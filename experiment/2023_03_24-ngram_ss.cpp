@@ -13,10 +13,15 @@ int main() {
 		}
 	};
 
-	std::unordered_map<Sequence, std::array<std::size_t, 128>, SequenceHash>
+	std::unordered_map<
+		Sequence,
+		std::array<std::size_t, 128>,
+		SequenceHash>
 		nGramCounts;
 	{
-		std::ifstream in("../experiments/2023_03_24-ngram_ss.cpp.assets/titus-andronicus.txt");
+		std::ifstream in(
+			"../experiments/2023_03_24-ngram_ss.cpp.assets/"
+			"titus-andronicus.txt");
 		Sequence seq;
 		char cur;
 		seq.fill(0);
@@ -45,7 +50,8 @@ int main() {
 		if (it == nGramCounts.end()) {
 			cur = uniform(gen);
 		} else {
-			std::discrete_distribution<> dist(it->second.begin(), it->second.end());
+			std::discrete_distribution<> dist(
+				it->second.begin(), it->second.end());
 			cur = dist(gen);
 		}
 		std::cout << cur;

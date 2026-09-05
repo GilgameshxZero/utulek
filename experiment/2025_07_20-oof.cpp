@@ -14,18 +14,18 @@ namespace oof {
 		uint8_t red{}, green{}, blue{};
 		constexpr color() = default;
 
-		template <std::integral component_type>
+		template<std::integral component_type>
 		constexpr color(
 			component_type r,
 			component_type g,
-			component_type b)
-				: red{static_cast<uint8_t>(r)},
-					green{static_cast<uint8_t>(g)},
-					blue{static_cast<uint8_t>(b)} {}
+			component_type b) :
+			red{static_cast<uint8_t>(r)},
+			green{static_cast<uint8_t>(g)},
+			blue{static_cast<uint8_t>(b)} {}
 
-		template <std::integral component_type>
-		constexpr color(component_type component)
-				: color(component, component, component) {}
+		template<std::integral component_type>
+		constexpr color(component_type component) :
+			color(component, component, component) {}
 
 		friend constexpr auto operator==(
 			const color &,
@@ -122,26 +122,26 @@ namespace oof {
 	[[nodiscard]] auto move_down(int amount)
 		-> move_down_sequence;
 
-	using error_callback_type =
-		void (*)(const std::string &msg);
+	using error_callback_type = void (*)(
+		const std::string &msg);
 	inline error_callback_type error_callback = nullptr;
 
-	template <typename T, typename... types>
+	template<typename T, typename... types>
 	constexpr bool is_any_of =
 		(std::same_as<T, types> || ...);
-	template <typename T>
+	template<typename T>
 	concept std_string_type =
 		is_any_of<T, std::string, std::wstring>;
 
-	template <typename T, typename variant_type>
+	template<typename T, typename variant_type>
 	struct is_alternative : std::false_type {};
-	template <typename T, typename... variant_alternatives>
+	template<typename T, typename... variant_alternatives>
 	struct is_alternative<
 		T,
-		std::variant<variant_alternatives...>>
-			: std::disjunction<
-					std::is_same<T, variant_alternatives>...> {};
-	template <typename T, typename variant_type>
+		std::variant<variant_alternatives...>> :
+		std::disjunction<
+			std::is_same<T, variant_alternatives>...> {};
+	template<typename T, typename variant_type>
 	constexpr bool is_alternative_v =
 		is_alternative<T, variant_type>::value;
 
@@ -168,12 +168,12 @@ namespace oof {
 		move_up_sequence,
 		move_down_sequence>;
 
-	template <typename T>
+	template<typename T>
 	concept sequence_c =
 		is_alternative_v<T, sequence_variant_type>;
 
 	// Writes a single sequence type into a string
-	template <
+	template<
 		oof::std_string_type string_type,
 		oof::sequence_c sequence_type>
 	auto write_sequence_into_string(
@@ -181,14 +181,14 @@ namespace oof {
 		const sequence_type &sequence) -> void;
 
 	// Returns a sing from a sequence type
-	template <
+	template<
 		oof::std_string_type string_type,
 		oof::sequence_c sequence_type>
 	[[nodiscard]] auto get_string_from_sequence(
 		const sequence_type &sequence) -> string_type;
 
 	// Returns a string from a vector of sequence types
-	template <oof::std_string_type string_type>
+	template<oof::std_string_type string_type>
 	[[nodiscard]] auto get_string_from_sequences(
 		const std::vector<sequence_variant_type> &sequences)
 		-> string_type;
@@ -209,7 +209,7 @@ namespace oof {
 			const cell_format &) -> bool = default;
 	};
 
-	template <oof::std_string_type string_type>
+	template<oof::std_string_type string_type>
 	struct cell {
 		using char_type = typename string_type::value_type;
 
@@ -220,7 +220,7 @@ namespace oof {
 			const cell &) -> bool = default;
 	};
 
-	template <oof::std_string_type string_type>
+	template<oof::std_string_type string_type>
 	struct screen {
 		using char_type = typename string_type::value_type;
 
@@ -336,8 +336,9 @@ namespace oof {
 		// Override all pixels with the fill color
 		auto clear() -> void;
 
-		[[nodiscard]] auto get_color(int column, int halfline)
-			const -> const color &;
+		[[nodiscard]] auto get_color(
+			int column,
+			int halfline) const -> const color &;
 		[[nodiscard]] auto get_color(int column, int halfline)
 			-> color &;
 		[[nodiscard]] auto is_in(int column, int halfline) const
@@ -349,22 +350,22 @@ namespace oof {
 
 		color m_fill_color{};
 		int m_halfline_height =
-			0;	// This refers to "pixel" height. Height in lines
-					// will be half that.
+			0; // This refers to "pixel" height. Height in lines
+				 // will be half that.
 		int m_origin_column = 0;
 		int m_origin_halfline = 0;
 		mutable screen<std::wstring> m_screen;
 	};
 
 	// Deduction guide
-	template <typename char_type>
+	template<typename char_type>
 	screen(int, int, int, int, char_type fill_char)
 		-> screen<std::basic_string<char_type>>;
-	template <typename char_type>
+	template<typename char_type>
 	screen(int, int, char_type fill_char)
 		-> screen<std::basic_string<char_type>>;
 
-	template <
+	template<
 		typename stream_type,
 		oof::sequence_c sequence_type>
 	auto operator<<(
@@ -376,7 +377,7 @@ namespace oof {
 		// CRTP to extend the numerous sequence types with
 		// convenience member functions without using runtime
 		// polymorphism or repeating the code
-		template <typename T>
+		template<typename T>
 		struct extender {
 			operator std::string() const;
 			operator std::wstring() const;
@@ -391,16 +392,16 @@ namespace oof {
 		[[nodiscard]] auto get_pixel_background(
 			const color &fill_color) -> cell<std::wstring>;
 
-		template <oof::std_string_type string_type>
+		template<oof::std_string_type string_type>
 		auto write_sequence_string_no_reserve(
 			const std::vector<sequence_variant_type> &sequences,
 			string_type &target) -> void;
 
-		template <oof::sequence_c sequence_type>
+		template<oof::sequence_c sequence_type>
 		[[nodiscard]] constexpr auto get_sequence_string_size(
 			const sequence_type &sequence) -> size_t;
 
-		template <
+		template<
 			oof::std_string_type string_type,
 			std::integral int_type>
 		auto write_int_to_string(
@@ -415,8 +416,9 @@ namespace oof {
 
 			explicit constexpr cell_pos(
 				const int width,
-				const int height)
-					: m_width(width), m_height(height) {}
+				const int height) :
+				m_width(width),
+				m_height(height) {}
 			[[nodiscard]] constexpr auto get_column() const
 				-> int {
 				return m_index % m_width;
@@ -442,7 +444,7 @@ namespace oof {
 				const cell_pos &) -> bool = default;
 		};
 
-		template <oof::std_string_type string_type>
+		template<oof::std_string_type string_type>
 		struct draw_state {
 			using cell_type = cell<string_type>;
 			std::optional<cell_pos> m_last_written_pos;
@@ -465,7 +467,7 @@ namespace oof {
 				const cell_pos &target_pos) const -> bool;
 		};
 
-		template <
+		template<
 			oof::std_string_type string_type,
 			typename T,
 			typename... Ts>
@@ -474,82 +476,82 @@ namespace oof {
 			const T &first,
 			const Ts &...rest) -> void;
 
-		template <oof::std_string_type string_type>
+		template<oof::std_string_type string_type>
 		[[nodiscard]] auto get_index_color_seq_str(
 			const set_index_color_sequence &sequence)
 			-> string_type;
 
-		template <std_string_type string_type>
+		template<std_string_type string_type>
 		using fitting_char_sequence_t = std::conditional_t<
 			std::is_same_v<string_type, std::string>,
 			char_sequence,
 			wchar_sequence>;
 
-	}	 // namespace detail
+	} // namespace detail
 
-	struct fg_rgb_color_sequence
-			: detail::extender<fg_rgb_color_sequence> {
+	struct fg_rgb_color_sequence :
+		detail::extender<fg_rgb_color_sequence> {
 		color m_color;
 	};
-	struct fg_index_color_sequence
-			: detail::extender<fg_index_color_sequence> {
+	struct fg_index_color_sequence :
+		detail::extender<fg_index_color_sequence> {
 		int m_index;
 	};
-	struct set_index_color_sequence
-			: detail::extender<set_index_color_sequence> {
+	struct set_index_color_sequence :
+		detail::extender<set_index_color_sequence> {
 		int m_index{};
 		color m_color;
 	};
-	struct bg_rgb_color_sequence
-			: detail::extender<bg_rgb_color_sequence> {
+	struct bg_rgb_color_sequence :
+		detail::extender<bg_rgb_color_sequence> {
 		color m_color;
 	};
-	struct bg_index_color_sequence
-			: detail::extender<bg_index_color_sequence> {
+	struct bg_index_color_sequence :
+		detail::extender<bg_index_color_sequence> {
 		int m_index;
 	};
-	struct underline_sequence
-			: detail::extender<underline_sequence> {
+	struct underline_sequence :
+		detail::extender<underline_sequence> {
 		bool m_underline;
 	};
 	struct bold_sequence : detail::extender<bold_sequence> {
 		bool m_bold;
 	};
-	struct cursor_visibility_sequence
-			: detail::extender<cursor_visibility_sequence> {
+	struct cursor_visibility_sequence :
+		detail::extender<cursor_visibility_sequence> {
 		bool m_visibility;
 	};
-	struct position_sequence
-			: detail::extender<position_sequence> {
+	struct position_sequence :
+		detail::extender<position_sequence> {
 		uint8_t m_line;
 		uint8_t m_column;
 	};
-	struct hposition_sequence
-			: detail::extender<hposition_sequence> {
+	struct hposition_sequence :
+		detail::extender<hposition_sequence> {
 		uint8_t m_column;
 	};
-	struct vposition_sequence
-			: detail::extender<vposition_sequence> {
+	struct vposition_sequence :
+		detail::extender<vposition_sequence> {
 		uint8_t m_line;
 	};
-	struct store_position_sequence
-			: detail::extender<store_position_sequence> {};
-	struct load_position_sequence
-			: detail::extender<load_position_sequence> {};
-	struct move_left_sequence
-			: detail::extender<move_left_sequence> {
+	struct store_position_sequence :
+		detail::extender<store_position_sequence> {};
+	struct load_position_sequence :
+		detail::extender<load_position_sequence> {};
+	struct move_left_sequence :
+		detail::extender<move_left_sequence> {
 		uint8_t m_amount;
 	};
-	struct move_right_sequence
-			: detail::extender<move_right_sequence> {
+	struct move_right_sequence :
+		detail::extender<move_right_sequence> {
 		uint8_t m_amount;
 	};
-	struct move_up_sequence
-			: detail::extender<move_up_sequence> {
+	struct move_up_sequence :
+		detail::extender<move_up_sequence> {
 		uint8_t m_amount;
 	};
-	struct move_down_sequence
-			: detail::extender<move_down_sequence> {
+	struct move_down_sequence :
+		detail::extender<move_down_sequence> {
 		uint8_t m_amount;
 	};
 	struct char_sequence : detail::extender<char_sequence> {
@@ -558,15 +560,15 @@ namespace oof {
 	struct wchar_sequence : detail::extender<wchar_sequence> {
 		wchar_t m_letter;
 	};
-	struct reset_sequence : detail::extender<reset_sequence> {
-	};
-	struct clear_screen_sequence
-			: detail::extender<clear_screen_sequence> {};
+	struct reset_sequence :
+		detail::extender<reset_sequence> {};
+	struct clear_screen_sequence :
+		detail::extender<clear_screen_sequence> {};
 
-}	 // namespace oof
+} // namespace oof
 
 // Constexpr, therefore defined here
-template <oof::sequence_c sequence_type>
+template<oof::sequence_c sequence_type>
 constexpr auto oof::detail::get_sequence_string_size(
 	const sequence_type &sequence) -> size_t {
 	constexpr auto get_int_param_str_length =
@@ -576,19 +578,20 @@ constexpr auto oof::detail::get_sequence_string_size(
 		return 3;
 	};
 
-	if constexpr (is_any_of<
-									sequence_type,
-									char_sequence,
-									wchar_sequence>) {
+	if constexpr (
+		is_any_of<
+			sequence_type,
+			char_sequence,
+			wchar_sequence>) {
 		return 1;
-	} else if constexpr (std::is_same_v<
-												 sequence_type,
-												 set_index_color_sequence>) {
+	} else if constexpr (
+		std::
+			is_same_v<sequence_type, set_index_color_sequence>) {
 		size_t reserve_size = 0;
-		reserve_size += 4;	// \x1b]4;
+		reserve_size += 4; // \x1b]4;
 		reserve_size +=
-			get_int_param_str_length(sequence.m_index);	 // <i>;
-		reserve_size += 4;	// ;rgb:
+			get_int_param_str_length(sequence.m_index); // <i>;
+		reserve_size += 4; // ;rgb:
 
 		constexpr auto get_component_str_size =
 			[](const uint8_t component) {
@@ -596,22 +599,23 @@ constexpr auto oof::detail::get_sequence_string_size(
 			};
 		reserve_size +=
 			get_component_str_size(sequence.m_color.red);
-		reserve_size += 1;	// /
+		reserve_size += 1; // /
 		reserve_size +=
 			get_component_str_size(sequence.m_color.green);
-		reserve_size += 1;	// /
+		reserve_size += 1; // /
 		reserve_size +=
 			get_component_str_size(sequence.m_color.blue);
-		reserve_size += 2;	// <ST>
+		reserve_size += 2; // <ST>
 
 		return reserve_size;
 	} else {
 		size_t reserve_size = 0;
 		constexpr int semicolon_size = 1;
-		if constexpr (is_any_of<
-										sequence_type,
-										fg_rgb_color_sequence,
-										bg_rgb_color_sequence>) {
+		if constexpr (
+			is_any_of<
+				sequence_type,
+				fg_rgb_color_sequence,
+				bg_rgb_color_sequence>) {
 			reserve_size += 2 + semicolon_size + 1 +
 				semicolon_size +
 				get_int_param_str_length(sequence.m_color.red) +
@@ -619,64 +623,62 @@ constexpr auto oof::detail::get_sequence_string_size(
 				get_int_param_str_length(sequence.m_color.green) +
 				semicolon_size +
 				get_int_param_str_length(sequence.m_color.blue);
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 underline_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, underline_sequence>) {
 			reserve_size += sequence.m_underline ? 1 : 2;
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 bold_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, bold_sequence>) {
 			reserve_size += sequence.m_bold ? 1 : 2;
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 position_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, position_sequence>) {
 			reserve_size +=
 				get_int_param_str_length(sequence.m_line);
 			reserve_size += semicolon_size;
 			reserve_size +=
 				get_int_param_str_length(sequence.m_column);
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 hposition_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, hposition_sequence>) {
 			reserve_size +=
 				get_int_param_str_length(sequence.m_column);
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 vposition_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, vposition_sequence>) {
 			reserve_size +=
 				get_int_param_str_length(sequence.m_line);
-		} else if constexpr (is_any_of<
-													 sequence_type,
-													 reset_sequence,
-													 clear_screen_sequence>) {
+		} else if constexpr (
+			is_any_of<
+				sequence_type,
+				reset_sequence,
+				clear_screen_sequence>) {
 			reserve_size += 1;
-		} else if constexpr (is_any_of<
-													 sequence_type,
-													 cursor_visibility_sequence>) {
+		} else if constexpr (
+			is_any_of<
+				sequence_type,
+				cursor_visibility_sequence>) {
 			reserve_size += 3;
-		} else if constexpr (is_any_of<
-													 sequence_type,
-													 move_left_sequence,
-													 move_right_sequence,
-													 move_up_sequence,
-													 move_down_sequence>) {
+		} else if constexpr (
+			is_any_of<
+				sequence_type,
+				move_left_sequence,
+				move_right_sequence,
+				move_up_sequence,
+				move_down_sequence>) {
 			reserve_size +=
 				get_int_param_str_length(sequence.m_amount);
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 fg_index_color_sequence>) {
-			reserve_size += 5;	// "38;5;"
+		} else if constexpr (
+			std::
+				is_same_v<sequence_type, fg_index_color_sequence>) {
+			reserve_size += 5; // "38;5;"
 			reserve_size +=
 				get_int_param_str_length(sequence.m_index);
 		}
 
-		reserve_size += 3;	// 2 intro, 1 outro
+		reserve_size += 3; // 2 intro, 1 outro
 		return reserve_size;
 	}
 }
 
 // This will deliberately be instantiated at compiletime
-template <
+template<
 	typename stream_type,
 	oof::sequence_c sequence_type>
 auto oof::operator<<(
@@ -695,7 +697,7 @@ auto oof::operator<<(
 #ifdef OOF_IMPL
 
 // Instantiated by write_ints_into_string()
-template <
+template<
 	oof::std_string_type string_type,
 	std::integral int_type>
 auto oof::detail::write_int_to_string(
@@ -717,7 +719,7 @@ auto oof::detail::write_int_to_string(
 }
 
 // Instantiated by write_sequence_into_string()
-template <
+template<
 	oof::std_string_type string_type,
 	typename T,
 	typename... Ts>
@@ -730,24 +732,23 @@ auto oof::detail::write_ints_into_string(
 }
 
 // Instantiated by write_sequence_string_no_reserve()
-template <
+template<
 	oof::std_string_type string_type,
 	oof::sequence_c sequence_type>
 auto oof::write_sequence_into_string(
 	string_type &target,
 	const sequence_type &sequence) -> void {
-	if constexpr (std::is_same_v<
-									sequence_type,
-									detail::fitting_char_sequence_t<
-										string_type>>) {
+	if constexpr (
+		std::is_same_v<
+			sequence_type,
+			detail::fitting_char_sequence_t<string_type>>) {
 		target += sequence.m_letter;
 	} else {
 		using char_type = typename string_type::value_type;
 
 		target += static_cast<char_type>('\x1b');
-		if constexpr (std::same_as<
-										sequence_type,
-										set_index_color_sequence>)
+		if constexpr (
+			std::same_as<sequence_type, set_index_color_sequence>)
 			target += static_cast<char_type>(']');
 		else if constexpr (
 			std::
@@ -756,9 +757,9 @@ auto oof::write_sequence_into_string(
 		} else
 			target += static_cast<char_type>('[');
 
-		if constexpr (std::is_same_v<
-										sequence_type,
-										fg_rgb_color_sequence>) {
+		if constexpr (
+			std::
+				is_same_v<sequence_type, fg_rgb_color_sequence>) {
 			detail::write_ints_into_string(
 				target,
 				38,
@@ -767,29 +768,30 @@ auto oof::write_sequence_into_string(
 				sequence.m_color.green,
 				sequence.m_color.blue);
 			target += static_cast<char_type>('m');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 fg_index_color_sequence>) {
+		} else if constexpr (
+			std::
+				is_same_v<sequence_type, fg_index_color_sequence>) {
 			detail::write_ints_into_string(
 				target, 38, 5, sequence.m_index);
 			target += static_cast<char_type>('m');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 bg_index_color_sequence>) {
+		} else if constexpr (
+			std::
+				is_same_v<sequence_type, bg_index_color_sequence>) {
 			detail::write_ints_into_string(
 				target, 48, 5, sequence.m_index);
 			target += static_cast<char_type>('m');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 set_index_color_sequence>) {
+		} else if constexpr (
+			std::is_same_v<
+				sequence_type,
+				set_index_color_sequence>) {
 			detail::write_ints_into_string(
 				target, 4, sequence.m_index);
 			target +=
 				detail::get_index_color_seq_str<string_type>(
 					sequence);
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 bg_rgb_color_sequence>) {
+		} else if constexpr (
+			std::
+				is_same_v<sequence_type, bg_rgb_color_sequence>) {
 			detail::write_ints_into_string(
 				target,
 				48,
@@ -798,90 +800,81 @@ auto oof::write_sequence_into_string(
 				sequence.m_color.green,
 				sequence.m_color.blue);
 			target += static_cast<char_type>('m');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 underline_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, underline_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_underline ? 4 : 24);
 			target += static_cast<char_type>('m');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 bold_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, bold_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_bold ? 1 : 22);
 			target += static_cast<char_type>('m');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 cursor_visibility_sequence>) {
+		} else if constexpr (
+			std::is_same_v<
+				sequence_type,
+				cursor_visibility_sequence>) {
 			target += static_cast<char_type>('?');
 			detail::write_ints_into_string(target, 25);
 			target += static_cast<char_type>(
 				sequence.m_visibility ? 'h' : 'l');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 position_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, position_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_line + 1, sequence.m_column + 1);
 			target += static_cast<char_type>('H');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 hposition_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, hposition_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_column + 1);
 			target += static_cast<char_type>('G');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 vposition_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, vposition_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_line + 1);
 			target += static_cast<char_type>('d');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 store_position_sequence>) {
+		} else if constexpr (
+			std::
+				is_same_v<sequence_type, store_position_sequence>) {
 			target += static_cast<char_type>('7');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 load_position_sequence>) {
+		} else if constexpr (
+			std::
+				is_same_v<sequence_type, load_position_sequence>) {
 			target += static_cast<char_type>('8');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 move_down_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, move_down_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_amount);
 			target += static_cast<char_type>('B');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 move_up_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, move_up_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_amount);
 			target += static_cast<char_type>('A');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 move_left_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, move_left_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_amount);
 			target += static_cast<char_type>('D');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 move_right_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, move_right_sequence>) {
 			detail::write_ints_into_string(
 				target, sequence.m_amount);
 			target += static_cast<char_type>('C');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 reset_sequence>) {
+		} else if constexpr (
+			std::is_same_v<sequence_type, reset_sequence>) {
 			detail::write_ints_into_string(target, 0);
 			target += static_cast<char_type>('m');
-		} else if constexpr (std::is_same_v<
-													 sequence_type,
-													 clear_screen_sequence>) {
+		} else if constexpr (
+			std::
+				is_same_v<sequence_type, clear_screen_sequence>) {
 			detail::write_ints_into_string(target, 2);
 			target += static_cast<char_type>('J');
 		}
 	}
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::detail::get_index_color_seq_str(
 	const set_index_color_sequence &sequence) -> string_type {
 	using char_type = typename string_type::value_type;
@@ -898,11 +891,11 @@ auto oof::detail::get_index_color_seq_str(
 		else
 			result += static_cast<char_type>('a' + nibble - 10);
 	};
-	const auto write_component =
-		[&](const uint8_t component) {
-			if (component > 15) write_nibble(component >> 4);
-			write_nibble(component & 0xf);
-		};
+	const auto write_component = [&](
+																 const uint8_t component) {
+		if (component > 15) write_nibble(component >> 4);
+		write_nibble(component & 0xf);
+	};
 	write_component(sequence.m_color.red);
 	result += static_cast<char_type>('/');
 	write_component(sequence.m_color.green);
@@ -913,17 +906,19 @@ auto oof::detail::get_index_color_seq_str(
 	return result;
 }
 
-template <oof::std_string_type string_type>
-auto oof::screen<string_type>::update_sequence_buffer()
-	const -> void {
+template<oof::std_string_type string_type>
+auto
+	oof::screen<string_type>::update_sequence_buffer() const
+	-> void {
 	detail::draw_state<string_type> state{};
 	m_sequence_buffer.clear();
 	m_sequence_buffer.push_back(reset_sequence{});
 
-	for (detail::cell_pos relative_pos{
-				 this->m_width, this->m_height};
-			 relative_pos.is_end() == false;
-			 ++relative_pos) {
+	for (
+		detail::cell_pos relative_pos{
+			this->m_width, this->m_height};
+		relative_pos.is_end() == false;
+		++relative_pos) {
 		const cell<string_type> &target_cell_state =
 			this->m_cells[relative_pos.m_index];
 
@@ -944,19 +939,19 @@ auto oof::screen<string_type>::update_sequence_buffer()
 	}
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 oof::screen<string_type>::screen(
 	const int width,
 	const int height,
 	const int start_column,
 	const int start_line,
-	const cell<string_type> &background)
-		: m_width(width),
-			m_height(height),
-			m_origin_line(start_line),
-			m_origin_column(start_column),
-			m_background(background),
-			m_cells(width * height, background) {
+	const cell<string_type> &background) :
+	m_width(width),
+	m_height(height),
+	m_origin_line(start_line),
+	m_origin_column(start_column),
+	m_background(background),
+	m_cells(width * height, background) {
 	if (width <= 0) {
 		const std::string msg = "Width can't be negative";
 		::oof::detail::error(msg);
@@ -967,38 +962,38 @@ oof::screen<string_type>::screen(
 	}
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 oof::screen<string_type>::screen(
 	const int width,
 	const int height,
 	const int start_column,
 	const int start_line,
-	const char_type fill_char)
-		: screen(
-				width,
-				height,
-				start_column,
-				start_line,
-				cell<string_type>{fill_char}) {}
+	const char_type fill_char) :
+	screen(
+		width,
+		height,
+		start_column,
+		start_line,
+		cell<string_type>{fill_char}) {}
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 oof::screen<string_type>::screen(
 	const int width,
 	const int height,
-	const char_type fill_char)
-		: screen(width, height, 0, 0, fill_char) {}
+	const char_type fill_char) :
+	screen(width, height, 0, 0, fill_char) {}
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::screen<string_type>::get_width() const -> int {
 	return m_width;
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::screen<string_type>::get_height() const -> int {
 	return m_height;
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::screen<string_type>::get_string() const
 	-> string_type {
 	this->update_sequence_buffer();
@@ -1009,7 +1004,7 @@ auto oof::screen<string_type>::get_string() const
 	return result;
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::screen<string_type>::get_string(
 	string_type &buffer) const -> void {
 	this->update_sequence_buffer();
@@ -1027,7 +1022,7 @@ auto oof::screen<string_type>::get_string(
 	m_old_cells = m_cells;
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::screen<string_type>::write_into(
 	const string_type &text,
 	const int column,
@@ -1065,7 +1060,7 @@ auto oof::screen<string_type>::write_into(
 	}
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::screen<string_type>::is_inside(
 	const int column,
 	const int line) const -> bool {
@@ -1073,7 +1068,7 @@ auto oof::screen<string_type>::is_inside(
 		line < m_height;
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::screen<string_type>::get_cell(
 	const int column,
 	const int line) -> cell<string_type> & {
@@ -1115,7 +1110,7 @@ auto oof::get_string_reserve_size(
 }
 
 // Instantiated by oof::screen<string_type>::get_string()
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::detail::write_sequence_string_no_reserve(
 	const std::vector<sequence_variant_type> &sequences,
 	string_type &target) -> void {
@@ -1127,7 +1122,7 @@ auto oof::detail::write_sequence_string_no_reserve(
 			sequence);
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::get_string_from_sequences(
 	const std::vector<sequence_variant_type> &sequences)
 	-> string_type {
@@ -1265,35 +1260,35 @@ oof::pixel_screen::pixel_screen(
 	const int halfline_height,
 	const int start_column,
 	const int start_halfline,
-	const color &fill_color)
-		: m_fill_color(fill_color),
-			m_halfline_height(halfline_height),
-			m_origin_column(start_column),
-			m_origin_halfline(start_halfline),
-			m_screen(
-				width,
-				this->get_line_height(),
-				m_origin_column,
-				m_origin_halfline / 2,
-				detail::get_pixel_background(fill_color)),
-			m_pixels(width * halfline_height, fill_color) {}
+	const color &fill_color) :
+	m_fill_color(fill_color),
+	m_halfline_height(halfline_height),
+	m_origin_column(start_column),
+	m_origin_halfline(start_halfline),
+	m_screen(
+		width,
+		this->get_line_height(),
+		m_origin_column,
+		m_origin_halfline / 2,
+		detail::get_pixel_background(fill_color)),
+	m_pixels(width * halfline_height, fill_color) {}
 
 oof::pixel_screen::pixel_screen(
 	const int width,
 	const int halfline_height,
 	const int start_column,
-	const int start_halfline)
-		: pixel_screen(
-				width,
-				halfline_height,
-				start_column,
-				start_halfline,
-				color{}) {}
+	const int start_halfline) :
+	pixel_screen(
+		width,
+		halfline_height,
+		start_column,
+		start_halfline,
+		color{}) {}
 
 oof::pixel_screen::pixel_screen(
 	const int width,
-	const int halfline_height)
-		: pixel_screen(width, halfline_height, 0, 0, color{}) {}
+	const int halfline_height) :
+	pixel_screen(width, halfline_height, 0, 0, color{}) {}
 
 auto oof::pixel_screen::get_screen_ref()
 	-> screen<std::wstring> & {
@@ -1305,8 +1300,9 @@ auto oof::pixel_screen::compute_result() const -> void {
 	int halfline_bottom = halfline_top + 1;
 	// TODO iterator?
 	for (int line = 0; line < m_screen.get_height(); ++line) {
-		for (int column = 0; column < m_screen.get_width();
-				 ++column) {
+		for (
+			int column = 0; column < m_screen.get_width();
+			++column) {
 			cell<std::wstring> &target_cell =
 				m_screen.get_cell(column, line);
 			target_cell.m_format.m_fg_color =
@@ -1377,12 +1373,12 @@ auto oof::pixel_screen::clear() -> void {
 	for (color &pixel : m_pixels) pixel = m_fill_color;
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::screen<string_type>::clear() -> void {
 	for (cell<string_type> &cell : *this) cell = m_background;
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::detail::draw_state<string_type>::write_sequence(
 	std::vector<sequence_variant_type> &sequence_buffer,
 	const cell_type &target_cell_state,
@@ -1458,7 +1454,7 @@ auto oof::detail::draw_state<string_type>::write_sequence(
 	m_format = target_cell_state.m_format;
 }
 
-template <oof::std_string_type string_type>
+template<oof::std_string_type string_type>
 auto oof::detail::draw_state<string_type>::
 	is_position_sequence_necessary(
 		const cell_pos &target_pos) const -> bool {
@@ -1483,7 +1479,7 @@ auto oof::detail::draw_state<string_type>::
 	return false;
 }
 
-template <
+template<
 	oof::std_string_type string_type,
 	oof::sequence_c sequence_type>
 auto oof::get_string_from_sequence(
@@ -1507,7 +1503,7 @@ auto oof::detail::get_pixel_background(
 			.m_fg_color = fill_color, .m_bg_color = fill_color}};
 }
 
-template <typename sequence_type>
+template<typename sequence_type>
 oof::detail::extender<sequence_type>::operator std::string()
 	const {
 	const sequence_type &sequence =
@@ -1515,15 +1511,15 @@ oof::detail::extender<sequence_type>::operator std::string()
 	return get_string_from_sequence<std::string>(sequence);
 }
 
-template <typename sequence_type>
-oof::detail::extender<
-	sequence_type>::operator std::wstring() const {
+template<typename sequence_type>
+oof::detail::extender<sequence_type>::operator std::
+	wstring() const {
 	const sequence_type &sequence =
 		static_cast<const sequence_type &>(*this);
 	return get_string_from_sequence<std::wstring>(sequence);
 }
 
-template <typename sequence_type>
+template<typename sequence_type>
 auto oof::detail::extender<sequence_type>::operator+(
 	const std::string &other) const -> std::string {
 	const sequence_type &sequence =
@@ -1531,7 +1527,7 @@ auto oof::detail::extender<sequence_type>::operator+(
 	return std::string(sequence) + other;
 }
 
-template <typename sequence_type>
+template<typename sequence_type>
 auto oof::detail::extender<sequence_type>::operator+(
 	const std::wstring &other) const -> std::wstring {
 	const sequence_type &sequence =
@@ -1554,19 +1550,30 @@ auto impl_fun() -> void {
 		oof::sequence_variant_type{});
 }
 
-#endif	// OOF_IMPL
+#endif // OOF_IMPL
 
 #include <rain.hpp>
 
 template<typename char_type>
-auto fast_print(const std::basic_string<char_type>& sss) -> void
-{
-   HANDLE const output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-   const auto char_count = static_cast<DWORD>(sss.length());
-   if constexpr (std::is_same_v<char_type, char>)
-      WriteConsoleA(output_handle, sss.c_str(), char_count, nullptr, nullptr);
-   else
-      WriteConsoleW(output_handle, sss.c_str(), char_count, nullptr, nullptr);
+auto fast_print(const std::basic_string<char_type> &sss)
+	-> void {
+	HANDLE const output_handle =
+		GetStdHandle(STD_OUTPUT_HANDLE);
+	const auto char_count = static_cast<DWORD>(sss.length());
+	if constexpr (std::is_same_v<char_type, char>)
+		WriteConsoleA(
+			output_handle,
+			sss.c_str(),
+			char_count,
+			nullptr,
+			nullptr);
+	else
+		WriteConsoleW(
+			output_handle,
+			sss.c_str(),
+			char_count,
+			nullptr,
+			nullptr);
 }
 
 int main() {
@@ -1579,9 +1586,12 @@ int main() {
 			std::chrono::duration<double>(t1 - t0).count();
 
 		for (oof::color &pixel : screen) {
-			pixel.red = 127.5 + 127.5 * std::sin(1.0 * seconds + rand());
-			pixel.green = 127.5 + 127.5 * std::sin(2.0 * seconds + rand());
-			pixel.blue = 127.5 + 127.5 * std::sin(3.0 * seconds + rand());
+			pixel.red =
+				127.5 + 127.5 * std::sin(1.0 * seconds + rand());
+			pixel.green =
+				127.5 + 127.5 * std::sin(2.0 * seconds + rand());
+			pixel.blue =
+				127.5 + 127.5 * std::sin(3.0 * seconds + rand());
 		}
 		fast_print(screen.get_string());
 	}

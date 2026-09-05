@@ -6,6 +6,7 @@
 dill
 requests
 python-dotenv
+dkimpy
 
 # Utility.
 selenium

@@ -37,52 +37,68 @@ int main() {
 			client("www.google.com:443");
 		std::stringstream tlsPlaintext;
 		tlsPlaintext
-			<< "\x16"s	// ContentType type;
-			<< "\x03\x03"s	// ProtocolVersion version;
+			<< "\x16"s // ContentType type;
+			<< "\x03\x03"s // ProtocolVersion version;
 			// << "\x00\x68"s	// uint16 length;
-			<< "\x00\x65"s	// uint16 length;
-			<< "\x01"s	// HandshakeType msg_type;
+			<< "\x00\x65"s // uint16 length;
+			<< "\x01"s // HandshakeType msg_type;
 			// << "\x00\x00\x64"s	// uint24 length;
-			<< "\x00\x00\x61"s	// uint24 length;
-			<< "\x03\x03"s	// ProtocolVersion version;
-			<< "\x00\x87\x20\xB9"s	// uint32 gmt_unix_time;
-			<< "0123456789012345678901234567"s	// opaque random_bytes[28];
-			<< "\x00"s	// SessionID session_id;
-			// Most handshake_failure (0x28) errors are due to unsupported
-			// cipher suites, or a EC cipher suite without a corresponding extension
-			// (notably, EC point formats and elliptic curves). C030
+			<< "\x00\x00\x61"s // uint24 length;
+			<< "\x03\x03"s // ProtocolVersion version;
+			<< "\x00\x87\x20\xB9"s // uint32 gmt_unix_time;
+			<< "0123456789012345678901234567"s // opaque
+																				 // random_bytes[28];
+			<< "\x00"s // SessionID session_id;
+			// Most handshake_failure (0x28) errors are due to
+			// unsupported cipher suites, or a EC cipher suite
+			// without a corresponding extension (notably, EC
+			// point formats and elliptic curves). C030
 			// (TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384), C02F, CCA8
-			// (TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256) recommended for maximum
-			// coverage and security (wikipedia, google, pixiv, usaco, nyaa).
-			// << "\x00\x02\x00\x0A"s	// CipherSuite cipher_suites<2..2^16-2>;
-			<< "\x00\x02\xCC\xA8"s	// CipherSuite cipher_suites<2..2^16-2>;
-			<< "\x01\x00"s	// CompressionMethod compression_methods<1..2^8-1>;
+			// (TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256)
+			// recommended for maximum coverage and security
+			// (wikipedia, google, pixiv, usaco, nyaa).
+			// << "\x00\x02\x00\x0A"s	// CipherSuite
+			// cipher_suites<2..2^16-2>;
+			<< "\x00\x02\xCC\xA8"s // CipherSuite
+														 // cipher_suites<2..2^16-2>;
+			<< "\x01\x00"s // CompressionMethod
+										 // compression_methods<1..2^8-1>;
 			// << "\x00\x39"s	// Extension extensions<0..2^16-1>;
-			<< "\x00\x36"s	// Extension extensions<0..2^16-1>;
+			<< "\x00\x36"s // Extension extensions<0..2^16-1>;
 			// Extension - Server Name for `www.wikipedia.org`.
-			// << "\x00\x00\x00\x16\x00\x14\x00\x00\x11www.howsmyssl.com"s
-			// << "\x00\x00\x00\x16\x00\x14\x00\x00\x11www.wikipedia.com"s
+			// <<
+			// "\x00\x00\x00\x16\x00\x14\x00\x00\x11www.howsmyssl.com"s
+			// <<
+			// "\x00\x00\x00\x16\x00\x14\x00\x00\x11www.wikipedia.com"s
 			<< "\x00\x00\x00\x13\x00\x11\x00\x00\x0Ewww.google.com"s
-			<< "\x00\x12\x00\x00"s	// Extension - SCT.
-			<< "\xFF\x01\x00\x01\x00"s	// Extension - Renegotiation info.
+			<< "\x00\x12\x00\x00"s // Extension - SCT.
+			<< "\xFF\x01\x00\x01\x00"s // Extension -
+																 // Renegotiation info.
 			// Extension - Signature algorithms.
 			<< "\x00\x0D\x00\x04\x00\x02\x05\x01"s
-			<< "\x00\x0B\x00\x02\x01\x00"s	// Extension - EC point formats.
-			<< "\x00\x0A\x00\x04\x00\x02\x00\x1D"s	// Extension - Elliptic curves.
+			<< "\x00\x0B\x00\x02\x01\x00"s // Extension - EC point
+																		 // formats.
+			<< "\x00\x0A\x00\x04\x00\x02\x00\x1D"s // Extension -
+																						 // Elliptic
+																						 // curves.
 			;
 		client.send(tlsPlaintext.str());
 		std::this_thread::sleep_for(1s);
 
 		std::string buffer(8192, '\0');
 		client.recv(buffer);
-		std::cout << buffer.length() << std::endl << std::hex << std::setfill('0');
+		std::cout << buffer.length() << std::endl
+							<< std::hex << std::setfill('0');
 		for (char const &c : buffer) {
 			std::cout << std::setw(2)
-								<< static_cast<int>(static_cast<unsigned char>(c)) << ' ';
+								<< static_cast<int>(
+										 static_cast<unsigned char>(c))
+								<< ' ';
 		}
 		std::cout << std::endl;
 
-		// Response stored as raw string so it won’t be formatted.
+		// Response stored as raw string so it won’t be
+		// formatted.
 		std::string _ = R"(
 		16 03 03 00 57 
 		02 00 00 53 
@@ -118,7 +134,7 @@ int main() {
 		tlsPlaintext
 			<< "\x16\x03\x03\x00\x25"s
 			<< "\x10\x00\x00\x21"s
-			<< "\x20\x35\x80\x72\xd6\x36\x58\x80\xd1\xae\xea\x32\x9a\xdf\x91\x21\x38\x38\x51\xed\x21\xa2\x8e\x3b\x75\xe9\x65\xd0\xd2\xcd\x16\x62\x54"s	// Public key.
+			<< "\x20\x35\x80\x72\xd6\x36\x58\x80\xd1\xae\xea\x32\x9a\xdf\x91\x21\x38\x38\x51\xed\x21\xa2\x8e\x3b\x75\xe9\x65\xd0\xd2\xcd\x16\x62\x54"s // Public key.
 
 			<< "\x14\x03\x03\x00\x01"s
 			<< "\x01"s
@@ -130,10 +146,13 @@ int main() {
 		std::this_thread::sleep_for(1s);
 
 		client.recv(buffer, 1s);
-		std::cout << buffer.length() << std::endl << std::hex << std::setfill('0');
+		std::cout << buffer.length() << std::endl
+							<< std::hex << std::setfill('0');
 		for (char const &c : buffer) {
 			std::cout << std::setw(2)
-								<< static_cast<int>(static_cast<unsigned char>(c)) << ' ';
+								<< static_cast<int>(
+										 static_cast<unsigned char>(c))
+								<< ' ';
 		}
 		std::cout << std::endl;
 	}

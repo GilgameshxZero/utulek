@@ -18,12 +18,14 @@ class Wrapper {
 	}
 
 	Wrapper &operator=(Wrapper const &right) {
-		cout << "copy-assign: " << this->value << " <- " << right.value << ".\n";
+		cout << "copy-assign: " << this->value << " <- "
+				 << right.value << ".\n";
 		this->value = right.value;
 		return *this;
 	}
 	Wrapper &operator=(Wrapper &&right) {
-		cout << "move-assign: " << this->value << " <- " << right.value << ".\n";
+		cout << "move-assign: " << this->value << " <- "
+				 << right.value << ".\n";
 		this->value = right.value;
 		return *this;
 	}
@@ -70,7 +72,8 @@ int main() {
 	{
 		array<Wrapper, 3> X{0, 1, 2};
 		tie(X[2], X[1], X[0]) =
-			tuple<Wrapper &, Wrapper &, Wrapper &>{X[0], X[1], X[2]};
+			tuple<Wrapper &, Wrapper &, Wrapper &>{
+				X[0], X[1], X[2]};
 		cout << X[0] << ' ' << X[1] << ' ' << X[2] << '\n';
 	}
 

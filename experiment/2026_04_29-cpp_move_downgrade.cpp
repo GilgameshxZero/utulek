@@ -5,9 +5,7 @@ using namespace std;
 class A {
 	public:
 	A() {}
-	A(A &&a) {
-		cout << "A::move\n";
-	}
+	A(A &&a) { cout << "A::move\n"; }
 };
 
 class B : virtual public A {

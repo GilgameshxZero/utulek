@@ -13,10 +13,9 @@ int main() {
 		mov A, eax
 	}
 #else
-	__asm__(
-		"mov eax, A\n"
-		"shl eax, 0x2\n"
-		"mov A, eax\n");
+	__asm__("mov eax, A\n"
+					"shl eax, 0x2\n"
+					"mov A, eax\n");
 #endif
 
 	std::cout << "A: " << A << '\n';

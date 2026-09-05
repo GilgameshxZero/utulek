@@ -2,49 +2,51 @@
 
 using namespace Rain::Literal;
 
-template <std::size_t INDEX>
+template<std::size_t INDEX>
 class CTFibonacci;
 
-template <>
+template<>
 class CTFibonacci<0> {
 	public:
 	static constexpr std::size_t get() { return 0_zu; }
 };
 
-template <>
+template<>
 class CTFibonacci<1> {
 	public:
 	static constexpr std::size_t get() { return 1_zu; }
 };
 
-template <std::size_t INDEX>
+template<std::size_t INDEX>
 class CTFibonacci {
 	public:
 	static constexpr std::size_t get() {
-		return CTFibonacci<INDEX - 1>::get() + CTFibonacci<INDEX - 2>::get();
+		return CTFibonacci<INDEX - 1>::get() +
+			CTFibonacci<INDEX - 2>::get();
 	}
 };
 
-// CTCharFibonacci is an erroneous implementation, but the template should "wrap
-// around". If the wrap-around is successful, then this should take no real time
-// to compute. This may require optimizations to be enabled.
+// CTCharFibonacci is an erroneous implementation, but the
+// template should "wrap around". If the wrap-around is
+// successful, then this should take no real time to
+// compute. This may require optimizations to be enabled.
 using namespace Rain::Literal;
-template <unsigned char INDEX>
+template<unsigned char INDEX>
 class CTCharFibonacci;
 
-template <>
+template<>
 class CTCharFibonacci<3> {
 	public:
 	static constexpr std::size_t get() { return 3_zu; }
 };
 
-template <>
+template<>
 class CTCharFibonacci<4> {
 	public:
 	static constexpr std::size_t get() { return 5_zu; }
 };
 
-template <unsigned char INDEX>
+template<unsigned char INDEX>
 class CTCharFibonacci {
 	public:
 	static constexpr std::size_t get() {
@@ -54,27 +56,29 @@ class CTCharFibonacci {
 };
 
 // Essentially rebuilds integral_constant.
-template <std::size_t VALUE>
+template<std::size_t VALUE>
 class CTSizeT {
 	public:
 	static constexpr std::size_t get() { return VALUE; }
 };
 
-// More explicitly efficient compile-time recursion. Discussion:
+// More explicitly efficient compile-time recursion.
+// Discussion:
 // <https://stackoverflow.com/questions/22645551/calculate-the-fibonacci-number-recursive-approach-in-compile-time-constexpr>.
-template <std::size_t INDEX>
+template<std::size_t INDEX>
 class CTFibonacciExplicit;
 
-template <>
+template<>
 class CTFibonacciExplicit<0> : public CTSizeT<0> {};
 
-template <>
+template<>
 class CTFibonacciExplicit<1> : public CTSizeT<1> {};
 
-template <std::size_t INDEX>
-class CTFibonacciExplicit : public CTSizeT<
-															CTFibonacciExplicit<INDEX - 1>::get() +
-															CTFibonacciExplicit<INDEX - 2>::get()> {};
+template<std::size_t INDEX>
+class CTFibonacciExplicit :
+	public CTSizeT<
+		CTFibonacciExplicit<INDEX - 1>::get() +
+		CTFibonacciExplicit<INDEX - 2>::get()> {};
 
 int main() {
 	std::cout << CTFibonacci<0>::get() << '\n'

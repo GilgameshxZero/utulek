@@ -4,95 +4,149 @@ using namespace std;
 using namespace Rain::Literal;
 using namespace Rain::Algorithm;
 
-template <typename ValueType>
-class SegmentTreeLazySumPolicy
-		: protected SegmentTreeLazy<>::Policy<ValueType> {
+template<typename ValueType>
+class SegmentTreeLazySumPolicy :
+	protected SegmentTreeLazy<>::Policy<ValueType> {
 	protected:
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Value;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Update;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Result;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Query;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Value;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Update;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Result;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Query;
 
 	inline Value defaultValue() { return {}; }
 	inline Update defaultUpdate() { return {}; }
 	inline Result defaultResult() { return {}; }
-	inline void combine(Update &current, Update const &update, std::size_t) {
+	inline void combine(
+		Update &current,
+		Update const &update,
+		std::size_t) {
 		current += update;
 	}
-	inline void
-	retrace(Value &value, Value const &left, Value const &right, std::size_t) {
+	inline void retrace(
+		Value &value,
+		Value const &left,
+		Value const &right,
+		std::size_t) {
 		value = left + right;
 	}
-	inline void apply(Value &value, Update const &update, std::size_t range) {
+	inline void apply(
+		Value &value,
+		Update const &update,
+		std::size_t range) {
 		value += update * static_cast<Update>(range);
 	}
-	inline Result
-	aggregate(Result const &left, Result const &right, Query const &) {
+	inline Result aggregate(
+		Result const &left,
+		Result const &right,
+		Query const &) {
 		return left + right;
 	}
-	inline Result convert(Value const &value, Query const &, std::size_t) {
+	inline Result convert(
+		Value const &value,
+		Query const &,
+		std::size_t) {
 		return {value};
 	}
 };
 
-template <typename ValueType>
-class SegmentTreeLazyMinPolicy
-		: protected SegmentTreeLazy<>::Policy<ValueType> {
+template<typename ValueType>
+class SegmentTreeLazyMinPolicy :
+	protected SegmentTreeLazy<>::Policy<ValueType> {
 	protected:
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Value;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Update;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Result;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Query;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Value;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Update;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Result;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Query;
 
 	inline Value defaultValue() { return {}; }
 	inline Update defaultUpdate() { return {}; }
-	inline Result defaultResult() { return std::numeric_limits<Result>::max(); }
-	inline void combine(Update &current, Update const &update, std::size_t) {
+	inline Result defaultResult() {
+		return std::numeric_limits<Result>::max();
+	}
+	inline void combine(
+		Update &current,
+		Update const &update,
+		std::size_t) {
 		current += update;
 	}
-	inline void
-	retrace(Value &value, Value const &left, Value const &right, std::size_t) {
+	inline void retrace(
+		Value &value,
+		Value const &left,
+		Value const &right,
+		std::size_t) {
 		value = std::min(left, right);
 	}
-	inline void apply(Value &value, Update const &update, std::size_t) {
+	inline void
+		apply(Value &value, Update const &update, std::size_t) {
 		value += update;
 	}
-	inline Result
-	aggregate(Result const &left, Result const &right, Query const &) {
+	inline Result aggregate(
+		Result const &left,
+		Result const &right,
+		Query const &) {
 		return std::min(left, right);
 	}
-	inline Result convert(Value const &value, Query const &, std::size_t) {
+	inline Result convert(
+		Value const &value,
+		Query const &,
+		std::size_t) {
 		return {value};
 	}
 };
 
-template <typename ValueType>
-class SegmentTreeLazyMaxPolicy
-		: protected SegmentTreeLazy<>::Policy<ValueType> {
+template<typename ValueType>
+class SegmentTreeLazyMaxPolicy :
+	protected SegmentTreeLazy<>::Policy<ValueType> {
 	protected:
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Value;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Update;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Result;
-	using typename SegmentTreeLazy<>::Policy<ValueType>::Query;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Value;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Update;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Result;
+	using
+		typename SegmentTreeLazy<>::Policy<ValueType>::Query;
 
 	inline Value defaultValue() { return {}; }
 	inline Update defaultUpdate() { return {}; }
-	inline Result defaultResult() { return std::numeric_limits<Result>::min(); }
-	inline void combine(Update &current, Update const &update, std::size_t) {
+	inline Result defaultResult() {
+		return std::numeric_limits<Result>::min();
+	}
+	inline void combine(
+		Update &current,
+		Update const &update,
+		std::size_t) {
 		current += update;
 	}
-	inline void
-	retrace(Value &value, Value const &left, Value const &right, std::size_t) {
+	inline void retrace(
+		Value &value,
+		Value const &left,
+		Value const &right,
+		std::size_t) {
 		value = std::max(left, right);
 	}
-	inline void apply(Value &value, Update const &update, std::size_t) {
+	inline void
+		apply(Value &value, Update const &update, std::size_t) {
 		value += update;
 	}
-	inline Result
-	aggregate(Result const &left, Result const &right, Query const &) {
+	inline Result aggregate(
+		Result const &left,
+		Result const &right,
+		Query const &) {
 		return std::max(left, right);
 	}
-	inline Result convert(Value const &value, Query const &, std::size_t) {
+	inline Result convert(
+		Value const &value,
+		Query const &,
+		std::size_t) {
 		return {value};
 	}
 };

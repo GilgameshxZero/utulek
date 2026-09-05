@@ -15,10 +15,10 @@ using LL = long long;
 using LD = long double;
 using CF = Clamped<float>;
 
-#define RF(x, from, to)                                    \
-	for (                                                    \
-		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL};     \
-		x != _to;                                              \
+#define RF(x, from, to) \
+	for ( \
+		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL}; \
+		x != _to; \
 		x += _delta)
 
 template<typename Value>

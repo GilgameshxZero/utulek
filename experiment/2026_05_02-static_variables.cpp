@@ -36,8 +36,8 @@ class A {
 
 	template<B b>
 	int &c() {
-		// // Doesn't work, templates must be determined at compile time.
-		// return cInner<b, tc>();
+		// // Doesn't work, templates must be determined at
+		// compile time. return cInner<b, tc>();
 		static int value;
 		return value;
 	}

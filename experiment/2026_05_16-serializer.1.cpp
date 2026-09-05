@@ -15,10 +15,10 @@ using LL = long long;
 using LD = long double;
 using CLD = Clamped<LD>;
 
-#define RF(x, from, to)                                    \
-	for (                                                    \
-		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL};     \
-		x != _to;                                              \
+#define RF(x, from, to) \
+	for ( \
+		LL x(from), _to(to), _delta{x < _to ? 1LL : -1LL}; \
+		x != _to; \
 		x += _delta)
 
 size_t constexpr C_CLASS{10}, C_EPOCH{1};
@@ -102,7 +102,8 @@ int main(int, char const *const *const) {
 			shuffle(mbp.begin(), mbp.end(), gen);
 
 			{
-				vector<vector<Tensor<CLD, 2>>> activationV(C_THREAD),
+				vector<vector<Tensor<CLD, 2>>> activationV(
+					C_THREAD),
 					activationGradientV(C_THREAD);
 				CLD loss{};
 
