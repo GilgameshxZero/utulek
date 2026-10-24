@@ -14,6 +14,13 @@
 3. Narrow by sender/recipient, subject, or a distinctive phrase. Broad `rg` searches for common words (company names, “LinkedIn,” etc.) can return many irrelevant matches.
 4. Extract `text/plain` MIME parts from likely messages and inspect nearby replies or LinkedIn notification emails. Newer replies may quote the original message.
 
+## Large duplicate scans
+
+* Keep each message's Maildir path alongside its content fingerprint and group membership. Subjects and counts alone are not enough to support follow-up inspection.
+* Retain the group index in queryable state after the scan. If the analysis process may exit, use a private temporary database outside the Maildir and verify that group members can be queried before reporting results. Do not rely on a process-local in-memory table or an stdin loop unless its lifetime has been confirmed.
+* Exclude Google Chat messages from duplicate groups when indicated by Gmail's `Chat` label. Keep dates out of the content fingerprint when comparing email copies, but report when missing dates or parse errors exclude messages.
+* Never modify Maildir messages during a duplicate scan unless the user explicitly asks for that change.
+
 ## Example: list recent headers
 
 ```python
