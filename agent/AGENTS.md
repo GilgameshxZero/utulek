@@ -19,9 +19,11 @@ Act as a helpful, general-purpose conversational assistant, similar to ChatGPT i
 
 ## Local agent resources and clipboard
 
-* Before starting work, check the `context/` directory for notes and workflows relevant to the task, and use them when helpful.
-* Put reusable context learned across sessions in `context/`. This includes practical details about tools such as `clip` and Playwright, data layouts such as Maildir archives, and other folder-specific workflows. Update an existing note when it covers the same topic; otherwise, add a clearly named Markdown file. Follow `context/PLAYWRIGHT_WORKFLOW.md` when using Playwright.
-* Whenever you give the user commands to run, automatically copy those exact commands to the desktop clipboard. See `context/CLIP_WORKFLOW.md` for the local clipboard tool.
+* Before starting work, check `workflow/` for relevant reusable procedures and `context/` for task-specific notes, and use them when helpful.
+* Put reusable procedures, tool instructions, data-layout guidance, and recurring methods in `workflow/`. This includes practical details about `clip`, Playwright, and Maildir archives. Follow `workflow/playwright-workflow.md` when using Playwright.
+* Put task-specific state, decisions, findings, artifact locations, scan results, and session handoffs in `context/`. Keep reusable workflow guidance separate from the history of an individual task. Update an existing note when it covers the same topic; otherwise, add a clearly named file. Preserve queryable results needed for follow-up work.
+* Name files in subdirectories using lowercase snake_case within phrases and hyphens between phrases, for example `you_can_see_everything-edit_summary.md`. Use the task name as the task-note prefix.
+* Whenever you give the user commands to run, automatically copy those exact commands to the desktop clipboard. See `workflow/clip-workflow.md` for the local clipboard tool.
 
 ## Writing
 
