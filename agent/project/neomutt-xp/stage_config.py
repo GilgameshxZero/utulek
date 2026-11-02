@@ -43,6 +43,17 @@ def render(text):
     replace(r'mv \.event\.tmp\.ics (.*?)/\$\(uuidgen\)\.ics',
             lambda m: command + ' save .event.tmp.ics \\"' + m[1] + '\\"')
     replace(r'\$\{my_active_dir\}neomutt-ical-request\.sh', command + ' request')
+    # Create NeoMutt-owned attachments BEFORE generation (new-mime truncates).
+    # The no-op mailcap composer leaves the placeholder for the actual helper;
+    # update-encoding then refreshes size/encoding after generation.
+    replace(r'^(set my_ics_response_macro_post=")\s*\\\n',
+            lambda m:m[1]+'\\\n<new-mime>.reply.tmp.ics<enter>text/calendar<enter>\\\n')
+    replace(r'^(macro compose R "<write-fcc>[^"\n]*?<enter>)\\\n',
+            lambda m:m[1]+'\\\n<new-mime>.request.tmp.ics<enter>text/calendar<enter>\\\n')
+    text,count=re.subn(r'<attach-file>(\.(?:reply|request)\.tmp\.ics)<enter><toggle-unlink>',
+                      '<last-entry><update-encoding>',text)
+    if count!=2:
+        raise ValueError('Expected reply and request attachment cleanup macros')
     return text
 
 
@@ -53,6 +64,7 @@ def render_mailcap(text):
                               '"@NEOMUTT_COMMAND@" ical', text)
     if html_count != 1 or ical_count != 3:
         raise ValueError('Unexpected HTML/calendar mailcap entries')
+    text=re.sub(r'^(text/calendar;.*)$',lambda m:m[0]+'; compose="@NEOMUTT_COMMAND@" keep %s',text,flags=re.M)
     return text
 
 
@@ -65,6 +77,7 @@ def stage(source, destination):
     for path in (Path(__file__).parent / 'python').iterdir():
         if path.is_file():
             shutil.copy2(path, destination / path.name)
+    shutil.copy2(Path(__file__).parent/'deployment.py',destination/'deployment.py')
     text = render((source / 'neomuttrc').read_text())
     # Environment variables expand differently under cmd and sh. Invoke an
     # extensionless mailcap dispatcher from the snowfall working directory via
@@ -72,7 +85,8 @@ def stage(source, destination):
     text = text.replace('set mailcap_path="${my_active_dir}mailcap"',
                         'set mailcap_path="`"$my_email_command" mailcap`"')
     (destination / 'neomuttrc').write_text(text)
-    (destination / 'mailcap').write_text(render_mailcap((source / 'mailcap').read_text()))
+    shutil.copy2(source/'mailcap',destination/'mailcap')
+    (destination / 'mailcap.template').write_text(render_mailcap((source / 'mailcap').read_text()))
 
 
 if __name__ == '__main__':

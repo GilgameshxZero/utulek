@@ -7,7 +7,7 @@ Use when the user asks to move a conversation or task into another session, asks
 1. Stop starting new task work. Finish only the necessary wrap-up and persistence already authorized.
 2. Ensure completed file changes are saved on disk. Do not create Git commits; uncommitted work is intentional in this workspace. Preserve unrelated changes.
 3. Update the existing relevant private task note, or create a concise handoff if none provides a clear resumption point. Save the final state, adopted preferences, important artifacts and paths, verification and its limits, outstanding work, and the next useful action. A finished task can explicitly have no outstanding work.
-4. Keep task-specific or private information in ignored `context/`; keep reusable procedures in `workflow/` without credentials or private account details. Retain queryable results needed for follow-up rather than rerunning expensive work. Do not duplicate transcripts or routine tool output.
+4. Keep all task/project-specific information in ignored `context/`, using exactly one context/handoff file per task or project. Update that same file. Reserve `workflow/` for reusable procedures shared across different tasks/projects, without credentials or private account details. Retain queryable results needed for follow-up rather than rerunning expensive work. Do not duplicate transcripts or routine tool output.
 5. Check that private notes and generated artifacts are ignored, and read back the handoff. Do not rerun tests or scans just for a save.
 6. Briefly confirm the save with a clickable link to the handoff. Link a changed workflow when applicable. Do not claim a commit, upload, or backup occurred unless it actually did.
 
@@ -16,7 +16,7 @@ Keep handoffs concise and limited to what the next session needs. Do not create 
 
 ## Create or update the task note
 
-1. Check `context/` for an existing note covering the same task. Update it when appropriate; otherwise create `<task_name>-session_handoff.md` in the appropriate topic directory under `context/` (see `context/README.md`). Use lowercase snake_case within phrases and hyphens between phrases.
+1. Check `context/` for the single existing context/handoff file covering the task or project and update it. Do not create a separate handoff alongside an existing context file. If none exists, create `<task_name>-session_handoff.md` in the appropriate topic directory under `context/` (see `context/README.md`). Use lowercase snake_case within phrases and hyphens between phrases.
 2. Summarize the relevant conversation and completed work. Read only the files needed to confirm paths or current state; do not repeat expensive scans just to create a handoff.
 3. Put the latest state and next useful action near the top. Include a timestamp with timezone when timing matters, and distinguish historical state from facts that remain current.
 4. Include enough context that the receiving session can continue without access to the previous chat:

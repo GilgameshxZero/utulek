@@ -376,6 +376,9 @@ and default key bindings are (parenthesized).
 
 add [-l] [-p] [-q] [-Q] <file|dir|url|playlist>
 	Adds file/dir/url/playlist to the specified view or the current view.
+	In library and playlist views, playlist files become separate file-backed
+	entries in view 3. Directory additions also discover playlist files
+	recursively. Queue additions retain their existing track-expansion behavior.
 
 	@li -l
 	add to library
@@ -509,9 +512,17 @@ pl-export <filename>
 	Exports the currently selected playlist. The file will be overwritten if
 	it exists.
 
-pl-import [filename]
-	Imports a playlist into the playlist view. The argument can be omitted in
-	the file browser view.
+pl-import [file|directory]
+	Imports M3U, M3U8, PLS or cmus .pl files as separate file-backed playlists
+	in view 3. Directories are scanned recursively for playlist files. The
+	argument can be omitted in the file browser view. Source associations and
+	directory roots survive restarts. Relative paths resolve beside the source.
+	Re-importing the same source does not create another entry.
+
+	Use *update* to refresh these entries. Internal edits are replaced by the
+	source contents; normal saves only write cmus's internal snapshots, never
+	the external source. Deleting an imported entry never deletes its source;
+	files inside an imported directory are rediscovered on the next update.
 
 pl-rename <name>
 	Renames the selected playlist.
@@ -691,6 +702,13 @@ unbind [-f] <context> <key>
 unmark
 	Unmarks all tracks (see *mark*).
 
+update
+	Refreshes the music library and all file-backed playlists from any view.
+	Reloads changed contents, removes playlist entries whose source files no
+	longer exist, and discovers new playlists under imported directories.
+	Unreadable sources retain their last successful contents. Playlists created
+	inside cmus are unaffected by source synchronization.
+
 update-cache [-f]
 	Updates the track metadata cache ($XDG_CONFIG_HOME/cmus/cache). By
 	default, only deletions or files with a changed modification time are
@@ -840,7 +858,8 @@ win-update (*u*)
 
 	Reloads contents of directory in the browser view.
 
-	Only works in views 1-2 and 5, does nothing in other views.
+	In playlist view, refreshes file-backed playlists, or asks before reloading
+	a native playlist's saved snapshot. Also works in views 1-2 and 5.
 
 win-update-cache [-f]
 	Same as *update-cache*, but only for marked / selected tracks.

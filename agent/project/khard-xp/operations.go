@@ -63,8 +63,12 @@ func (r Runner) chooseBook(books []Book) (Book, error) {
 	if len(books) == 0 {
 		return Book{}, fmt.Errorf("no available address books")
 	}
+	rows := [][]string{{"Index", "Address book"}}
 	for i, b := range books {
-		fmt.Fprintf(r.Out, "%d  %s\n", i+1, safe(b.Name))
+		rows = append(rows, []string{strconv.Itoa(i + 1), b.Name})
+	}
+	if e := printTable(r.Out, rows); e != nil {
+		return Book{}, e
 	}
 	s, e := r.answer("Select address book number")
 	if e != nil {
@@ -142,8 +146,13 @@ func (r Runner) contactOperation(source *Card, cfg Config, o Options) error {
 		return e
 	}
 	var duplicates []*Card
+	duplicateQuery := compileSearch([]string{source.first("FN")})
 	for _, c := range targets {
-		if c.matches([]string{source.first("FN")}, cfg) {
+		matched, e := duplicateQuery.match(c, cfg)
+		if e != nil {
+			return e
+		}
+		if matched {
 			duplicates = append(duplicates, c)
 		}
 	}
@@ -285,7 +294,7 @@ func (r Runner) mergeContacts(source, target *Card, cfg Config, deleteSource boo
 		return e
 	}
 	merged := cloneCard(target)
-	changed, e := merged.applyModel(model, cfg)
+	changed, e := merged.applyYAML(model, cfg, false)
 	if e != nil {
 		return e
 	}
@@ -382,7 +391,7 @@ func (r Runner) addEmail(cfg Config, o Options) error {
 	if e != nil {
 		return e
 	}
-	cards, e := loadMatchingCards(cfg, o.Books, nil)
+	cards, e := loadMatchingCards(cfg, o.Books, o.Terms)
 	if e != nil {
 		return e
 	}
@@ -411,8 +420,13 @@ func (r Runner) addEmail(cfg Config, o Options) error {
 			terms = strings.Fields(strings.ReplaceAll(a.Name, ",", ""))
 		}
 		var matches []*Card
+		query := compileSearch(terms)
 		for _, c := range cards {
-			if c.matches(terms, cfg) {
+			matched, e := query.match(c, cfg)
+			if e != nil {
+				return e
+			}
+			if matched {
 				matches = append(matches, c)
 			}
 		}
@@ -433,8 +447,13 @@ func (r Runner) addEmail(cfg Config, o Options) error {
 				return e
 			}
 			matches = nil
+			compiled := compileSearch(strings.Fields(query))
 			for _, v := range cards {
-				if v.matches(strings.Fields(query), cfg) {
+				matched, e := compiled.match(v, cfg)
+				if e != nil {
+					return e
+				}
+				if matched {
 					matches = append(matches, v)
 				}
 			}
@@ -573,72 +592,13 @@ func (r Runner) newEmailContact(name string, cfg Config) (*Card, error) {
 
 // Add one property without rebuilding the contact model or changing old labels.
 func (c *Card) addEmailAddress(label, address string) error {
-	var types []string
-	custom := ""
-	pref := 0
-	for _, part := range strings.Split(label, ",") {
-		part = strings.TrimSpace(part)
-		lower := strings.ToLower(part)
-		switch {
-		case lower == "":
-			continue
-		case lower == "pref":
-			pref++
-		case strings.HasPrefix(lower, "pref="):
-			n, e := strconv.Atoi(lower[5:])
-			if e != nil || n < 0 || n > 99 {
-				return fmt.Errorf("invalid email preference")
-			}
-			pref += n
-		case lower == "home" || lower == "internet" || lower == "work" || (lower == "x400" && c.first("VERSION") == "3.0"):
-			types = append(types, part)
-		default:
-			if !validToken(part) {
-				return fmt.Errorf("invalid email label")
-			}
-			if custom != "" {
-				return fmt.Errorf("only one custom email label is allowed")
-			}
-			if strings.HasPrefix(lower, "x-") {
-				custom = part[2:]
-				types = append(types, part)
-			} else {
-				custom = part
-				types = append(types, "X-"+part)
-			}
-		}
-	}
-	if len(types) == 0 && pref == 0 {
+	if strings.TrimSpace(label) == "" {
 		return fmt.Errorf("email label is missing")
 	}
-	head := "EMAIL"
-	if pref > 0 {
-		if c.first("VERSION") == "4.0" {
-			head += ";PREF=" + strconv.Itoa(pref)
-		} else {
-			types = append(types, "pref")
-		}
+	p, e := c.typedProperty("EMAIL", label, escape(address), false)
+	if e != nil {
+		return e
 	}
-	if len(types) > 0 {
-		head += ";TYPE=" + strings.Join(types, ",")
-	}
-	group := ""
-	if custom != "" {
-		used := make(map[string]bool, len(c.Props))
-		for _, p := range c.Props {
-			used[strings.ToLower(p.Group)] = true
-		}
-		for i := 1; ; i++ {
-			group = "itememail" + strconv.Itoa(i)
-			if !used[group] {
-				break
-			}
-		}
-		head = group + "." + head
-	}
-	c.replace("EMAIL", append(c.properties("EMAIL"), newProp(head, escape(address))))
-	if custom != "" {
-		c.replace("X-ABLABEL", append(c.properties("X-ABLABEL"), newProp(group+".X-ABLabel", escape(custom))))
-	}
+	c.replaceExact("EMAIL", append(c.properties("EMAIL"), p))
 	return nil
 }

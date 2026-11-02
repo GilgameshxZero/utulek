@@ -191,29 +191,7 @@ func (c *Card) first(key string) string {
 	}
 	return ""
 }
-func (c *Card) label(p Property) string {
-	var labels []string
-	if p.Group != "" {
-		for _, q := range c.Props {
-			if q.Group == p.Group && q.Key == "X-ABLABEL" {
-				labels = append(labels, unescape(q.Value))
-			}
-		}
-	}
-	for _, field := range splitQuoted(p.Head, ';')[1:] {
-		k, v, ok := strings.Cut(field, "=")
-		if !ok {
-			continue
-		}
-		v = strings.Trim(v, `"`)
-		if strings.EqualFold(k, "TYPE") {
-			labels = append(labels, strings.Split(v, ",")...)
-		} else if strings.EqualFold(k, "PREF") {
-			labels = append(labels, "pref="+v)
-		}
-	}
-	return strings.Join(labels, ", ")
-}
+func (c *Card) label(p Property) string { return labelValue(c, p, p.Key, false) }
 
 func foldLine(line string) string {
 	var b strings.Builder
@@ -402,7 +380,9 @@ func loadMatchingCards(c Config, names, terms []string) ([]*Card, error) {
 				continue
 			}
 		}
-		c.debugf("loading book=%s source_search=%t", b.Name, c.SourceSearch)
+		if c.Debug {
+			c.debugf("loading book=%s source_search=%t", b.Name, c.SourceSearch)
+		}
 		read, filtered, parsed, matched := 0, 0, 0, 0
 		entries, e := os.ReadDir(b.Path)
 		if e != nil {
@@ -433,6 +413,11 @@ func loadMatchingCards(c Config, names, terms []string) ([]*Card, error) {
 			}
 			card.Path = path
 			card.Book = b.Name
+			if c.UIDScope != nil {
+				if id := card.first("UID"); id != "" {
+					c.UIDScope[id] = true
+				}
+			}
 			ok, e := query.match(card, c)
 			if e != nil {
 				return nil, fmt.Errorf("%s: %w", path, e)
@@ -442,7 +427,9 @@ func loadMatchingCards(c Config, names, terms []string) ([]*Card, error) {
 				matched++
 			}
 		}
-		c.debugf("book=%s read=%d prefiltered=%d parsed=%d matched=%d", b.Name, read, filtered, parsed, matched)
+		if c.Debug {
+			c.debugf("book=%s read=%d prefiltered=%d parsed=%d matched=%d", b.Name, read, filtered, parsed, matched)
+		}
 	}
 	sortCards(cards, c)
 	return cards, nil
@@ -454,15 +441,32 @@ func sortCards(cards []*Card, cfg Config) {
 	type entry struct {
 		card *Card
 		name string
+		book string
 	}
 	entries := make([]entry, len(cards))
+	var bookKeys map[string]string
+	if cfg.Group {
+		bookKeys = map[string]string{}
+	}
 	for i, c := range cards {
-		entries[i] = entry{c, strings.ToLower(c.name(cfg.Sort))}
+		book := ""
+		if cfg.Group {
+			var found bool
+			book, found = bookKeys[c.Book]
+			if !found {
+				book = cfg.collationKey(c.Book)
+				bookKeys[c.Book] = book
+			}
+		}
+		entries[i] = entry{c, cfg.collationKey(c.name(cfg.Sort)), book}
 	}
 	sort.SliceStable(entries, func(i, j int) bool {
 		a, b := entries[i], entries[j]
-		if cfg.Group && a.card.Book != b.card.Book {
-			return a.card.Book < b.card.Book
+		if cfg.Group && a.book != b.book {
+			if cfg.Reverse {
+				return a.book > b.book
+			}
+			return a.book < b.book
 		}
 		if a.name == b.name {
 			return a.card.Path < b.card.Path

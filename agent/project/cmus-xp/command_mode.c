@@ -89,6 +89,14 @@ void view_clear(int view, int explicit_view)
 	}
 }
 
+static void add_to_library(const char *name, enum file_type type)
+{
+	if (type == FILE_TYPE_PL || type == FILE_TYPE_DIR)
+		pl_import(name);
+	if (type != FILE_TYPE_PL)
+		cmus_add(lib_add_track, name, type, JOB_TYPE_LIB, 0, NULL);
+}
+
 void view_add(int view, char *arg, int prepend)
 {
 	char *tmp, *name;
@@ -102,20 +110,10 @@ void view_add(int view, char *arg, int prepend)
 		return;
 	}
 	free(tmp);
-	if (view == TREE_VIEW || view == SORTED_VIEW) {
-		if (ft == FILE_TYPE_PL) {
-			pl_import(name);
-			free(name);
-			return;
-		}
-		if (ft == FILE_TYPE_DIR)
-			pl_import(name);
-	}
-
 	switch (view) {
 	case TREE_VIEW:
 	case SORTED_VIEW:
-		cmus_add(lib_add_track, name, ft, JOB_TYPE_LIB, 0, NULL);
+		add_to_library(name, ft);
 		break;
 	case PLAYLIST_VIEW:
 		pl_add_file_to_marked_pl(name);
@@ -1558,7 +1556,10 @@ static void add_from_browser(add_ti_cb add, int job_type, int advance)
 
 		ft = cmus_detect_ft(sel, &ret);
 		if (ft != FILE_TYPE_INVALID) {
-			cmus_add(add, ret, ft, job_type, 0, NULL);
+			if (job_type == JOB_TYPE_LIB)
+				add_to_library(ret, ft);
+			else
+				cmus_add(add, ret, ft, job_type, 0, NULL);
 			if (advance)
 				window_down(browser_win, 1);
 		}

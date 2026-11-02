@@ -6,6 +6,7 @@
 path = ~/contacts/default/
 
 [general]
+debug = no
 default_action = list
 # Leave editor unset for the default Windows text editor.
 # On Linux, an unset editor uses EDITOR, then vim.
@@ -25,5 +26,6 @@ localize_dates = yes
 [vcard]
 preferred_version = 3.0
 private_objects = ,
-search_in_source_files = yes
+# Optional raw prefilter: faster, but folding/escaping can hide matches.
+search_in_source_files = no
 skip_unparsable = no

@@ -6,7 +6,7 @@ import (
 )
 
 // Build the upstream-visible search text only when a general query needs it.
-// The CLI's presentation remains independent until the presentation audit.
+// This renderer is shared by detailed CLI output and general search.
 func searchDocument(c *Card, cfg Config, view *columnValues) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Name: %s\n", c.first("FN"))
@@ -26,9 +26,10 @@ func searchDocument(c *Card, cfg Config, view *columnValues) string {
 			writeSearchYAML(&b, label, value, indent)
 		}
 	}
+	fmt.Fprintf(&b, "Kind: %s\n", contactKind(c))
 	write("Organisation", "organisations", 0)
-	fmt.Fprintf(&b, "Address book: %s\nKind: %s\n", c.Book, contactKind(c))
-	anniversary, birthday := searchDateText(c, "anniversary"), searchDateText(c, "birthday")
+	fmt.Fprintf(&b, "Address book: %s\n", c.Book)
+	anniversary, birthday := formatContactDate(c, "anniversary", cfg), formatContactDate(c, "birthday", cfg)
 	if anniversary != "" || birthday != "" || searchValuePresent(view.property("nicknames")) || searchValuePresent(view.property("roles")) || searchValuePresent(view.property("titles")) {
 		b.WriteString("General:\n")
 		if anniversary != "" {
@@ -41,13 +42,13 @@ func searchDocument(c *Card, cfg Config, view *columnValues) string {
 		write("Role", "roles", 4)
 		write("Title", "titles", 4)
 	}
-	for _, section := range []struct{ heading, field, implicit string }{{"Phone", "phone_numbers", "voice"}, {"E-Mail", "emails", "internet"}, {"Address", "post_addresses", "home"}} {
+	for _, section := range []struct{ heading, field, implicit string }{{"Phone", "phone_numbers", "voice"}, {"E-Mail", "emails", "internet"}, {"IMPP", "impp", ""}, {"Address", "post_addresses", "home"}} {
 		values, _ := view.property(section.field).(map[string]any)
 		if len(values) == 0 {
 			continue
 		}
 		b.WriteString(section.heading + "\n")
-		for _, label := range sortedKeys(values) {
+		for _, label := range sortedLabelKeys(values) {
 			value := values[label]
 			if section.field == "post_addresses" {
 				var addresses []any
@@ -75,6 +76,7 @@ func searchDocument(c *Card, cfg Config, view *columnValues) string {
 			}
 		}
 		if len(values) > 0 {
+			sortPropertyValues(values)
 			if !privateHeading {
 				b.WriteString("Private:\n")
 				privateHeading = true
@@ -165,12 +167,21 @@ func writeSearchText(b *strings.Builder, text string, indent int) {
 	}
 }
 func propertyGroupLabel(c *Card, p Property) string {
-	if p.Group != "" {
-		for _, label := range c.Props {
-			if label.Key == "X-ABLABEL" && label.Group == p.Group {
-				return unescape(label.Value)
+	if p.Group == "" {
+		return ""
+	}
+	count := 0
+	label := ""
+	for _, child := range c.Props {
+		if child.Group == p.Group {
+			count++
+			if child.Key == "X-ABLABEL" {
+				label = unescape(child.Value)
 			}
 		}
+	}
+	if count == 2 {
+		return label
 	}
 	return ""
 }
@@ -202,20 +213,4 @@ func searchAddress(address map[string]any) string {
 		}
 	}
 	return strings.Join(lines, "\n")
-}
-func searchDateText(c *Card, field string) string {
-	date, text, present, _ := parsedSearchDate(c, field)
-	if !present {
-		return ""
-	}
-	if date.IsZero() {
-		return text
-	}
-	if date.Hour() != 0 || date.Minute() != 0 || date.Second() != 0 {
-		return date.Format("2006-01-02T15:04:05-07:00")
-	}
-	if date.Year() == 1900 {
-		return date.Format("--01-02")
-	}
-	return date.Format("2006-01-02")
 }

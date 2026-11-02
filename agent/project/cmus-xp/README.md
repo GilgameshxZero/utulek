@@ -4,6 +4,30 @@ Native Linux and Windows builds share cmus's interface, playback engine and
 expanded FFmpeg decoder. See [the Windows README](README_WINDOWS.md) for codec
 coverage and platform-specific limits.
 
+Version 0.5 adds file-backed playlists on Linux and Windows. Add an M3U, M3U8,
+PLS or cmus `.pl` file with `:add` (or `:add -p`); it appears as a separate
+named entry in playlist view `3`. Adding a directory discovers playlist files
+recursively while retaining the existing audio-directory import behavior.
+`:pl-import` also accepts a file or directory and imports only playlists.
+In browser view `5`, pressing `a` over a playlist file or folder uses the same
+import logic; playlist entries appear in view `3`.
+
+`:update` reloads all linked playlists, discovers new files in imported
+directories, and removes playlist entries whose source files disappeared.
+It works from any view and also updates the music library. `u` on a linked
+playlist refreshes linked sources too. Source associations survive restarts;
+different files with the same basename get distinct names, and re-adding the
+same source does not duplicate it. Relative tracks resolve beside their source
+file; UTF-8 BOMs, CRLF, local `file://` URIs, and indexed PLS order are supported.
+
+Source files remain authoritative: imports, refreshes, normal playlist saves,
+and removal of an entry never write to or delete its external source. Edits made
+inside cmus are replaced on the next refresh. A deleted entry in a tracked
+directory is rediscovered on the next update if its file still exists. Native
+playlists created inside cmus remain independent. Scanning and loading run on
+the worker thread; read failures retain the last successfully loaded contents.
+Windows stream URLs retain the port's existing unsupported status.
+
 The shared FFmpeg decoder and playback engine also build on Linux. Windows
 adapters stay under `windows/`; Linux uses the existing curses, plugin and audio
 output interfaces. Linux includes PulseAudio (also used with PipeWire) and ALSA

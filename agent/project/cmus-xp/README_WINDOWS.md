@@ -3,6 +3,8 @@
 A native Windows port of cmus, preserving its terminal interface, commands,
 library, queue, and playback engine. Version 0.4 adds optimized decoding,
 expanded codecs, and tested audio playback from video containers.
+Version 0.5 adds file-backed playlist imports and `:update` synchronization;
+see the [shared README](README.md) for usage and supported playlist formats.
 
 ## Run the preview
 
@@ -91,10 +93,29 @@ screen model. It emits explicitly positioned VT spans instead of mixing
 `WriteConsoleOutput` rectangles and cursor writes. The old display backend
 could leave a diagonal divider, missing rows, and stale content at startup,
 resize, or tmux reattachment through nested ConPTY hosts. The VT adapter fixes
-the reproduced failures against the unchanged Windows tmux executable. Colors
+those earlier empty-screen failures against the unchanged Windows tmux executable. Colors
 configured as `default` retain the terminal's foreground/background (VT 39/49),
 including custom and light terminal themes; explicit cmus theme colors still
 use the terminal palette.
+
+The native build uses ANSI color indexes (`PDC_RGB`) so named and numeric theme
+colors have the same meaning as upstream cmus. Its private static PDCurses ABI
+stores Unicode scalars, combining clusters, and wide-character continuation
+cells instead of treating every UTF-16 value as one screen column. The display
+adapter emits bold, reverse, italic and underline attributes. Canonical Unicode
+composition prevents decomposed accents from consuming extra legacy console
+cells; user theme/configuration files are not rewritten as a workaround.
+
+Populated album-heading text and visible color/style cells match an isolated
+build of the pinned upstream revision in 30 direct system/editor ConPTY checks,
+including CJK, supplementary symbols, combining accents, theme changes,
+selection, shortening headings, switching views and resizing. The previous
+binary fails all 20 baseline checks. These checks use the terminal parser's
+Unicode 11 width provider. Additional tests inside the existing Windows tmux
+still show wide-character partial-redraw differences; full populated tmux
+rendering parity is not established. The tmux binary/settings remain unchanged.
+Reusable capture/comparison helpers are `windows/check_album_render.js`,
+`scripts/capture_linux_albums.py`, and `scripts/check_album_captures.js`.
 
 The executable also has a read-only `--check-runtime` diagnostic: drive/UNC
 canonicalization, long-path and Unicode conversion, a system DLL read/map,

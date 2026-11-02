@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+directory=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit
+exec python3 "$directory/neomutt-rollback.py" "$@"

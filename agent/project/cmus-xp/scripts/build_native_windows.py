@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from pdcurses_unicode import prepare as prepare_unicode_curses
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = '''ape browser buffer cache channelmap cmdline cmus command_mode comment
@@ -45,6 +46,7 @@ def main():
         parser.error('Static audio libraries not found; run scripts/build_audio_deps.py first')
     out = ROOT / '.obj/native'
     out.mkdir(parents=True, exist_ok=True)
+    curses_header, curses_addstr = prepare_unicode_curses(pdc, out)
     config = out / 'config'
     config.mkdir(exist_ok=True)
     for name, content in {
@@ -80,16 +82,18 @@ int win_resource(const char *name, const char **data, size_t *size) {
 }
 ''')
     common = [str(cc), '-std=gnu11', '-O2', '-g', '-D_FILE_OFFSET_BITS=64', '-ffile-prefix-map=' + str(ROOT) + '=.',
-              '-D_WIN32_WINNT=0x0A00', '-DPDC_WIDE', '-DPDC_FORCE_UTF8',
+              '-D_WIN32_WINNT=0x0A00', '-DPDC_WIDE', '-DPDC_FORCE_UTF8', '-DPDC_RGB',
+              '-I' + str(curses_header.parent),
               '-I' + str(pdc), '-I' + str(ROOT), '-I' + str(out), '-I' + str(audio / 'include')]
     native = ['-DCMUS_NATIVE_WINDOWS', '-DHAVE_CONFIG', '-DHAVE_STRDUP',
-              '-DVERSION="0.4.0-dev"', '-D_CRT_SECURE_NO_WARNINGS',
+              '-DVERSION="0.5.0-dev"', '-D_CRT_SECURE_NO_WARNINGS',
               '-I' + str(ROOT / 'windows/include'), '-include', str(ROOT / 'windows/compat.h')]
     jobs = []
     for path in [ROOT / (s + '.c') for s in SOURCES] + [ROOT / 'ip/wav.c', ROOT / 'ip/ffmpeg.c',
                  ROOT / 'op/waveout.c', ROOT / 'windows/compat.c',
                  ROOT / 'windows/services.c', ROOT / 'windows/static_plugins.c',
                  ROOT / 'windows/curses_vt.c',
+                 ROOT / 'windows/curses_unicode.c',
                  ROOT / 'windows/path_windows.c', ROOT / 'windows/check_runtime.c', resource_c]:
         obj = out / (path.parent.name + '_' + path.stem + '.o')
         extra = ['-DCMUS_WIN_IMPLEMENTATION'] if path.name == 'compat.c' else []
@@ -104,7 +108,9 @@ int win_resource(const char *name, const char **data, size_t *size) {
         if path == pdc / 'wincon/pdcdisp.c':
             continue  # windows/curses_vt.c supplies the display adapter.
         obj = out / ('pdc_' + path.stem + '.o')
-        jobs.append((path, obj, common))
+        if path == pdc / 'pdcurses/addstr.c':
+            path = curses_addstr
+        jobs.append((path, obj, common + ['-include', str(curses_header)]))
 
     def compile_one(item):
         path, obj, flags = item
@@ -124,7 +130,7 @@ int win_resource(const char *name, const char **data, size_t *size) {
     subprocess.run([str(cc), '-static', '-Wl,--no-insert-timestamp', '-o', str(exe)] + [str(j[1]) for j in jobs] +
                    ['-L' + str(audio / 'lib'), '-lavformat', '-lavcodec', '-lswresample',
                     '-lavutil', '-lwinpthread', '-lwinmm', '-ladvapi32', '-luser32',
-                    '-lbcrypt', '-lole32', '-lsecur32', '-lws2_32'], check=True)
+                    '-lbcrypt', '-lole32', '-lsecur32', '-lws2_32', '-lnormaliz'], check=True)
     destination = args.install_dir.resolve() / 'cmus.exe'
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination != exe:

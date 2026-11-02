@@ -43,7 +43,7 @@ try {
     $original = [IO.File]::ReadAllText($vcfFile, $utf8)
     if (-not $original.Contains('TEL:+15550100009') -or $original.Contains('TYPE=cell')) { throw 'inferred phone label' }
     [IO.File]::WriteAllText($editFile, "Note: updated by smoke test`n", $utf8)
-    $null = Invoke-Khard -Arguments @('edit', '-i', $editFile, 'name:Windows')
+    $null = Invoke-Khard -Arguments @('edit', '--patch', '-i', $editFile, 'name:Windows')
     $shown = Invoke-Khard -Arguments @('show', '--format', 'vcard', 'name:Windows')
     if (-not $shown.Contains('NOTE:updated by smoke test') -or -not $shown.Contains('TEL:+15550100009')) { throw 'edit lost fields' }
     $checks.Add('atomic edit preserves phone and unrelated fields')

@@ -105,3 +105,43 @@ func TestFilteredLoadOrderingAndMalformedFiles(t *testing.T) {
 		t.Fatalf("skip malformed: %v, %v", cards, err)
 	}
 }
+
+func BenchmarkCompiledSearch(b *testing.B) {
+	c, e := parseCard([]byte(fixture))
+	if e != nil {
+		b.Fatal(e)
+	}
+	for _, terms := range [][]string{{"name:Alice"}, {"Alice", "Engineering"}, {"not-a-matching-needle"}} {
+		q := compileSearch(terms)
+		b.Run(fmt.Sprint(terms), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, e := q.match(c, Config{})
+				if e != nil {
+					b.Fatal(e)
+				}
+			}
+		})
+	}
+}
+func BenchmarkFilteredLoad(b *testing.B) {
+	dir := b.TempDir()
+	for i := 0; i < 754; i++ {
+		data := []byte(fmt.Sprintf("BEGIN:VCARD\nVERSION:3.0\nUID:%d\nFN:Contact %d\nEND:VCARD\n", i, i))
+		if e := os.WriteFile(filepath.Join(dir, fmt.Sprintf("%04d.vcf", i)), data, 0600); e != nil {
+			b.Fatal(e)
+		}
+	}
+	for _, fast := range []bool{false, true} {
+		b.Run(fmt.Sprint(fast), func(b *testing.B) {
+			cfg := Config{Books: []Book{{Name: "benchmark", Path: dir}}, Sort: "first_name", SourceSearch: fast}
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				cards, e := loadMatchingCards(cfg, nil, []string{"name:Contact 753"})
+				if e != nil || len(cards) != 1 {
+					b.Fatal(len(cards), e)
+				}
+			}
+		})
+	}
+}

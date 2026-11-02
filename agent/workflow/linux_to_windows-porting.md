@@ -11,8 +11,8 @@ Maintain this workflow as ports reveal reusable lessons. Keep project-specific s
 
 ## Build and packaging
 
-* Prefer reusable cross-compilation infrastructure where suitable. cmus-xp uses LLVM-MinGW and static dependencies; project documentation describes both Windows and Linux build entry points.
-* Keep dependencies, downloads, build outputs, fixtures, and generated reports in the project's ignored out/ directory. Track source, reproducible build scripts, dependency pins/hashes, and required license notices.
+* Prefer reusable cross-compilation infrastructure where suitable. Record the chosen toolchain, dependencies, and platform build entry points in the project documentation and its single context file.
+* Keep finished binaries in the project's ignored `.bin/` and intermediates, build caches, comparison environments, fixtures and generated test reports in `.obj/`. Track source, reproducible build scripts, dependency pins/hashes, and required license notices.
 * Follow project_binaries-workflow.md for app binaries and launchers. Sandbox permissions still apply to installation destinations.
 * Do not create Git commits or publish/upload artifacts without authorization.
 * Do not place files on the Windows host unless explicitly authorized. Existing SSH access does not imply upload permission.
@@ -27,6 +27,7 @@ Maintain this workflow as ports reveal reusable lessons. Keep project-specific s
 ## Verification and handoff
 
 * Cross-compilation establishes buildability, not Windows runtime behavior.
+* For behavior changes, trace every user entry point (typed commands, keyboard bindings, browser actions, and remote controls). Route equivalent actions through shared logic. Regression checks must exercise the actual user input paths, including configured/default bindings, rather than only calling a convenient command or helper. Include the reported interaction in reproduction and final validation on each affected platform.
 * A sandbox may hide audio devices and block the desktop audio socket. Inspect the host's actual audio server/devices before concluding that playback validation is unavailable. For live Linux playback, use an isolated player configuration and monitor only its stream; preserve the user's sink, volume and other streams. Distinguish delivery through a live audio device from an acoustic listening test.
 * Run checks appropriate to the change under applicable instructions. For Windows support, the project binaries workflow requires actual Windows execution and launcher argument checks; obtain explicit host-write authorization before staging files there.
 * Retain concise, queryable results for costly grouped checks; do not repeat dependency builds or broad checks without a relevant change, failure, or unresolved concern.

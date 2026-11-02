@@ -42,6 +42,8 @@ char *win_absolute_path(const char *, const char *);
 int win_check_runtime(void);
 char *win_normalize(char *);
 void win_init(void);
+extern char **win_environment;
+char *win_getenv(const char *name);
 void win_curses_pair_defaults(int pair, int foreground, int background);
 FILE *win_fopen(const char *, const char *);
 int win_open(const char *, int, ...);
@@ -62,6 +64,9 @@ char *win_config_dir(void);
 char *tgetstr(const char *, char **);
 char *tgoto(const char *, int, int);
 #ifndef CMUS_WIN_IMPLEMENTATION
+#define getenv win_getenv
+#undef environ
+#define environ win_environment
 #define fopen win_fopen
 #define open win_open
 #define stat(path, buf) win_stat(path, buf)

@@ -9,8 +9,9 @@ Temporary files end in `.yaml.txt` or `.vcf.txt` so they open as text rather
 than being imported by a contacts application. With no configured editor,
 Linux uses `EDITOR`, then Vim.
 
-Version 0.1.3-preview adds copy, move, merge and add-email to the earlier
-search and list-column compatibility work.
+Version 0.1.5-preview completes the staged compatibility work against khard
+0.22.0, including native locale handling, Chinese collation/display support,
+replacement YAML editing and the current-upstream command audit.
 See [UPSTREAM_COMPATIBILITY.md](UPSTREAM_COMPATIBILITY.md) for stages and exceptions.
 
 ## Configuration shared with Linux
@@ -25,8 +26,12 @@ On Windows, `~` is the current user's home directory, normally
 4. `~/.config/khard/khard.conf`.
 
 The parser accepts ConfigObj sections, nested `[[address book]]` sections,
-quoted values, comments, boolean values, comma lists, and trailing commas.
-Windows backslashes are preserved. Home-relative paths with `/` work on both
+quoted values (including triple-quoted multiline scalars), comments, boolean
+values, comma lists, and trailing commas. Quoted whitespace and backslashes
+are literal.
+Windows backslashes are preserved. Address-book paths expand environment
+variables (`$NAME`, `${NAME}`, and Windows `%NAME%`), retaining unknown references.
+Explicit `type = vdir` is accepted. Home-relative paths with `/` work on both
 platforms. Relative paths resolve from the caller's working directory, as in
 upstream khard; use `~/...` to avoid that dependency. Absolute Linux paths
 and editor executables still need to exist on the platform using the file.
@@ -37,12 +42,12 @@ shell expansions, pipelines and escape sequences are not executed.
 Recognized settings include all settings in `khard.conf.example`, plus
 `preferred_phone_number_type`, `preferred_email_address_type`, `debug`, and
 configured `private_objects`. `merge_editor` receives the source YAML file
-first and the editable target YAML file last. Without it, the normal editor
-opens the target with the source included as a commented reference. `localize_dates` is accepted, but this
-preview displays dates in their stored ISO form. `search_in_source_files`
-is accepted; searches always use the parsed contact. Debug is currently
-accepted without verbose logging. ConfigObj multiline quoted values are
-not implemented. The app never rewrites your configuration.
+first and the editable target YAML file last. When unset, `MERGE_EDITOR` is
+used if defined; otherwise the normal editor opens the target with the source
+included as a commented reference. `localize_dates` is accepted, but localized
+presentation uses native locale data when enabled. YAML dates remain ISO.
+Discovered address books support recursive globbing, leaf directories and
+collision suffixes. Interpolation stays disabled, matching upstream 0.22.0. The app never rewrites your configuration.
 
 ## Commands
 
@@ -71,6 +76,32 @@ as in khard. Public upstream fields such as `post_addresses:`, `organisations:`,
 `roles:`, `titles:`, `kind:`, and `version:` are supported too. `name:` checks
 both first-name and last-name ordering. `phone_numbers:` ignores punctuation
 and handles upstream's local/international number matching rules.
+General searches cover upstream-visible names, headings, address-book names,
+known values and configured private properties. Unknown vCard properties,
+photos, raw syntax, REV, and unconfigured private values are excluded.
+An unknown prefix, including its colon, stays part of the general query.
+Public field queries match values and mapping labels; date-valued `birthday:`
+and `anniversary:` require an exact ISO date, with invalid queries reported as
+errors when a date-valued contact is examined. Reduced dates use year 1900,
+as upstream does. Date-times only match a date at naive midnight; text-valued
+dates use substring matching. vCard 3 X-ANNIVERSARY is supported.
+
+`-f` / `--search-in-source-files`, or `search_in_source_files = yes`, first
+matches query values against raw file text, skips rejected files before parsing,
+and then checks parsed contacts. This is faster but can miss folded/escaped
+values, display labels and normalized dates. Malformed rejected files are not
+parsed; disable this option for complete parsed-contact search/error reporting.
+`--debug`, or `debug = yes`, writes book loading counts and prefilter/parse/match
+counts to stderr without changing stdout protocols. Debug output is specific
+to khard-xp rather than an upstream logging transcript.
+
+Existing YAML field aliases (`phone:`, `email:`, `addresses:`, `private:`, and
+others) and case-insensitive field prefixes remain extensions. All nicknames
+in a comma-separated property are retained, unlike the installed upstream
+0.19.1/vobject stack, which exposes only the first. Search uses upstream's
+implicit voice/internet/home labels without adding those labels to stored data
+or to otherwise untyped TSV output.
+
 A literal `--` ends option processing.
 
 `list -F` accepts upstream property names and nested paths such as
@@ -132,9 +163,10 @@ is changed by this feature.
 YAML uses the familiar khard fields, including structured names, phone,
 email, postal addresses, organization, dates, categories, webpages, private
 objects and notes. Strings remain strings, including unquoted phone values
-and dates. Unknown fields, duplicate keys, aliases, extra YAML documents and
-unsupported structures are rejected. This preview does not validate every
-vCard date or property syntax rule; inspect unusual imported data carefully.
+and dates. Unknown fields, duplicate keys, extra YAML documents and unsupported
+structures are rejected. Anchors/aliases are supported with bounded expansion
+and nesting; cycles are rejected. Dates are validated on changes. Tagged
+values, nested categories, Kind and Impp are supported.
 
 An empty label (`""`) represents an unlabeled phone or email:
 
@@ -150,9 +182,11 @@ Note: |
 ```
 
 No `CELL` label is inferred. Phone labels already present are preserved.
-YAML input files may contain only fields to update: missing fields are left
-alone, while explicit null/empty values clear fields. This partial-update
-behavior differs from upstream's replacement-template behavior. `Private`
+YAML edits now use replacement semantics: omitted managed fields are cleared.
+Omitted Formatted name retains the existing FN, as upstream does; explicitly
+empty FN requests automatic generation. Replacement input requires a name or
+organisation. Use `edit --patch` for partial updates that preserve omitted
+fields. Explicit null/empty values clear fields in either mode. `Private`
 is treated as a complete mapping of the configured private objects when
 supplied. `--open-editor` opens input for review before saving.
 
@@ -160,9 +194,8 @@ Unchanged properties keep their exact original physical bytes, including
 unknown properties, photos, extension parameters and folded lines. Unchanged
 YAML round trips perform no write. Changed phone/email/address entries reuse
 their original property headers when their labels match, preserving extra
-parameters and group associations. Exotic custom labels that cannot be
-represented as type tokens can remain untouched in YAML; use `--format vcard`
-to change those fields directly. Arbitrary unknown properties are available
+parameters and group associations. Unicode custom labels, including Chinese labels, are supported. Unknown
+fields and unchanged metadata remain intact. Arbitrary unknown properties are available
 for direct vCard editing. New properties use UTF-8, CRLF and 75-octet folding.
 
 Only vCard 3.0 and 4.0 are editable. New contacts receive a random UUID and
@@ -182,7 +215,10 @@ print its path.
 
 ## Build and install
 
-Go 1.24+ is needed to build. GNU Make targets `all`, `windows`, `test`, and
+Go 1.24+ is needed to build. Linux native locale support requires cgo and a C
+compiler, and uses the host libc and installed locale data. Windows uses native
+NLS APIs with no additional DLLs. A cgo-disabled Linux build supports only C
+locales and explicitly rejects unsupported locales. GNU Make targets `all`, `windows`, `test`, and
 `test-windows` build the Linux reference executable, Windows x64 executable,
 local tests, and Windows test executable. Dependencies and build caches stay
 under the ignored `.obj/` directory. YAML is pinned to
@@ -197,7 +233,8 @@ It does not replace the existing Linux khard executable.
 `scripts/windows_smoke.ps1` runs the compiled app against a disposable
 address book, including config lookup, create/edit/remove, Unicode, paths
 with spaces, and optional batch-launcher argument and exit-code checks.
-The Windows regression executable additionally checks editor invocation,
+The Windows regression executable additionally checks source-search/debug
+stdout/stderr behavior, multiline config, field/date queries, editor invocation,
 conflict detection, no-op preservation and vCard edge cases. Neither test
 suite writes production contacts. `scripts/compare_readonly.py` compares
 list/phone/email identities against an installed upstream khard and retains
@@ -243,16 +280,43 @@ semantic vCard snapshots and command results in `.obj/operation_compatibility.js
 Generated UIDs, REV timestamps and property order are excluded from equality;
 upstream's inferred voice label in a rewritten merge is an explicit exception.
 
-## Current limitations / feedback
+`scripts/compare_search.py` compares general/public/date/private queries in
+both parsed and raw-prefilter modes, plus config/debug cases, against upstream
+using disposable books. Detailed results and named compatibility extensions
+are retained in `.obj/search_compatibility.json`. Queries are compiled once per
+load; simple terms check visible scalars and labels directly, and only complex
+phrases render the complete search text. An invariant regression check compares
+the simple-term fast path with that full representation.
 
-Full upstream command/output parity, locale-specific name sorting, date
-localization, full collection/date formatting parity, and translated Unix editor/shell
-commands are outside this first preview. This program manages local files;
-Syncthing or another existing sync process remains responsible for syncing.
+## Locales and current-upstream audit
 
-The feedback milestone is actual Windows terminal use: list readability,
-ambiguous-contact selection, search behavior and a create/edit/remove cycle
-for a disposable contact using your normal editor.
+Locale selection follows LC_ALL, then LC_COLLATE/LC_TIME, then LANG. Windows
+uses the user's native locale when no override is set. POSIX Chinese names
+`zh_CN.UTF-8` / `zh_TW.UTF-8` map to Windows `zh-CN` / `zh-TW` where appropriate.
+Linux uses glibc collation/date data; Windows uses NLS and honors user date
+preferences. Sort keys are computed once per contact and once per book.
+CJK table cells count wide characters correctly; combining marks add no width.
+YAML always uses ISO dates; localized dates appear in readable output/search.
+
+The release audit uses isolated khard 0.22.0 and dependencies pinned in
+`scripts/upstream_requirements.txt`, installed under ignored `.obj/upstream-current/`.
+`scripts/audit_current.py` covers commands, aliases, option inventory, output,
+collections, discovery and seven locales, including Simplified/Traditional
+Chinese. `scripts/audit_editing.py` verifies saved YAML/new-contact semantics.
+`scripts/windows_locale_smoke.ps1` independently compares Chinese sorting and
+dates with Windows/.NET NLS and edits Chinese labels through the executable.
+Detailed reports, native Windows logs and benchmarks remain under `.obj/`.
+
+This remains a compatible reimplementation with deliberate differences, listed
+in [UPSTREAM_COMPATIBILITY.md](UPSTREAM_COMPATIBILITY.md). It preserves valid
+nickname lists, tagged private values, precise date offsets and yearless leap
+days rather than reproducing upstream data loss/rejection bugs. Empty labels
+and headerless ordinary email TSV remain supported; `--mutt` has its separate
+status-line contract. Editor prompts and help/log wording differ. Unix shell
+commands are not translated for Windows. The default Windows GUI editor's
+manual save/confirmation flow still needs an interactive user check; configured
+editor and recovery paths are automated-test covered. Syncthing remains
+responsible for synchronization.
 
 ## Local build output
 

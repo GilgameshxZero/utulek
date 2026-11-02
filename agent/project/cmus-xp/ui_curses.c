@@ -255,7 +255,7 @@ static unsigned char cursed_to_attr_idx[NR_CURSED] = {
 };
 
 /* index is CURSED_*, value is fucking color pair */
-static int pairs[NR_CURSED];
+static attr_t pairs[NR_CURSED];
 
 enum {
 	TF_ALBUMARTIST,

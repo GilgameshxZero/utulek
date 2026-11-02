@@ -12,6 +12,9 @@ type searchQuery []searchTerm
 // Compile once per load, not once per contact. Extra YAML aliases and
 // case-insensitive field names remain documented preview extensions.
 func compileSearch(terms []string) searchQuery {
+	if len(terms) == 0 {
+		return nil
+	}
 	q := make(searchQuery, 0, len(terms))
 	for _, s := range terms {
 		field, value, qualified := strings.Cut(s, ":")
@@ -21,6 +24,21 @@ func compileSearch(terms []string) searchQuery {
 		if !qualified || (!public && !alias && field != "name") {
 			field = ""
 			value = s
+		}
+		if field == "kind" {
+			canonical := ""
+			for _, kind := range []string{"individual", "group", "org", "location", "application", "device"} {
+				if strings.HasPrefix(kind, strings.ToLower(value)) {
+					canonical = kind
+					break
+				}
+			}
+			if canonical == "" {
+				field = ""
+				value = s
+			} else {
+				value = canonical
+			}
 		}
 		t := searchTerm{field: field, value: strings.ToLower(value)}
 		if field == "phone_numbers" {
@@ -54,7 +72,7 @@ func (q searchQuery) match(c *Card, cfg Config) (bool, error) {
 	if len(q) == 0 {
 		return true, nil
 	}
-	view := columnValues{card: c}
+	view := columnValues{card: c, search: true}
 	document := ""
 	documentReady := false
 	var model Model
@@ -63,6 +81,12 @@ func (q searchQuery) match(c *Card, cfg Config) (bool, error) {
 		switch t.field {
 		case "":
 			if !documentReady {
+				if quickVisibleMatch(c, cfg, t.value) {
+					continue
+				}
+				if simpleSearchAtom(t.value) {
+					return false, nil
+				}
 				document = strings.ToLower(searchDocument(c, cfg, &view))
 				documentReady = true
 			}
@@ -89,17 +113,6 @@ func (q searchQuery) match(c *Card, cfg Config) (bool, error) {
 		default:
 			if _, public := listProperties[t.field]; public {
 				value = view.property(t.field)
-				if t.field == "emails" || t.field == "post_addresses" {
-					implicit := "internet"
-					if t.field == "post_addresses" {
-						implicit = "home"
-					}
-					if values, ok := value.(map[string]any); ok {
-						if _, exists := values[""]; exists && strings.Contains(implicit, t.value) {
-							continue
-						}
-					}
-				}
 			} else {
 				if model == nil {
 					model = c.model(cfg)
@@ -134,6 +147,9 @@ func matchSearchValue(value any, term string) bool {
 	return false
 }
 func (c *Card) matches(terms []string, cfg Config) bool {
+	if len(terms) == 0 {
+		return true
+	}
 	matched, _ := compileSearch(terms).match(c, cfg)
 	return matched
 }
@@ -151,10 +167,7 @@ func matchPhoneDigits(number, digits string) bool {
 func (c *Card) matchesPhoneTerm(t searchTerm) bool {
 	for _, p := range c.Props {
 		if p.Key == "TEL" {
-			label := c.label(p)
-			if label == "" {
-				label = "voice"
-			}
+			label := searchLabel(c, p, "TEL")
 			if strings.Contains(strings.ToLower(label), t.value) || matchPhoneDigits(phoneDigits(unescape(p.Value)), t.digits) {
 				return true
 			}
@@ -165,52 +178,63 @@ func (c *Card) matchesPhoneTerm(t searchTerm) bool {
 
 // Dates are exact ISO-date comparisons, not substring matches. VALUE=text
 // remains ordinary text; reduced dates use upstream's implicit year 1900.
-func parsedSearchDate(c *Card, field string) (time.Time, string, bool, bool) {
-	key := "BDAY"
+func parsedSearchDate(c *Card, field string) (time.Time, *string, bool, bool) {
+	keys := []string{"BDAY"}
 	if field == "anniversary" {
-		key = "ANNIVERSARY"
+		keys = []string{"ANNIVERSARY", "X-ANNIVERSARY"}
 	}
-	props := c.properties(key)
-	if len(props) == 0 && field == "anniversary" {
-		props = c.properties("X-ANNIVERSARY")
+	for _, key := range keys {
+		for _, p := range c.Props {
+			if p.Key == key {
+				date, text, present, zoned := parseSearchDateProperty(p)
+				if present {
+					return date, text, present, zoned
+				}
+				break
+			}
+		}
 	}
-	if len(props) == 0 {
-		return time.Time{}, "", false, false
-	}
-	p := props[0]
+	return time.Time{}, nil, false, false
+}
+func parseSearchDateProperty(p Property) (time.Time, *string, bool, bool) {
 	for _, param := range splitQuoted(p.Head, ';')[1:] {
 		k, v, ok := strings.Cut(param, "=")
 		if ok && strings.EqualFold(k, "VALUE") && strings.EqualFold(strings.Trim(v, "\""), "text") {
-			return time.Time{}, unescape(p.Value), true, false
+			text := unescape(p.Value)
+			return time.Time{}, &text, true, false
 		}
 	}
 	value := p.Value
 	if strings.HasPrefix(value, "--") {
-		value = "1900-" + value[2:]
+		if value == "--0229" || value == "--02-29" {
+			value = "2000-02-29"
+		} else {
+			value = "1900-" + value[2:]
+		}
 	}
 	for _, layout := range []string{"2006-01-02", "20060102", "2006-0102", "2006-01-02T15:04:05", "20060102T150405", "2006-01-02T15:04:05Z", "20060102T150405Z"} {
 		if d, e := time.Parse(layout, value); e == nil {
-			return d, "", true, false
+			return d, nil, true, false
 		}
 	}
 	for _, layout := range []string{time.RFC3339, "20060102T150405Z07:00", "20060102T150405Z0700", "2006-01-02T15:04:05Z0700"} {
 		if d, e := time.Parse(layout, value); e == nil {
-			return d, "", true, true
+			return d, nil, true, true
 		}
 	}
-	return time.Time{}, "", false, false
+	return time.Time{}, nil, false, false
 }
 func matchDateQuery(c *Card, field, term string) (bool, error) {
 	date, text, present, zoned := parsedSearchDate(c, field)
 	if !present {
 		return false, nil
 	}
-	if !date.IsZero() {
+	if text == nil {
 		query, e := time.Parse("2006-1-2", term)
 		if e != nil {
 			return false, fmt.Errorf("%s query requires an ISO date (YYYY-MM-DD): %q", field, term)
 		}
 		return !zoned && date.Equal(query), nil
 	}
-	return strings.Contains(strings.ToLower(text), term), nil
+	return strings.Contains(strings.ToLower(*text), term), nil
 }

@@ -152,7 +152,7 @@ func TestMergeLifecycleAndRecovery(t *testing.T) {
 			}
 			cfg.MergeEditor = []string{exe, "-test.run=^TestEditorHelper$", "--"}
 			t.Setenv("KHARD_XP_EDITOR_HELPER", "1")
-			text := "Note: merged note 雪\n"
+			text := "First name: Alice\nLast name: Zoë\nNote: merged note 雪\n"
 			if mode == "unchanged" {
 				data, e := encodeModel(target.model(cfg))
 				if e != nil {
@@ -333,7 +333,7 @@ func TestMergeEditorFailureAndSingleEditorFallback(t *testing.T) {
 			}
 			editor := []string{exe, "-test.run=^TestEditorHelper$", "--"}
 			t.Setenv("KHARD_XP_EDITOR_HELPER", "1")
-			t.Setenv("KHARD_XP_EDITOR_TEXT", "Note: merged\n")
+			t.Setenv("KHARD_XP_EDITOR_TEXT", "First name: Alice\nLast name: Zoë\nNote: merged\n")
 			if mode == "failure" {
 				cfg.MergeEditor = []string{filepath.Join(t.TempDir(), "missing editor")}
 			} else {

@@ -1,0 +1,8 @@
+configobj==5.0.9
+khard==0.22.0
+python-dateutil==4.0.0
+pytz==2026.6
+ruamel.yaml==0.19.1
+six==1.17.0
+tzdata==2026.6
+vobject==0.9.9

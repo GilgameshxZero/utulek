@@ -51,15 +51,14 @@ def fold(line):
 @lru_cache(maxsize=64)
 def named_zone(name):
     try:
-        return ZoneInfo(name)
-    except (ZoneInfoNotFoundError, ValueError):
-        # Windows has no system IANA database. Bundle TZif data, not a pip package.
         with ZipFile(Path(__file__).with_name('timezones.zip')) as archive:
-            try:
-                data = archive.read(name)
-            except KeyError:
-                raise ValueError('Unknown calendar timezone: ' + name) from None
+            data = archive.read(name)
         return ZoneInfo.from_file(BytesIO(data), key=name)
+    except (KeyError, FileNotFoundError):
+        try:
+            return ZoneInfo(name)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError('Unknown calendar timezone: ' + name) from None
 
 
 def plain_date(value):
@@ -151,7 +150,9 @@ class EmbeddedZone(tzinfo):
         for instant, before, after in transitions:
             low, high = instant + min(before, after), instant + max(before, after)
             if low <= wall < high:
-                return after if dt.fold else before
+                # Preserve dateutil/vobject's choice of post-transition offset
+                # for a nonexistent spring-forward wall time.
+                return after if after > before or dt.fold else before
             if wall >= high:
                 selected = after
         return selected
@@ -217,7 +218,7 @@ class Component:
 
     def __getattr__(self, name):
         try:
-            return self.contents[name.lower()][0]
+            return self.contents[name.lower().replace('_', '-')][0]
         except KeyError:
             raise AttributeError(name) from None
 
@@ -234,12 +235,18 @@ class Component:
             if 'version' not in self.contents:
                 self.add('version').value = '2.0'
             if 'prodid' not in self.contents:
-                self.add('prodid').value = '-//NeoMutt-XP//Calendar Helper//EN'
+                # Preserve the original helper's on-wire product identifier.
+                # This is compatibility data, not a runtime library dependency.
+                self.add('prodid').value = '-//PYVOBJECT//NONSGML Version 0.9.9//EN'
             present = {z.tzid.value for z in self.contents.get('vtimezone', [])}
             for event in self.contents.get('vevent', []):
                 for props in event.contents.values():
                     for prop in props:
                         component = getattr(prop, 'zone_component', None)
+                        if component is None and isinstance(getattr(prop, 'value', None), datetime):
+                            value = prop.value
+                            if value.tzinfo is not None and value.tzinfo is not timezone.utc:
+                                component = generated_zone(value.tzinfo, value.year)
                         if component is not None and component.tzid.value not in present:
                             self.add(component)
                             present.add(component.tzid.value)
@@ -325,6 +332,12 @@ def readOne(stream, ignoreUnreadable=False):
                                 raise
                             zone = EmbeddedZone(item.zone_component)
                         value = value.replace(tzinfo=zone)
+                        # ZoneInfo chooses the pre-gap offset; vobject/dateutil
+                        # used the post-gap offset for nonexistent local times.
+                        if isinstance(zone, ZoneInfo):
+                            roundtrip = value.astimezone(timezone.utc).astimezone(zone)
+                            if roundtrip.replace(tzinfo=None) > value.replace(tzinfo=None):
+                                value = value.replace(fold=1)
                     item.value = value
                     item.original = value
                 elif item.name == 'duration':
@@ -338,3 +351,51 @@ def readOne(stream, ignoreUnreadable=False):
                     item.original = item.value
     decode(root)
     return root
+
+
+def generated_zone(zone, year):
+    """Embed transitions around this reply's date, including fixed-offset zones.
+
+    Replies in the existing helper do not expand recurrence rules. Explicit
+    transition dates cover this event and two surrounding years on either side.
+    """
+    result = Component('vtimezone')
+    result.add('tzid').value = getattr(zone, 'key', str(zone))
+    begin = datetime(max(1, year - 2), 1, 1, tzinfo=timezone.utc)
+    end = datetime(min(9999, year + 3), 1, 1, tzinfo=timezone.utc)
+    previous = begin
+    previous_offset = begin.astimezone(zone).utcoffset()
+    groups = {}
+    while previous < end:
+        current = min(previous + timedelta(days=1), end)
+        current_offset = current.astimezone(zone).utcoffset()
+        if current_offset != previous_offset:
+            low, high = previous, current
+            while high - low > timedelta(seconds=1):
+                middle = low + timedelta(seconds=int((high-low).total_seconds()) // 2)
+                if middle.astimezone(zone).utcoffset() == previous_offset:
+                    low = middle
+                else:
+                    high = middle
+            local = high.astimezone(zone)
+            key = ('daylight' if local.dst() else 'standard', previous_offset, current_offset, local.tzname())
+            groups.setdefault(key, []).append((high + previous_offset).replace(tzinfo=None))
+        previous, previous_offset = current, current_offset
+    if not groups:
+        local = begin.astimezone(zone)
+        groups[('standard', local.utcoffset(), local.utcoffset(), local.tzname())] = [begin.replace(tzinfo=None)]
+    def render_offset(value):
+        seconds = int(value.total_seconds())
+        hours, seconds_left = divmod(abs(seconds), 3600)
+        minutes, seconds_left = divmod(seconds_left, 60)
+        return ('-' if seconds < 0 else '+') + f'{hours:02}{minutes:02}' + (f'{seconds_left:02}' if seconds_left else '')
+    for (kind, before, after, name), dates in groups.items():
+        item = result.add(kind)
+        item.add('dtstart').value = dates[0]
+        item.add('tzoffsetfrom').value = render_offset(before)
+        item.add('tzoffsetto').value = render_offset(after)
+        if name:
+            item.add('tzname').value = name
+        if len(dates) > 1:
+            item.add('rdate').value = ','.join(value.strftime('%Y%m%dT%H%M%S') for value in dates[1:])
+    return result

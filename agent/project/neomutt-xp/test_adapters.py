@@ -68,12 +68,17 @@ def main():
         result = call('path')
         check('extensionless_dispatch_and_native_path', result.returncode == 0 and
               Path(result.stdout.decode().strip()).resolve() == (module / 'neomutt-command').resolve(), result.stderr.decode(errors='replace'))
+        generated=work/'generated.ics'
+        generated.write_bytes(b'fixture calendar\n')
+        result=call('keep',[generated])
+        check('mailcap_compose_preserves_generated_file',result.returncode==0 and
+              generated.read_bytes()==b'fixture calendar\n' and not result.stdout)
         vault = home / 'vault & ü'
         vault.mkdir()
         result = call('vault', ['~/vault & ü'])
         check('vault_home_and_native_path', result.returncode == 0 and
               Path(result.stdout.decode().strip()).resolve() == vault.resolve(), result.stderr.decode(errors='replace'))
-        (module / 'mailcap').write_text('text/html; "@NEOMUTT_COMMAND@" html %s\n',encoding='utf-8')
+        (module / 'mailcap.template').write_text('text/html; "@NEOMUTT_COMMAND@" html %s\n',encoding='utf-8')
         result = call('mailcap')
         generated = Path(result.stdout.decode().strip())
         check('mailcap_native_path_and_command', result.returncode == 0 and generated.exists() and
@@ -159,8 +164,12 @@ def main():
                 body = re.sub(rb'UID:[^@\r\n]*@', b'UID:<uuid>@', body)
                 body = re.sub(rb'DTSTAMP:[^\r\n]*', b'DTSTAMP:<timestamp>', body)
                 runs.append((run.returncode, run.stdout, run.stderr, body, draft.exists()))
-            check('request_parity_' + duration, runs[0] == runs[1],
-                  '' if runs[0] == runs[1] else repr(runs))
+            matched=runs[0] == runs[1]
+            if duration=='wrong':
+                # Owned placeholders must not leave a stale ICS after a failed
+                # generator. Exit status, prompts and draft handling still match.
+                matched=runs[0][:3]==runs[1][:3] and runs[0][4]==runs[1][4] and runs[1][3]==b''
+            check('request_parity_' + duration, matched,'' if matched else repr(runs))
         # HTML: compare exact wrapper bytes and opener argv. Fake timer/rm avoid
         # waiting 64 seconds; this checks command behavior, not timer accuracy.
         html_tools = root / 'html_tools'

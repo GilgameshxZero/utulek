@@ -16,7 +16,7 @@ type Model map[string]any
 var nameFields = []string{"Last name", "First name", "Additional", "Prefix", "Suffix"}
 var addressFields = []string{"Box", "Extended", "Street", "City", "Region", "Code", "Country"}
 var simpleFields = map[string]string{"Formatted name": "FN", "Nickname": "NICKNAME", "Birthday": "BDAY", "Anniversary": "ANNIVERSARY", "Title": "TITLE", "Role": "ROLE", "Webpage": "URL", "Note": "NOTE", "Categories": "CATEGORIES"}
-var fieldOrder = []string{"Formatted name", "Prefix", "First name", "Additional", "Last name", "Suffix", "Nickname", "Anniversary", "Birthday", "Organisation", "Title", "Role", "Phone", "Email", "Address", "Categories", "Webpage", "Private", "Note"}
+var fieldOrder = []string{"Formatted name", "Kind", "Prefix", "First name", "Additional", "Last name", "Suffix", "Nickname", "Anniversary", "Birthday", "Organisation", "Title", "Role", "Phone", "Email", "Impp", "Address", "Categories", "Webpage", "Private", "Note"}
 
 func stringsValue(v any) []string {
 	switch t := v.(type) {
@@ -77,103 +77,16 @@ func appendModel(m map[string]any, k string, v any) {
 	}
 }
 
-func (c *Card) model(cfg Config) Model {
-	m := Model{}
-	for _, k := range fieldOrder {
-		m[k] = nil
-	}
-	for f, key := range simpleFields {
-		var ss []string
-		for _, p := range c.properties(key) {
-			if key == "CATEGORIES" || key == "NICKNAME" {
-				for _, s := range splitEscaped(p.Value, ',') {
-					ss = append(ss, unescape(s))
-				}
-			} else {
-				ss = append(ss, unescape(p.Value))
-			}
-		}
-		m[f] = oneOrMany(ss)
-	}
-	if p := c.properties("N"); len(p) > 0 {
-		parts := splitEscaped(p[0].Value, ';')
-		for i, f := range nameFields {
-			if i < len(parts) {
-				var ss []string
-				for _, s := range splitEscaped(parts[i], ',') {
-					ss = append(ss, unescape(s))
-				}
-				m[f] = oneOrMany(ss)
-			}
-		}
-	}
-	var orgs []any
-	for _, p := range c.properties("ORG") {
-		var ss []string
-		for _, s := range splitEscaped(p.Value, ';') {
-			ss = append(ss, unescape(s))
-		}
-		orgs = append(orgs, oneOrMany(ss))
-	}
-	if len(orgs) == 1 {
-		if _, ok := orgs[0].([]any); ok {
-			m["Organisation"] = orgs
-		} else {
-			m["Organisation"] = orgs[0]
-		}
-	} else if len(orgs) > 1 {
-		m["Organisation"] = orgs
-	}
-	for f, key := range map[string]string{"Phone": "TEL", "Email": "EMAIL", "Address": "ADR"} {
-		values := map[string]any{}
-		for _, p := range c.properties(key) {
-			label := c.label(p)
-			var v any = unescape(p.Value)
-			if key == "TEL" && strings.HasPrefix(strings.ToLower(p.Value), "tel:") {
-				v = unescape(p.Value[4:])
-			}
-			if key == "ADR" {
-				a := map[string]any{}
-				parts := splitEscaped(p.Value, ';')
-				for i, k := range addressFields {
-					a[k] = nil
-					if i < len(parts) && parts[i] != "" {
-						a[k] = unescape(parts[i])
-					}
-				}
-				v = a
-			}
-			appendModel(values, label, v)
-		}
-		if len(values) > 0 {
-			m[f] = values
-		}
-	}
-	private := map[string]any{}
-	for _, name := range cfg.Private {
-		if name == "" {
-			continue
-		}
-		var ss []string
-		for _, p := range c.properties("X-" + strings.ToUpper(name)) {
-			ss = append(ss, unescape(p.Value))
-		}
-		private[name] = oneOrMany(ss)
-	}
-	if len(private) > 0 {
-		m["Private"] = private
-	}
-	return m
-}
-
 func encodeModel(m Model) ([]byte, error) {
 	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 	for _, k := range fieldOrder {
 		key := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: k}
 		val := &yaml.Node{}
-		if e := val.Encode(m[k]); e != nil {
+		value := m[k]
+		if e := val.Encode(value); e != nil {
 			return nil, e
 		}
+		emptyNullNodes(val)
 		n.Content = append(n.Content, key, val)
 	}
 	var b bytes.Buffer
@@ -188,10 +101,23 @@ func encodeModel(m Model) ([]byte, error) {
 }
 
 func decodeNode(n *yaml.Node, depth int) (any, error) {
+	budget := 100000
+	return decodeNodeLimited(n, depth, &budget)
+}
+func decodeNodeLimited(n *yaml.Node, depth int, budget *int) (any, error) {
+	*budget--
+	if *budget < 0 {
+		return nil, fmt.Errorf("YAML expansion exceeds 100000 nodes")
+	}
 	if depth > 32 {
 		return nil, fmt.Errorf("YAML nesting is too deep")
 	}
 	switch n.Kind {
+	case yaml.AliasNode:
+		if n.Alias == nil {
+			return nil, fmt.Errorf("unresolved YAML alias")
+		}
+		return decodeNodeLimited(n.Alias, depth+1, budget)
 	case yaml.ScalarNode:
 		if n.Tag == "!!null" {
 			return nil, nil
@@ -203,7 +129,7 @@ func decodeNode(n *yaml.Node, depth int) (any, error) {
 	case yaml.SequenceNode:
 		r := []any{}
 		for _, v := range n.Content {
-			x, e := decodeNode(v, depth+1)
+			x, e := decodeNodeLimited(v, depth+1, budget)
 			if e != nil {
 				return nil, e
 			}
@@ -220,7 +146,7 @@ func decodeNode(n *yaml.Node, depth int) (any, error) {
 			if _, ok := r[k.Value]; ok {
 				return nil, fmt.Errorf("duplicate YAML key %q", k.Value)
 			}
-			x, e := decodeNode(n.Content[i+1], depth+1)
+			x, e := decodeNodeLimited(n.Content[i+1], depth+1, budget)
 			if e != nil {
 				return nil, e
 			}
@@ -296,43 +222,23 @@ func textList(v any) ([]string, error) {
 	return nil, fmt.Errorf("expected a string or list of strings")
 }
 
-func labelHead(key, label, version string) (string, error) {
-	head := key
-	if key == "TEL" && version == "4.0" {
-		head += ";VALUE=uri"
-	}
-	var types []string
-	for _, v := range strings.Split(label, ",") {
-		v = strings.TrimSpace(v)
-		if v == "" {
-			continue
-		}
-		if strings.HasPrefix(strings.ToLower(v), "pref=") {
-			n := strings.TrimPrefix(strings.ToLower(v), "pref=")
-			if n == "" || strings.Trim(n, "0123456789") != "" {
-				return "", fmt.Errorf("invalid preference %q", v)
-			}
-			if version == "4.0" {
-				head += ";PREF=" + n
-			} else {
-				types = append(types, "pref")
-			}
-			continue
-		}
-		if !validToken(v) {
-			return "", fmt.Errorf("unsupported label %q; keep existing labels or use comma-separated type names", label)
-		}
-		types = append(types, v)
-	}
-	if len(types) > 0 {
-		head += ";TYPE=" + strings.Join(types, ",")
-	}
-	return head, nil
-}
-
 func (c *Card) applyModel(m Model, cfg Config) (bool, error) {
+	work := cloneCard(c)
+	_, e := work.applyModelInPlace(m, cfg)
+	if e != nil {
+		return false, e
+	}
+	if reflect.DeepEqual(c.Props, work.Props) {
+		return false, nil
+	}
+	c.Props = work.Props
+	return true, nil
+}
+func (c *Card) applyModelInPlace(m Model, cfg Config) (bool, error) {
 	old := c.model(cfg)
 	changed := false
+	originalProps := c.Props
+	defer func() { c.clearOrphanLabels(originalProps) }()
 	version := c.first("VERSION")
 	if version != "3.0" && version != "4.0" {
 		return false, fmt.Errorf("editing vCard %s is unsupported", version)
@@ -372,6 +278,58 @@ func (c *Card) applyModel(m Model, cfg Config) (bool, error) {
 		if contains(nameFields, f) {
 			continue
 		}
+		if f == "Kind" {
+			kind := scalar(v)
+			key := "KIND"
+			if version == "3.0" {
+				key = "X-KIND"
+			}
+			var props []Property
+			if kind != "" {
+				kind = strings.ToLower(kind)
+				if !contains([]string{"individual", "group", "org", "location", "application", "device"}, kind) {
+					return false, fmt.Errorf("invalid contact kind %q", kind)
+				}
+				props = []Property{newProp(key, kind)}
+			}
+			c.replace(key, props)
+			changed = true
+			continue
+		}
+		if f == "Categories" {
+			if e := c.applyCategories(v); e != nil {
+				return false, e
+			}
+			changed = true
+			continue
+		}
+		if f == "Birthday" || f == "Anniversary" {
+			if e := c.applyDateField(f, v); e != nil {
+				return false, e
+			}
+			changed = true
+			continue
+		}
+		if f == "Impp" {
+			if e := c.applyImpp(v); e != nil {
+				return false, e
+			}
+			changed = true
+			continue
+		}
+		if f == "Organisation" || ((f == "Nickname" || f == "Title" || f == "Role" || f == "Webpage" || f == "Note") && hasTagged(v)) {
+			key := simpleFields[f]
+			if f == "Organisation" {
+				key = "ORG"
+			}
+			props, e := c.taggedProperties(key, v, f == "Organisation")
+			if e != nil {
+				return false, e
+			}
+			c.replaceExact(key, props)
+			changed = true
+			continue
+		}
 		key := simpleFields[f]
 		if key != "" {
 			ss, e := textList(v)
@@ -407,10 +365,7 @@ func (c *Card) applyModel(m Model, cfg Config) (bool, error) {
 			}
 			var pp []Property
 			for _, label := range sortedKeys(values) {
-				head, e := labelHead(key, label, version)
-				if e != nil {
-					return false, e
-				}
+				var e error
 				var ss []string
 				if key == "ADR" {
 					a := values[label]
@@ -472,34 +427,14 @@ func (c *Card) applyModel(m Model, cfg Config) (bool, error) {
 					}
 				}
 				for _, s := range ss {
-					pp = append(pp, newProp(head, s))
+					prop, e := c.typedProperty(key, label, s, true)
+					if e != nil {
+						return false, e
+					}
+					pp = append(pp, prop)
 				}
 			}
-			c.replace(key, pp)
-			changed = true
-		case "Organisation":
-			var aa []any
-			if v != nil {
-				if seq, ok := v.([]any); ok {
-					aa = seq
-				} else {
-					aa = []any{v}
-				}
-			}
-			var pp []Property
-			for _, org := range aa {
-				ss, e := textList(org)
-				if e != nil {
-					return false, e
-				}
-				for i := range ss {
-					ss[i] = escape(ss[i])
-				}
-				if len(ss) > 0 {
-					pp = append(pp, newProp("ORG", strings.Join(ss, ";")))
-				}
-			}
-			c.replace("ORG", pp)
+			c.replaceExact(key, pp)
 			changed = true
 		case "Private":
 			values, ok := v.(map[string]any)
@@ -519,22 +454,18 @@ func (c *Card) applyModel(m Model, cfg Config) (bool, error) {
 				if reflect.DeepEqual(values[k], oldValues[k]) {
 					continue
 				}
-				ss, e := textList(values[k])
+				key := "X-" + strings.ToUpper(k)
+				props, e := c.taggedProperties(key, values[k], false)
 				if e != nil {
 					return false, e
 				}
-				key := "X-" + strings.ToUpper(k)
-				var pp []Property
-				for _, s := range ss {
-					pp = append(pp, newProp(key, escape(s)))
-				}
-				c.replace(key, pp)
+				c.replaceExact(key, props)
 			}
 			changed = true
 		}
 	}
 	if c.first("FN") == "" {
-		n := c.name("first_name")
+		n := c.autoFormattedName()
 		if n == "Unnamed contact" {
 			return false, fmt.Errorf("contact needs a formatted name or name components")
 		}
@@ -573,4 +504,13 @@ func phoneDigits(s string) string {
 		}
 	}
 	return b.String()
+}
+
+func emptyNullNodes(n *yaml.Node) {
+	if n.Tag == "!!null" {
+		n.Value = ""
+	}
+	for _, child := range n.Content {
+		emptyNullNodes(child)
+	}
 }

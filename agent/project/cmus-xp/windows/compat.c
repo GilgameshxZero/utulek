@@ -46,16 +46,41 @@ char *win_normalize(char *s)
     if (s) for (char *p = s; *p; p++) if (*p == 92) *p = '/';
     return s;
 }
+char **win_environment;
+
+char *win_getenv(const char *name)
+{
+    if (!win_environment) return getenv(name);
+    size_t size = strlen(name);
+    for (char **p = win_environment; *p; p++)
+        if (!_strnicmp(*p, name, size) && (*p)[size] == '=')
+            return *p + size + 1;
+    return NULL;
+}
+
 void win_init(void)
 {
     /* Binary CRT descriptors are essential for audio, cache, and pipe data. */
     _fmode = _O_BINARY;
     wchar_t buf[32768];
-    if (GetEnvironmentVariableW(L"USERPROFILE", buf, 32768)) {
-        char *home = win_normalize(win_utf8(buf));
-        if (!getenv("HOME")) _putenv_s("HOME", home);
-        free(home);
+    if (!GetEnvironmentVariableW(L"HOME", buf, 32768) &&
+            GetEnvironmentVariableW(L"USERPROFILE", buf, 32768))
+        SetEnvironmentVariableW(L"HOME", buf);
+    /* CRT getenv/environ use the legacy ANSI code page. Keep an immutable
+     * UTF-8 snapshot for the shared engine and playlist env expansion. */
+    wchar_t *block = GetEnvironmentStringsW();
+    if (!block) return;
+    size_t count = 0;
+    for (wchar_t *p = block; *p; p += wcslen(p) + 1) count++;
+    win_environment = calloc(count + 1, sizeof(*win_environment));
+    if (win_environment) {
+        size_t i = 0;
+        for (wchar_t *p = block; *p; p += wcslen(p) + 1) {
+            char *entry = win_utf8(p);
+            if (entry) win_environment[i++] = entry;
+        }
     }
+    FreeEnvironmentStringsW(block);
 }
 FILE *win_fopen(const char *p, const char *mode)
 {
@@ -229,7 +254,7 @@ struct passwd *getpwuid(unsigned int id)
 {
     (void)id;
     static struct passwd user;
-    user.pw_name = getenv("USERNAME"); user.pw_dir = getenv("HOME");
+    user.pw_name = win_getenv("USERNAME"); user.pw_dir = win_getenv("HOME");
     return user.pw_dir ? &user : NULL;
 }
 struct passwd *getpwnam(const char *name)

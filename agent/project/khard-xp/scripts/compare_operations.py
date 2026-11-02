@@ -110,9 +110,9 @@ def main():
         # Upstream infers voice on rewritten untyped phones; khard-xp preserves them.
         if label == 'merge saved':
             for card in reference['snapshot']['destination']:
-                card['properties'] = sorted(p.replace('TEL;TYPE=voice:', 'TEL:') for p in card['properties'])
+                card['properties'] = sorted(p.replace('TEL;TYPE=voice:', 'TEL:') for p in card['properties'] if p not in ['X-KIND:individual','KIND:individual'])
         passed = reference['exit_code'] == 0 and candidate['exit_code'] == expected_status and reference['snapshot'] == candidate['snapshot']
-        cases.append({'case': label, 'passed': passed, 'expected_difference': 'upstream infers voice on rewritten untyped phones' if label == 'merge saved' else ('cancellation returns nonzero' if label == 'merge cancelled' else None), 'reference': reference, 'candidate': candidate})
+        cases.append({'case': label, 'passed': passed, 'expected_difference': 'upstream infers voice and serializes default individual kind on rewritten merges' if label == 'merge saved' else ('cancellation returns nonzero' if label == 'merge cancelled' else None), 'reference': reference, 'candidate': candidate})
     report = {'reference_version': subprocess.run([args.reference, '--version'], capture_output=True, text=True, check=True).stdout.strip(), 'synthetic_only': True, 'passed': all(c['passed'] for c in cases), 'cases': cases}
     Path(args.report).write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n')
     for case in cases:

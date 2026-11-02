@@ -27,7 +27,7 @@ func testConfig(t *testing.T) (Config, string) {
 		t.Fatal(e)
 	}
 	path := filepath.Join(root, "khard.conf")
-	s := fmt.Sprintf("# same ConfigObj syntax on both platforms\n[addressbooks]\n[[default]]\npath = '%s'\n[general]\ndefault_action = list\neditor = vim, -i, NONE\nmerge_editor = vimdiff\n[contact table]\ndisplay = formatted_name\nsort = formatted_name\nshow_uids = no\nreverse = false\ngroup_by_addressbook = no\npreferred_phone_number_type = home, pref\n[vcard]\nprivate_objects = SOCIAL-SECURITY,\npreferred_version = 3.0\nsearch_in_source_files = yes\nskip_unparsable = no\n", dir)
+	s := fmt.Sprintf("# same ConfigObj syntax on both platforms\n[addressbooks]\n[[default]]\npath = '%s'\n[general]\ndefault_action = list\neditor = vim, -i, NONE\nmerge_editor = vimdiff\n[contact table]\nlocalize_dates = no\ndisplay = formatted_name\nsort = formatted_name\nshow_uids = no\nreverse = false\ngroup_by_addressbook = no\npreferred_phone_number_type = home, pref\n[vcard]\nprivate_objects = SOCIAL-SECURITY,\npreferred_version = 3.0\nsearch_in_source_files = yes\nskip_unparsable = no\n", dir)
 	mustWrite(t, path, []byte(s))
 	cfg, e := loadConfig(path)
 	if e != nil {
@@ -265,7 +265,7 @@ func TestCLILifecycleAndSelection(t *testing.T) {
 		{[]string{"birthdays"}, "1990-04-03"},
 		{[]string{"postaddress"}, "12 Test Street"},
 		{[]string{"filename"}, "one.vcf"},
-		{[]string{"addressbooks"}, "default\t"},
+		{[]string{"addressbooks"}, "default\n"},
 	} {
 		out, _, e := runTest(t, path, "", false, test.args...)
 		if e != nil || !strings.Contains(out, test.want) {
@@ -282,7 +282,7 @@ func TestCLILifecycleAndSelection(t *testing.T) {
 	if _, _, e := runTest(t, path, "", false, "remove", "bob"); e == nil {
 		t.Fatal("noninteractive removal should require force")
 	}
-	if out, _, e := runTest(t, path, "Note: Edited safely\n", false, "edit", "bob"); e != nil || !strings.Contains(out, "Updated") {
+	if out, _, e := runTest(t, path, "Note: Edited safely\n", false, "edit", "--patch", "bob"); e != nil || !strings.Contains(out, "Updated") {
 		t.Fatal(out, e)
 	}
 	if _, _, e := runTest(t, path, "", false, "remove", "--force", "bob"); e != nil {

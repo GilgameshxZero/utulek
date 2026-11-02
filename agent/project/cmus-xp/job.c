@@ -43,6 +43,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <sys/mman.h>
 
 enum job_result_var {
@@ -454,7 +456,29 @@ static void add_pl(const char *filename)
 	ssize_t size;
 	int reverse;
 
-	buf = mmap_file(filename, &size);
+	if (jd->complete) {
+		/* External editors may truncate a playlist while it is being read.
+		 * A bounded read avoids SIGBUS from an invalidated mmap. */
+		int fd = open(filename, O_RDONLY);
+		struct stat st;
+		if (fd < 0) { jd->error = errno; return; }
+		if (fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_size > INT_MAX) {
+			jd->error = EINVAL;
+			close(fd);
+			return;
+		}
+		buf = xmalloc(st.st_size ? st.st_size : 1);
+		size = read_all(fd, buf, st.st_size);
+		int saved_errno = errno;
+		close(fd);
+		if (size < 0) {
+			free(buf);
+			jd->error = saved_errno;
+			return;
+		}
+	} else {
+		buf = mmap_file(filename, &size);
+	}
 	if (size == -1) {
 		jd->error = errno;
 		return;
@@ -467,7 +491,10 @@ static void add_pl(const char *filename)
 
 		cmus_playlist_for_each(buf, size, reverse, handle_line, cwd);
 		free(cwd);
-		munmap(buf, size);
+		if (jd->complete)
+			free(buf);
+		else
+			munmap(buf, size);
 	}
 	jd->error = worker_cancelling() ? ECANCELED : 0;
 	if (!jd->complete)

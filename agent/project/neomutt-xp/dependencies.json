@@ -1,0 +1,16 @@
+{
+  "lynx_windows": {
+    "version": "2.9.2",
+    "flavor": "64-bit curses color-style, no OpenSSL dependency",
+    "url": "https://invisible-island.net/archives/lynx/current/lynx64-cs2.9.2-setup.exe",
+    "sha256": "a6181fe50703b91b3ba0f418ca548b9b9d0377e0fa329898cebf43033354a84e",
+    "extraction": "innoextract; extract files without running the installer",
+    "license": "licenses/lynx_copying.txt"
+  },
+  "timezone_data": {
+    "version": "2026f",
+    "format": "TZif data in python/timezones.zip; no Python tzdata package",
+    "source": "IANA timezone database, packaged from /usr/share/zoneinfo",
+    "license": "licenses/timezone_data.txt"
+  }
+}

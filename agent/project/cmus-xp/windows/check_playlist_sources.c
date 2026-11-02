@@ -76,6 +76,16 @@ static PROCESS_INFORMATION launch(const wchar_t *exe)
         failed = 1;
     }
     Sleep(1000);
+    DWORD exit_code;
+    if (process.hProcess && GetExitCodeProcess(process.hProcess, &exit_code) &&
+            exit_code != STILL_ACTIVE) {
+        fprintf(report, "player exited during startup: %lu\n", exit_code);
+        free(snapshot("failed startup"));
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+        process.hProcess = NULL;
+        failed = 1;
+    }
     return process;
 }
 
@@ -113,8 +123,16 @@ int wmain(int argc, wchar_t **argv)
     wav_fixture(L"sources/two.wav");
     write_fixture(L"sources/a.m3u", "\xef\xbb\xbf#EXTM3U\r\none.wav\r\ntwo.wav\r\n");
     write_fixture(L"sources/sub/a.m3u", "../two.wav\n");
-    write_fixture(L"sources/b.pls", "[playlist]\nFile1=two.wav\n");
-    write_fixture(L"sources/u.m3u8", "one.wav\n");
+    write_fixture(L"sources/b.pls", "[playlist]\nFile2=two.wav\nFile1=one.wav\n");
+    char utf8_base[32768], uri[100000] = "file:///";
+    WideCharToMultiByte(CP_UTF8, 0, base, -1, utf8_base, sizeof(utf8_base), NULL, NULL);
+    char *encoded = uri + strlen(uri);
+    for (unsigned char *p = (unsigned char *)utf8_base; *p; p++) {
+        if (*p == ' ' || *p >= 128) { sprintf(encoded, "%%%02X", *p); encoded += 3; }
+        else *encoded++ = *p;
+    }
+    strcpy(encoded, "/sources/one.wav\n");
+    write_fixture(L"sources/u.m3u8", uri);
     write_fixture(L"sources/c.pl", "one.wav\none.wav\n");
     write_fixture(L"individual.m3u8", "sources/one.wav\n");
     SetEnvironmentVariableW(L"CMUS_HOME", config_dir);
@@ -129,15 +147,17 @@ int wmain(int argc, wchar_t **argv)
     PROCESS_INFORMATION process = launch(argv[1]);
     if (!process.hProcess) return 5;
     wchar_t command[32768];
-    swprintf(command, 32768, L":add %ls/sources\r", base);
+    swprintf(command, 32768, L":cd %ls/sources\r:view 5\r:browser-up\r", base);
     send_text(command);
+    send_text(L"a");
     check_count("M3U BOM CRLF", L"a.m3u", 2, ".wav");
     check_count("nested name collision", L"a.m3u.1", 1, "two.wav");
-    check_count("PLS", L"b.pls", 1, "two.wav");
-    check_count("M3U8", L"u.m3u8", 1, "one.wav");
+    check_count("PLS", L"b.pls", 2, ".wav");
+    check_count("M3U8 percent-encoded local file URI", L"u.m3u8", 1, "one.wav");
     check_count("PL duplicates", L"c.pl", 2, "one.wav");
-    swprintf(command, 32768, L":add -p %ls/individual.m3u8\r", base);
+    swprintf(command, 32768, L":cd %ls\r:view 5\r:win-bottom\r", base);
     send_text(command);
+    send_text(L"a");
     check_count("individual import", L"individual.m3u8", 1, "one.wav");
     write_fixture(L"sources/a.m3u", "two.wav\n");
     write_fixture(L"sources/b.pls", "");

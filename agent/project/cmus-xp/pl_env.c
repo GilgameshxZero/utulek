@@ -46,6 +46,9 @@ static bool pl_env_contains_delimiter(const char *str)
  */
 static char *pl_env_norm(char *path)
 {
+	/* Empty environment values have no byte at path[1]. */
+	if (!*path)
+		return path;
 #ifdef _WIN32
 	/* convert backslashes to slashes */
 	/* note: cmus uses forward slashes internally, but Windows accepts both */

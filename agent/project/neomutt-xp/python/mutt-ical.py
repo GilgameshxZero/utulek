@@ -25,7 +25,7 @@ import ical_support as vobject
 from command_args import split_command
 
 if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding='utf-8', newline='\n')
 
 # Gilgamesh.
 usage = """

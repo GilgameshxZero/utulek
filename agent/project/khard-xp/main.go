@@ -8,18 +8,18 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 )
 
-const version = "0.1.4-preview"
+const version = "0.1.5-preview"
 
 var errNoResults = fmt.Errorf("found no contacts")
 
 type Options struct {
+	Provided                                                               []string
 	SourceSearch, Debug                                                    bool
+	Patch, RemoveFirstLine                                                 bool
 	Command, Config, Input, Output, Format, Display, Sort, Fields, Version string
 	Books, Terms, ListFields                                               []string
 	Help, ShowVersion, Parsable, Force, OpenEditor, Reverse, Group, Skip   bool
@@ -32,6 +32,7 @@ type Options struct {
 var aliases = map[string]string{"list": "list", "ls": "list", "show": "show", "details": "show", "template": "template", "phone": "phone", "email": "email", "new": "new", "add": "new", "edit": "edit", "modify": "edit", "ed": "edit", "remove": "remove", "delete": "remove", "del": "remove", "rm": "remove", "addressbooks": "addressbooks", "abooks": "addressbooks", "filename": "filename", "file": "filename", "birthdays": "birthdays", "bdays": "birthdays", "postaddress": "postaddress", "post": "postaddress", "postaddr": "postaddress", "merge": "merge", "copy": "copy", "cp": "copy", "move": "move", "mv": "move", "add-email": "add-email"}
 
 func parseArgs(args []string) (Options, error) {
+	args = expandShortOptions(args)
 	o := Options{}
 	for i := 0; i < len(args); i++ {
 		a := args[i]
@@ -40,6 +41,12 @@ func parseArgs(args []string) (Options, error) {
 			break
 		}
 		key, value, has := strings.Cut(a, "=")
+		if class, takesValue := optionClass(key); class != "" {
+			if has && !takesValue {
+				return o, fmt.Errorf("%s does not take a value", key)
+			}
+			o.Provided = append(o.Provided, key)
+		}
 		next := func() (string, error) {
 			if has {
 				return value, nil
@@ -101,6 +108,10 @@ func parseArgs(args []string) (Options, error) {
 			if has {
 				return o, fmt.Errorf("--mutt does not take a value")
 			}
+		case "--patch":
+			o.Patch = true
+		case "--remove-first-line":
+			o.RemoveFirstLine = true
 		case "--force":
 			o.Force = true
 		case "--open-editor", "--edit":
@@ -116,7 +127,7 @@ func parseArgs(args []string) (Options, error) {
 		case "--debug":
 			o.Debug = true
 		default:
-			if strings.HasPrefix(a, "-") {
+			if a != "-" && strings.HasPrefix(a, "-") {
 				return o, fmt.Errorf("unknown option %s", a)
 			}
 			if cmd, ok := aliases[a]; ok && o.Command == "" && len(o.Terms) == 0 {
@@ -169,6 +180,8 @@ Options:
   -o, --output-file FILE  Write show output to a new file
   --format FORMAT        show: pretty/yaml/vcard; edit/new: yaml/vcard
   --open-editor          Open input in editor before saving
+  --patch                edit only: preserve fields omitted from YAML input
+  --remove-first-line    email parsable: omit upstream status line (default here)
   --force                Remove the selected contact without confirmation
   --vcard-version 3.0|4.0 Version for new contacts
   -d, --display ORDER    first_name / last_name / formatted_name
@@ -208,8 +221,8 @@ func (r Runner) choose(cards []*Card, cfg Config) (*Card, error) {
 	if !r.Interactive {
 		return nil, fmt.Errorf("%d contacts match; narrow the search or use uid:<UID>", len(cards))
 	}
-	for i, c := range cards {
-		fmt.Fprintf(r.Out, "%d  %s  [%s]\n", i+1, safe(c.name(cfg.Display)), safe(c.Book))
+	if e := r.contactTable(cards, cfg, Options{Command: "list"}); e != nil {
+		return nil, e
 	}
 	fmt.Fprint(r.Out, "Select contact number (blank cancels): ")
 	s, e := r.In.ReadString('\n')
@@ -217,7 +230,7 @@ func (r Runner) choose(cards []*Card, cfg Config) (*Card, error) {
 		return nil, e
 	}
 	s = strings.TrimSpace(s)
-	if s == "" {
+	if s == "" || s == "0" || strings.EqualFold(s, "q") || strings.EqualFold(s, "quit") {
 		return nil, fmt.Errorf("cancelled")
 	}
 	n, e := strconv.Atoi(s)
@@ -239,6 +252,7 @@ func safe(s string) string {
 // Detect the requested output protocol even when an earlier argument is invalid.
 // Values of options and everything after -- are data, never protocol flags.
 func muttRequested(args []string) bool {
+	args = expandShortOptions(args)
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--" {
 			break
@@ -248,8 +262,8 @@ func muttRequested(args []string) bool {
 			return true
 		}
 		if !inline {
-			switch key {
-			case "-c", "--config", "-i", "--input-file", "-o", "--output-file", "--format", "-d", "--display", "-s", "--sort", "-F", "--fields", "--vcard-version", "-a", "--addressbook", "-A", "--target-addressbook", "-t", "--target-contact", "--target", "-H", "--headers":
+			_, takesValue := optionClass(key)
+			if takesValue {
 				i++
 			}
 		}
@@ -309,6 +323,9 @@ func (r Runner) runOptions(o Options) error {
 		}
 		o.Command = cmd
 	}
+	if e := validateCommandOptions(o); e != nil {
+		return e
+	}
 	if o.Mutt {
 		var terms []string
 		for _, arg := range o.Terms {
@@ -354,6 +371,12 @@ func (r Runner) runOptions(o Options) error {
 	if (o.Headers != "" || o.SkipAdded) && o.Command != "add-email" {
 		return fmt.Errorf("email header options require add-email")
 	}
+	if o.Patch && o.Command != "edit" {
+		return fmt.Errorf("--patch applies only to edit")
+	}
+	if o.RemoveFirstLine && o.Command != "email" {
+		return fmt.Errorf("--remove-first-line applies only to email")
+	}
 	if o.Force && o.Command != "remove" {
 		return fmt.Errorf("--force applies only to remove")
 	}
@@ -385,6 +408,7 @@ func (r Runner) runOptions(o Options) error {
 
 	if o.Command == "template" {
 		m := (&Card{}).model(cfg)
+		m["Kind"] = nil
 		m["Phone"] = map[string]any{"": nil}
 		m["Email"] = map[string]any{"": nil}
 		data, e := encodeModel(m)
@@ -396,22 +420,29 @@ func (r Runner) runOptions(o Options) error {
 	}
 	if o.Command == "addressbooks" {
 		for _, b := range cfg.Books {
-			fmt.Fprintf(r.Out, "%s\t%s\n", safe(b.Name), safe(b.Path))
+			fmt.Fprintln(r.Out, b.Name)
 		}
 		return nil
 	}
+
 	if o.Command == "new" {
 		return r.writeContact(nil, cfg, o)
 	}
+	if r.Interactive && cfg.UIDs {
+		cfg.UIDScope = map[string]bool{}
+	}
 	if o.Command == "add-email" {
 		return r.addEmail(cfg, o)
+	}
+	if o.Command == "list" && !o.Parsable {
+		cfg.UIDScope = map[string]bool{}
 	}
 	matches, e := loadMatchingCards(cfg, o.Books, o.Terms)
 	if e != nil {
 		return e
 	}
 	switch o.Command {
-	case "list", "phone", "email", "postaddress", "birthdays", "filename":
+	case "list", "phone", "email", "postaddress", "birthdays":
 		return r.list(matches, cfg, o)
 	case "copy", "move", "merge":
 		c, e := r.choose(matches, cfg)
@@ -419,9 +450,13 @@ func (r Runner) runOptions(o Options) error {
 			return e
 		}
 		return r.contactOperation(c, cfg, o)
-	case "show", "edit", "remove":
+	case "show", "edit", "remove", "filename":
 		c, e := r.choose(matches, cfg)
 		if e != nil {
+			return e
+		}
+		if o.Command == "filename" {
+			_, e := fmt.Fprintln(r.Out, c.Path)
 			return e
 		}
 		if o.Command == "edit" {
@@ -479,142 +514,8 @@ func (r Runner) runOptions(o Options) error {
 }
 
 func pretty(c *Card, cfg Config) []byte {
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s\nAddress book: %s\nUID: %s\n", safe(c.name(cfg.Display)), safe(c.Book), safe(c.first("UID")))
-	m := c.model(cfg)
-	for _, k := range fieldOrder {
-		if k == "Formatted name" {
-			continue
-		}
-		if ss := stringsValue(m[k]); len(ss) > 0 {
-			fmt.Fprintf(&b, "%s: %s\n", k, safe(strings.Join(ss, " | ")))
-		}
-	}
-	return []byte(b.String())
-}
-
-func preferred(c *Card, key string, prefs []string) string {
-	pp := c.properties(key)
-	sort.SliceStable(pp, func(i, j int) bool { return strings.ToLower(c.label(pp[i])) < strings.ToLower(c.label(pp[j])) })
-	for _, pref := range prefs {
-		if pref == "" {
-			continue
-		}
-		for _, p := range pp {
-			if strings.Contains(strings.ToLower(c.label(p)), strings.ToLower(pref)) {
-				return unescape(p.Value)
-			}
-		}
-	}
-	if len(pp) > 0 {
-		return unescape(pp[0].Value)
-	}
-	return ""
-}
-
-func (r Runner) list(cards []*Card, cfg Config, o Options) error {
-	if o.Command == "filename" {
-		for _, c := range cards {
-			fmt.Fprintln(r.Out, c.Path)
-		}
-		return nil
-	}
-	if o.Command == "birthdays" {
-		sort.SliceStable(cards, func(i, j int) bool { return birthdayKey(cards[i].first("BDAY")) < birthdayKey(cards[j].first("BDAY")) })
-	}
-	w := tabwriter.NewWriter(r.Out, 0, 4, 2, ' ', 0)
-	if o.Command == "list" {
-		fields := []string{"name", "phone", "email"}
-		if cfg.UIDs {
-			fields = append(fields, "uid")
-		}
-		if cfg.Kinds {
-			fields = append(fields, "kind")
-		}
-		if cfg.Group {
-			fields = append(fields, "addressbook")
-		}
-
-		if o.Parsable {
-			fields = []string{"uid", "name", "address_book"}
-		} else {
-			fields = append([]string{"index"}, fields...)
-		}
-		if len(o.ListFields) > 0 {
-			fields = o.ListFields
-		}
-		if len(cards) == 0 {
-			if !o.Parsable {
-				fmt.Fprintln(r.Out, "Found no contacts")
-			}
-			return errNoResults
-		}
-		output := io.Writer(w)
-		if o.Parsable {
-			output = r.Out
-		} else {
-			fmt.Fprintln(w, strings.Join(fields, "\t"))
-		}
-		for i, c := range cards {
-			view := columnValues{card: c}
-			row := make([]string, len(fields))
-			for j, field := range fields {
-				var value string
-				switch field {
-				case "index":
-					value = strconv.Itoa(i + 1)
-				case "name":
-					value = c.name(cfg.Display)
-					if cfg.Nicknames && !o.Parsable && c.first("NICKNAME") != "" {
-						value += " (Nickname: " + c.first("NICKNAME") + ")"
-					}
-				case "phone":
-					value = preferred(c, "TEL", cfg.PreferredPhone)
-				case "email":
-					value = preferred(c, "EMAIL", cfg.PreferredEmail)
-				case "address_book", "addressbook":
-					value = c.Book
-				default:
-					value = view.nested(field)
-				}
-				row[j] = safe(value)
-			}
-			fmt.Fprintln(output, strings.Join(row, "\t"))
-		}
-		return w.Flush()
-	}
-	key := map[string]string{"phone": "TEL", "email": "EMAIL", "postaddress": "ADR", "birthdays": "BDAY"}[o.Command]
-	if !o.Parsable && !o.Mutt {
-		fmt.Fprintln(w, "Name\tType\tValue")
-	}
-	for _, c := range cards {
-		for _, p := range c.properties(key) {
-			v := unescape(p.Value)
-			if key == "TEL" && strings.HasPrefix(strings.ToLower(v), "tel:") {
-				v = v[4:]
-			}
-			name := c.name(cfg.Display)
-			label := c.label(p)
-			if o.Parsable || o.Mutt {
-				fmt.Fprintf(r.Out, "%s\t%s\t%s\n", safe(v), safe(name), safe(label))
-			} else {
-				fmt.Fprintf(w, "%s\t%s\t%s\n", safe(name), safe(label), safe(v))
-			}
-		}
-	}
-	return w.Flush()
-}
-func birthdayKey(s string) string {
-	if len(s) >= 10 && s[4] == '-' {
-		return s[5:10]
-	}
-	if strings.HasPrefix(s, "--") {
-		return strings.TrimPrefix(s, "--")
-	}
-	if s == "" {
-		return "zz"
-	}
-	return s
+	view := columnValues{card: c, search: true}
+	return []byte(searchDocument(c, cfg, &view))
 }
 
 func (r Runner) writeContact(c *Card, cfg Config, o Options) (resultErr error) {
@@ -725,7 +626,7 @@ func (r Runner) writeContact(c *Card, cfg Config, o Options) (resultErr error) {
 		if e != nil {
 			return e
 		}
-		changed, e = c.applyModel(m, cfg)
+		changed, e = c.applyYAML(m, cfg, o.Patch)
 		if e != nil {
 			return e
 		}
@@ -735,6 +636,9 @@ func (r Runner) writeContact(c *Card, cfg Config, o Options) (resultErr error) {
 		return nil
 	}
 	if creating {
+		if o.Format != "vcard" && len(c.properties("N")) == 0 {
+			c.replaceExact("N", []Property{newProp("N", ";;;;")})
+		}
 		e = createCard(c, book)
 	} else {
 		e = saveCard(c)

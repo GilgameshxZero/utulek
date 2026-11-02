@@ -1,92 +1,92 @@
 # Upstream compatibility
 
-This is a staged compatibility effort, not a claim of full upstream parity.
-Executable comparisons currently use installed khard 0.19.1; the current
-upstream documentation is also checked for changed behavior. The supported
-interface should be tested against a newer upstream release before calling
-this a complete compatible replacement.
+The four staged implementation scopes are complete in **0.1.5-preview**.
+The current release audit targets **khard 0.22.0**, with pinned comparison
+requirements in `scripts/upstream_requirements.txt`. This is a compatible Go
+reimplementation with the intentional differences below, not byte-for-byte
+identity with every upstream behavior.
 
-## Stage 1: search and list columns — implemented
+## Completed stages
 
-* Phone queries normalize punctuation and support local/international matching.
-* Names use upstream's first/additional/family order, or family followed by a
-  comma and first/additional names. Prefixes and suffixes are excluded from
-  these display orders; the formatted name retains the original FN value.
-* `name:` checks both orders, formatted names and nicknames.
-* Public search fields include organisations, post_addresses, roles, titles,
-  kind and version, in addition to the previously supported fields.
-* `list -F` replaces default columns in parsable output too, supports upstream
-  public properties and nested dictionary/list paths, and leaves missing
-  entries empty. A per-contact cache avoids rebuilding shared column values.
-* Empty lists exit with status 1; parsable output stays empty.
+* Stage 1: names, phone queries, public search fields and custom/nested columns.
+* Stage 2: copy/move/merge/add-email, UID/REV behavior, conflicts and recovery.
+* Stage 3: source-file prefiltering, debug output, multiline config, field/date/
+  private/general query semantics and native book-path expansion.
+* Stage 4: native locale collation and dates; Chinese names/addresses/labels and
+  display-cell widths; shared pretty/search rendering; readable tables, preferred
+  labels/values, row refinement, birthdays, postal output, collection order and
+  quoting, short UID scope, Kind/Impp, tagged YAML and recursive book discovery.
+  Command aliases, options, combined short flags and attached values are audited.
 
-`scripts/compare_compatibility.py` exercises disposable synthetic contacts
-against upstream and the native build, retaining expected and actual rows,
-exit codes and known exceptions in the ignored JSON report. Go regression
-coverage runs on Linux and Windows, including subprocess checks when
-KHARD_XP_CHECK_EXECUTABLE is set.
+## YAML editing contract
 
-## Stage 2: missing contact operations — implemented
+Edits replace the managed YAML fields by default: omitted fields clear their
+managed vCard properties. Omitted FN retains the current formatted name;
+explicitly empty FN requests automatic generation. Replacement input requires
+a name/organisation (explicit formatted names are also accepted).
+`edit --patch` preserves omitted fields. Null/empty values clear fields.
+A supplied Private mapping replaces the configured private values.
 
-Copy and move support source selection and `-A` destination selection. Copies
-receive a new UID; moves retain it. Shared staged installation validates the
-book, updates REV, refuses filename collisions and rechecks the source under a
-lock. Duplicate-name destinations support add, merge, overwrite and cancellation.
-Overwrite installs first; partial removal failures retain saved data and report
-what remains. Unsafe UID filenames are rejected.
+Unknown vCard properties, photos, metadata on unchanged values, UID and physical
+bytes of unchanged fields remain preserved. Unedited round trips do not write.
+Invalid updates are transactional in memory and on disk; editor/save failures
+retain a recovery draft. Tagged properties, nested categories, Impp, validated
+ISO/text dates and bounded YAML aliases are supported. Cycles, duplicate keys,
+unknown YAML field names and multiple documents are rejected.
 
-Merge supports `-t` / `--target-contact` / `--target` and `-A`, two-file
-`merge_editor` invocation, and a normal-editor fallback with a commented source
-reference. The target UID and unknown target properties are preserved. No-op
-merges write nothing. Confirmation saves the target before removing the source;
-failures preserve the draft and detect stale source and target data.
+## Locale and verification
 
-Add-email supports `-i`, `-H` / `--headers`, `all`, and
-`--skip-already-added`, encoded names, folded headers, address groups, existing
-contact selection/search, new contacts, custom labels and vCard preferences.
-A batch loads its books and indexes known email addresses once.
+Linux uses per-locale glibc handles (cgo), without changing global process locale.
+Windows uses native NLS collation/date APIs and user date preferences. Locale
+precedence is LC_ALL, category-specific LC_COLLATE/LC_TIME, then LANG; Windows
+uses the user locale if unset. Linux requires installed locale data. A cgo-free
+Linux build supports C locales only and reports other locales as unavailable.
 
-Regression tests exercise these operations on both platforms. The Linux
-`scripts/compare_operations.py` compares semantic results against upstream on
-disposable books, excluding generated UID/REV and serialization order. The
-Windows smoke script exercises copy/move and add-email skip through the binary.
+Linux differential coverage includes C, US English, German, Swedish, Icelandic,
+Simplified Chinese and Traditional Chinese. Native Windows Chinese ordering and
+dates are checked independently against .NET/NLS, including an executable edit
+with Chinese labels. Each platform uses its own native collation data; platform
+and OS-version differences are expected, not a promise of identical ordering.
 
-Interactive prompts are not exact upstream transcripts. Invalid merge YAML
-exits with a recovery draft instead of reopening in a loop; cancellation is
-nonzero. Repeated mail addresses are processed once. Unattended confirmation
-is refused. Both implementations require manually editing the target to select
-source values; source-only properties are not automatically unioned. Newer
-upstream auditing and the general YAML semantics decision remain in stage 4.
+Queryable reports: `.obj/current_upstream_audit.json` (presentation, parser
+inventory and discovery), `.obj/current_edit_audit.json`, and the
+`.obj/current_{compatibility,search_compatibility,operation_compatibility}.json`
+reports. Actual Windows regression/locale/installed launcher results are in
+`.obj/windows_stage4_validation.txt`. Read-only comparisons/audits cover the
+production books without writing any contact files. Performance records are
+under `.obj/performance_stage4_after.txt`.
 
-## Stage 3: configuration and search semantics — pending
+## Deliberate differences and boundaries
 
-Honor source-file search and debug options rather than merely accepting them;
-add ConfigObj multiline quoted values. Compare exact public/unknown field
-semantics, date queries, configured private objects and general searches
-against upstream. Existing extra YAML field aliases remain extensions for
-compatibility with this preview's callers. Case-insensitive extensions should
-be documented rather than confused with upstream guarantees.
-
-## Stage 4: presentation, editing and release audit — pending
-
-Finish locale collation and date localization, pretty/show/address/birthday
-output, preferred-label/value selection, tagged properties, collection order
-and quoting, short UID formatting and human-readable table parity. Compare
-all commands, options and YAML shapes with a supported current upstream
-release. Editing currently accepts partial YAML updates; upstream replacement
-semantics need a deliberate compatibility decision and preservation tests.
-
-## Deliberate platform and data-preservation differences
-
+* Untyped phone/email properties retain empty labels in stored data and TSV;
+  never infer CELL. Human pretty/search text may use upstream's implied labels.
+* Ordinary email TSV stays headerless; `email --mutt` has its explicit status
+  protocol. `--remove-first-line` is accepted. Zero-match mutt queries succeed.
+* ASCII controls are sanitized in TSV. Unicode/CJK table padding uses display
+  cells, fixing upstream's one-character/one-column assumption.
+* Existing YAML query aliases and case-insensitive field names remain extensions.
+* Nickname lists are preserved. The audited vobject 0.9.9 still reads only the
+  first comma-separated nickname. Upstream 0.22.0 also prints Kind twice and
+  cannot re-import certain tagged private exports; these bugs are not copied.
+* Valid reduced leap-day birthdays are retained using a leap-year placeholder
+  internally, rather than rejected because upstream's placeholder is 1900.
+  Source date offsets/precision are preserved; text date exports retain text=
+  so they can be imported safely. Explicit null clearing is supported.
+* ConfigObj interpolation remains disabled, as in upstream 0.22.0. Discovery
+  order/collision naming is deterministic; recursive symlink traversal is avoided.
+* Unknown/unchanged vCard bytes are preserved. Default-kind serialization is
+  avoided when it would only rewrite an implicit individual default.
+* Output files are not overwritten silently. Raw vCard edits are staged and
+  checked rather than editing production files directly. Invalid YAML exits
+  with recovery instead of reopening in a loop; cancellation is nonzero.
 * Windows defaults to the associated text application with explicit completion
-  confirmation. Explicit editor commands remain supported. Unix shell syntax
-  is not translated into Windows shell commands.
-* Untyped phone/email properties keep an empty label. Never infer CELL.
-* ASCII controls inside TSV columns are replaced with spaces. Upstream may
-  emit embedded newlines/tabs; the differential report names this exception.
-* Unknown/unchanged vCard bytes are preserved; unchanged edits do not write.
-* The explicit `email --mutt` protocol is a supported extension. End-to-end
-  NeoMutt integration belongs to neomutt/neomuttwin.
+  confirmation. Configured editors work on both platforms. Unix shell syntax is
+  not translated. Prompts, help, logs and error wording are not exact transcripts.
+* Manual default-Windows-GUI save/confirmation remains unverified; automated
+  editor invocation, recovery, lifecycle and launcher checks pass.
+* NeoMutt end-to-end integration belongs to neomutt/neomuttwin.
 
-Sources: [upstream command line documentation](https://khard.readthedocs.io/en/latest/commandline.html),
-[upstream subcommand reference](https://khard.readthedocs.io/en/stable/man/khard-subcommands.html).
+Sources: [khard 0.22.0](https://pypi.org/project/khard/0.22.0/),
+[configuration](https://khard.readthedocs.io/en/stable/man/khard.conf.html),
+[vCard nickname lists](https://www.rfc-editor.org/rfc/rfc2426.html#section-3.1.3),
+[Windows sort orders](https://learn.microsoft.com/en-us/windows/win32/intl/sort-order-identifiers).

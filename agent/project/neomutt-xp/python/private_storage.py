@@ -63,6 +63,8 @@ def check_private(path, directory=False):
 
 
 def protect_private(path):
+    if Path(path).is_symlink():
+        raise ValueError('Private storage cannot be a symbolic link')
     if os.name == 'nt':
         windows_acl(path, protect=True)
     else:

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // Public property names used by upstream queries and list columns. Keep column
@@ -14,19 +15,19 @@ var listProperties = map[string]string{
 	"anniversary": "ANNIVERSARY", "birthday": "BDAY", "categories": "CATEGORIES",
 	"emails": "EMAIL", "first_name": "N", "formatted_name": "FN", "kind": "KIND",
 	"last_name": "N", "nicknames": "NICKNAME", "notes": "NOTE", "organisations": "ORG",
-	"phone_numbers": "TEL", "post_addresses": "ADR", "roles": "ROLE", "titles": "TITLE",
+	"impp": "IMPP", "phone_numbers": "TEL", "post_addresses": "ADR", "roles": "ROLE", "titles": "TITLE",
 	"uid": "UID", "version": "VERSION", "webpages": "URL",
 }
 
 func contactKind(c *Card) string {
-	switch kind := c.first("KIND"); kind {
-	case "":
-		return "individual"
-	case "org":
-		return "organisation"
-	default:
+	key := "KIND"
+	if c.first("VERSION") == "3.0" {
+		key = "X-KIND"
+	}
+	if kind := c.first(key); kind != "" {
 		return kind
 	}
+	return "individual"
 }
 
 func parseListFields(input string) ([]string, error) {
@@ -55,8 +56,9 @@ func listFieldsHelp() string {
 }
 
 type columnValues struct {
-	card  *Card
-	cache map[string]any
+	search bool
+	card   *Card
+	cache  map[string]any
 }
 
 func (v *columnValues) property(field string) any {
@@ -69,7 +71,16 @@ func (v *columnValues) property(field string) any {
 	c, key := v.card, listProperties[field]
 	var result any
 	switch field {
-	case "uid", "version", "formatted_name", "birthday", "anniversary":
+	case "birthday", "anniversary":
+		date, text, present, zoned := parsedSearchDate(c, field)
+		if present {
+			if text != nil {
+				result = *text
+			} else {
+				result = pythonDate{Time: date, Zoned: zoned}
+			}
+		}
+	case "uid", "version", "formatted_name":
 		result = c.first(key)
 	case "kind":
 		result = contactKind(c)
@@ -80,6 +91,25 @@ func (v *columnValues) property(field string) any {
 		}
 		names := c.nameParts()
 		result = names[index]
+	case "impp":
+		values := map[string]any{}
+		for _, p := range c.properties("IMPP") {
+			scheme, handle, ok := strings.Cut(unescape(p.Value), ":")
+			if !ok {
+				continue
+			}
+			for _, param := range splitQuoted(p.Head, ';')[1:] {
+				k, value, ok := strings.Cut(param, "=")
+				if ok && strings.EqualFold(k, "PREF") {
+					scheme += ", pref=" + value
+				}
+			}
+			values[scheme] = append(anyList(values[scheme]), handle)
+		}
+		for _, value := range values {
+			sort.SliceStable(value.([]any), func(i, j int) bool { return value.([]any)[i].(string) < value.([]any)[j].(string) })
+		}
+		result = values
 	case "phone_numbers", "emails", "post_addresses":
 		values := map[string]any{}
 		for _, p := range c.Props {
@@ -87,6 +117,9 @@ func (v *columnValues) property(field string) any {
 				continue
 			}
 			label := c.label(p)
+			if v.search {
+				label = searchLabel(c, p, key)
+			}
 			var value any = unescape(p.Value)
 			if key == "TEL" && strings.HasPrefix(strings.ToLower(p.Value), "tel:") {
 				value = unescape(p.Value[4:])
@@ -119,7 +152,7 @@ func (v *columnValues) property(field string) any {
 			sort.SliceStable(entries, func(i, j int) bool {
 				if key == "ADR" {
 					a, b := entries[i].(map[string]any), entries[j].(map[string]any)
-					return strings.ToLower(fmt.Sprint(a["city"], "\x00", a["street"])) < strings.ToLower(fmt.Sprint(b["city"], "\x00", b["street"]))
+					return strings.ToLower(joinPublicText(a["city"], " ")+"\x00"+joinPublicText(a["street"], " ")) < strings.ToLower(joinPublicText(b["city"], " ")+"\x00"+joinPublicText(b["street"], " "))
 				}
 				return entries[i].(string) < entries[j].(string)
 			})
@@ -133,23 +166,45 @@ func (v *columnValues) property(field string) any {
 				continue
 			}
 			if key == "NICKNAME" || key == "CATEGORIES" {
+				var parts []any
 				for _, part := range splitEscaped(p.Value, ',') {
-					values = append(values, unescape(part))
+					var val any = unescape(part)
+					if key == "NICKNAME" {
+						if label := propertyGroupLabel(c, p); label != "" {
+							val = map[string]any{label: val}
+						}
+					}
+					parts = append(parts, val)
+				}
+				if key == "CATEGORIES" {
+					values = append(values, parts)
+				} else {
+					values = append(values, parts...)
 				}
 			} else if key == "ORG" {
 				var parts []any
 				for _, part := range splitEscaped(p.Value, ';') {
 					parts = append(parts, unescape(part))
 				}
-				values = append(values, parts)
+				var value any = parts
+				if label := propertyGroupLabel(c, p); label != "" {
+					value = map[string]any{label: value}
+				}
+				values = append(values, value)
 			} else {
-				values = append(values, unescape(p.Value))
+				var value any = unescape(p.Value)
+				if label := propertyGroupLabel(c, p); label != "" {
+					value = map[string]any{label: value}
+				}
+				values = append(values, value)
 			}
 		}
-		sort.SliceStable(values, func(i, j int) bool {
-			return strings.ToLower(pythonValue(values[i], false)) < strings.ToLower(pythonValue(values[j], false))
-		})
-		result = values
+		if key == "CATEGORIES" && len(values) == 1 {
+			result = values[0]
+		} else {
+			sortPropertyValues(values)
+			result = values
+		}
 	}
 	v.cache[field] = result
 	return result
@@ -182,6 +237,11 @@ func (v *columnValues) nested(field string) string {
 			return ""
 		}
 	}
+	if len(parts) == 1 {
+		if mapping, ok := value.(map[string]any); ok {
+			return v.publicDictionary(parts[0], mapping)
+		}
+	}
 	return pythonValue(value, false)
 }
 
@@ -189,7 +249,15 @@ func (v *columnValues) nested(field string) string {
 // Preserve that convention for collection columns as well as scalar paths.
 func pythonValue(value any, quoted bool) string {
 	switch val := value.(type) {
+	case pythonDate:
+		if quoted {
+			return fmt.Sprintf("datetime.datetime(%d, %d, %d, %d, %d)", val.Year(), val.Month(), val.Day(), val.Hour(), val.Minute())
+		}
+		return val.String()
 	case nil:
+		if quoted {
+			return "None"
+		}
 		return ""
 	case string:
 		if !quoted {
@@ -213,6 +281,16 @@ func pythonValue(value any, quoted bool) string {
 			case '\t':
 				escaped.WriteString(`\t`)
 			default:
+				if !unicode.IsPrint(r) || unicode.IsSpace(r) && r != ' ' {
+					if r <= 255 {
+						fmt.Fprintf(&escaped, `\x%02x`, r)
+					} else if r <= 65535 {
+						fmt.Fprintf(&escaped, `\u%04x`, r)
+					} else {
+						fmt.Fprintf(&escaped, `\U%08x`, r)
+					}
+					continue
+				}
 				if string(r) == quote {
 					escaped.WriteByte('\\')
 				}
@@ -235,7 +313,7 @@ func pythonValue(value any, quoted bool) string {
 			return ""
 		}
 		var parts []string
-		for _, key := range sortedKeys(val) {
+		for _, key := range publicMapKeys(val) {
 			parts = append(parts, pythonValue(key, true)+": "+pythonValue(val[key], true))
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
@@ -249,4 +327,76 @@ func partsOrEmpty(parts []string, i int) string {
 		return parts[i]
 	}
 	return ""
+}
+
+func publicMapKeys(value map[string]any) []string {
+	if len(value) == 7 {
+		keys := []string{"box", "extended", "street", "code", "city", "region", "country"}
+		isAddress := true
+		for _, key := range keys {
+			if _, ok := value[key]; !ok {
+				isAddress = false
+			}
+		}
+		if isAddress {
+			return keys
+		}
+	}
+	return sortedKeys(value)
+}
+func publicPythonValue(value any) string { return pythonValue(value, false) }
+
+func (v *columnValues) publicDictionary(field string, values map[string]any) string {
+	var keys []string
+	seen := map[string]bool{}
+	key := listProperties[field]
+	for _, p := range v.card.Props {
+		if p.Key != key {
+			continue
+		}
+		label := v.card.label(p)
+		if field == "impp" {
+			label, _, _ = strings.Cut(unescape(p.Value), ":")
+			for _, param := range splitQuoted(p.Head, ';')[1:] {
+				k, x, ok := strings.Cut(param, "=")
+				if ok && strings.EqualFold(k, "PREF") {
+					label += ", pref=" + x
+				}
+			}
+		}
+		if _, ok := values[label]; ok && !seen[label] {
+			keys = append(keys, label)
+			seen[label] = true
+		}
+	}
+	for _, label := range sortedKeys(values) {
+		if !seen[label] {
+			keys = append(keys, label)
+		}
+	}
+	var parts []string
+	for _, label := range keys {
+		parts = append(parts, pythonValue(label, true)+": "+pythonValue(values[label], true))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "{" + strings.Join(parts, ", ") + "}"
+}
+
+func joinPublicText(value any, separator string) string {
+	if list, ok := value.([]any); ok {
+		parts := make([]string, len(list))
+		for i, v := range list {
+			parts[i] = fmt.Sprint(v)
+		}
+		return strings.Join(parts, separator)
+	}
+	text, _ := value.(string)
+	return text
+}
+func sortedLabelKeys(values map[string]any) []string {
+	keys := sortedKeys(values)
+	sort.SliceStable(keys, func(i, j int) bool { return strings.ToLower(keys[i]) < strings.ToLower(keys[j]) })
+	return keys
 }

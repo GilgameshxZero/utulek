@@ -29,3 +29,6 @@ storage_state.json
 *.db-*
 *.log
 __pycache__/
+
+# Temporary comparison environments.
+/workspace/

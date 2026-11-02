@@ -19,6 +19,9 @@ type Config struct {
 	Reverse, Group, Nicknames, UIDs, Kinds, Skip bool
 	Private, PreferredPhone, PreferredEmail      []string
 	SourceSearch, Debug                          bool
+	LocalizeDates                                bool
+	Locale                                       *nativeLocale
+	UIDScope                                     map[string]bool
 	Diagnostics                                  io.Writer
 }
 
@@ -51,7 +54,7 @@ func defaultConfigPath() (string, error) {
 }
 
 func loadConfig(path string) (Config, error) {
-	c := Config{DefaultAction: "list", Version: "3.0", Sort: "first_name", Display: "first_name", UIDs: true, PreferredPhone: []string{"pref"}, PreferredEmail: []string{"pref"}}
+	c := Config{LocalizeDates: true, DefaultAction: "list", Version: "3.0", Sort: "first_name", Display: "first_name", UIDs: true, PreferredPhone: []string{"pref"}, PreferredEmail: []string{"pref"}}
 	var err error
 	if path == "" {
 		path, err = defaultConfigPath()
@@ -70,6 +73,7 @@ func loadConfig(path string) (Config, error) {
 	scan := bufio.NewScanner(f)
 	scan.Buffer(make([]byte, 4096), 1024*1024)
 	section, book := "", -1
+	bookTypes := map[int]string{}
 	seen := map[string]bool{}
 	lineNo := 0
 	for scan.Scan() {
@@ -80,18 +84,19 @@ func loadConfig(path string) (Config, error) {
 		}
 		fail := func(e error) (Config, error) { return c, fmt.Errorf("%s:%d: %w", path, lineNo, e) }
 		if strings.HasPrefix(line, "[") {
-			header := strings.TrimSpace(strings.SplitN(line, "#", 2)[0])
-			if strings.HasPrefix(header, "[[") && strings.HasSuffix(header, "]]") && section == "addressbooks" {
-				name := strings.TrimSpace(header[2 : len(header)-2])
-				name = strings.Trim(name, `"'`)
+			depth, name, e := configSection(line)
+			if e != nil {
+				return fail(e)
+			}
+			if depth == 2 && section == "addressbooks" {
 				if name == "" || seen["book:"+name] {
 					return fail(fmt.Errorf("empty or duplicate address book %q", name))
 				}
 				seen["book:"+name] = true
 				c.Books = append(c.Books, Book{Name: name})
 				book = len(c.Books) - 1
-			} else if strings.HasPrefix(header, "[") && strings.HasSuffix(header, "]") && !strings.HasPrefix(header, "[[") {
-				section = strings.TrimSpace(header[1 : len(header)-1])
+			} else if depth == 1 {
+				section = name
 				book = -1
 				if seen["section:"+section] {
 					return fail(fmt.Errorf("duplicate section %q", section))
@@ -121,6 +126,9 @@ func loadConfig(path string) (Config, error) {
 			s = values[0]
 		}
 		boolean := func(dst *bool) error {
+			if list {
+				return fmt.Errorf("%s must be a boolean, not a list", k)
+			}
 			switch strings.ToLower(s) {
 			case "yes", "true", "on", "1":
 				*dst = true
@@ -133,13 +141,23 @@ func loadConfig(path string) (Config, error) {
 		}
 		switch section {
 		case "addressbooks":
+			if book >= 0 && k == "type" && !list {
+				if s != "vdir" && s != "discover" {
+					return fail(fmt.Errorf("unknown address book type %q", s))
+				}
+				bookTypes[book] = s
+				continue
+			}
 			if book < 0 || k != "path" || list {
 				return fail(fmt.Errorf("expected [[book name]] and a single path"))
 			}
-			c.Books[book].Path, e = expandPath(s)
+			c.Books[book].Path, e = expandBookPath(s)
 		case "general":
 			switch k {
 			case "default_action":
+				if list {
+					return fail(fmt.Errorf("default_action must be a single command"))
+				}
 				if s != "" {
 					c.DefaultAction = s
 				}
@@ -161,8 +179,14 @@ func loadConfig(path string) (Config, error) {
 		case "contact table":
 			switch k {
 			case "display":
+				if list {
+					return fail(fmt.Errorf("display must be a single name order"))
+				}
 				c.Display = s
 			case "sort":
+				if list {
+					return fail(fmt.Errorf("sort must be a single name order"))
+				}
 				c.Sort = s
 			case "reverse":
 				e = boolean(&c.Reverse)
@@ -175,8 +199,7 @@ func loadConfig(path string) (Config, error) {
 			case "show_kinds":
 				e = boolean(&c.Kinds)
 			case "localize_dates":
-				var b bool
-				e = boolean(&b)
+				e = boolean(&c.LocalizeDates)
 			case "preferred_phone_number_type":
 				c.PreferredPhone = values
 			case "preferred_email_address_type":
@@ -185,6 +208,9 @@ func loadConfig(path string) (Config, error) {
 		case "vcard":
 			switch k {
 			case "preferred_version":
+				if list {
+					return fail(fmt.Errorf("preferred_version must be a single version"))
+				}
 				c.Version = s
 			case "private_objects":
 				c.Private = values
@@ -218,12 +244,25 @@ func loadConfig(path string) (Config, error) {
 		}
 	}
 	for _, v := range c.Private {
-		if v != "" && !validToken(v) {
+		if v != "" && (!validToken(v) || strings.HasPrefix(v, "-") || strings.HasSuffix(v, "-")) {
 			return c, fmt.Errorf("invalid private object %q", v)
 		}
 	}
-	if !seen["contact table:-1:display"] {
-		c.Display = c.Sort
+	if len(c.MergeEditor) == 0 {
+		if value := os.Getenv("MERGE_EDITOR"); value != "" {
+			c.MergeEditor, err = splitCommand(value)
+			if err != nil {
+				return c, fmt.Errorf("MERGE_EDITOR: %w", err)
+			}
+		}
+	}
+	c.Books, err = unfoldBooks(c.Books, bookTypes)
+	if err != nil {
+		return c, err
+	}
+	c.Locale, err = checkedLocale()
+	if err != nil {
+		return c, err
 	}
 	return c, nil
 }
