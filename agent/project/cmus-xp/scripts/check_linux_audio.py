@@ -27,6 +27,7 @@ def main():
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--remote', type=Path, default=ROOT / '.bin/cmus-remote')
     parser.add_argument('--output-dir', type=Path, default=ROOT / '.obj/linux_audio_checks')
+    parser.add_argument('--output-plugin', choices=('pulse', 'ao'), default='pulse')
     args = parser.parse_args()
     out = args.output_dir.resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -34,7 +35,9 @@ def main():
     socket = Path('/tmp') / ('cmus-xp-audio-%d.sock' % os.getpid())
     config = out / ('config-%d' % os.getpid())
     config.mkdir()
-    config.joinpath('rc').write_text('set output_plugin=pulse\nset softvol=true\nset softvol_state=100 100\n')
+    config.joinpath('rc').write_text('set mpris=false\nset output_plugin=' + args.output_plugin +
+        '\nset softvol=true\nset softvol_state=100 100\n' +
+        ('set dsp.ao.driver=pulse\n' if args.output_plugin == 'ao' else ''))
     fixtures = []
     signal = '0.01*sin(2*PI*if(lt(t,8),440,if(lt(t,16),880,1320))*t)'
     ffmpeg = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y']
@@ -66,8 +69,23 @@ def main():
                 except OSError:
                     break
     def command(*commands):
-        return subprocess.run([str(args.remote.resolve()), '--server', str(socket), '-C', *commands],
-                              check=True, capture_output=True, text=True, timeout=10).stdout
+        client = subprocess.Popen([str(args.remote.resolve()), '--server', str(socket), '-C', *commands],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        deadline = time.monotonic() + 10
+        try:
+            # Keep draining the terminal while the server redraws in response.
+            while client.poll() is None and time.monotonic() < deadline:
+                wait(.02)
+            output, errors = client.communicate(timeout=max(.01, deadline-time.monotonic()))
+            if client.returncode:
+                raise subprocess.CalledProcessError(client.returncode, client.args, output, errors)
+            if 'Error:' in output:
+                raise RuntimeError(output)
+            return output
+        finally:
+            if client.poll() is None:
+                client.kill()
+                client.communicate()
     def status():
         return dict(line.split(' ', 1) for line in command('status').splitlines() if ' ' in line)
     def pulse(kind):
@@ -141,7 +159,8 @@ def main():
             command('player-stop')
             wait(.2)
             assert status()['status'] == 'stopped'
-            result = {'file': path.name, 'passed': True, 'playing': initial, 'paused': silence,
+            result = {'file': path.name, 'output_plugin': args.output_plugin,
+                      'passed': True, 'playing': initial, 'paused': silence,
                       'resumed_after_seek': resumed, 'volume_50_percent': quieter,
                       'pause_position': paused['position'], 'seek_position': sought['position']}
             results.append(result)

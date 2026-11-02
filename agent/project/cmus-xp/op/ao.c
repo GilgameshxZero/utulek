@@ -38,6 +38,9 @@ static ao_device *libao_device;
 static char *wav_dir = NULL;
 static int wav_counter = 1;
 static int is_wav = 0;
+static int pack_24, input_bigendian;
+static unsigned char *packed;
+static size_t packed_capacity;
 
 /* configuration */
 static char *libao_driver = NULL;
@@ -58,6 +61,9 @@ static int op_ao_init(void)
 static int op_ao_exit(void)
 {
 	free(libao_driver);
+	free(packed);
+	packed = NULL;
+	packed_capacity = 0;
 	ao_shutdown();
 	return 0;
 }
@@ -113,6 +119,11 @@ static char *ao_channel_matrix(int channels, const channel_position_t *map)
 
 static int op_ao_open(sample_format_t sf, const channel_position_t *channel_map)
 {
+	if (!sf_get_rate(sf) || !sf_get_channels(sf) || sf_get_channels(sf) > CHANNELS_MAX ||
+			(sf_get_bits(sf) != 8 && sf_get_bits(sf) != 16 && sf_get_bits(sf) != 24 && sf_get_bits(sf) != 32))
+		return -OP_ERROR_SAMPLE_FORMAT;
+	pack_24 = 0;
+	input_bigendian = sf_get_bigendian(sf);
 	ao_sample_format format = {
 		.bits        = sf_get_bits(sf),
 		.rate        = sf_get_rate(sf),
@@ -131,6 +142,9 @@ static int op_ao_open(sample_format_t sf, const channel_position_t *channel_map)
 		is_wav = strcasecmp(libao_driver, "wav") == 0;
 	}
 	if (driver == -1) {
+#ifdef AO_API_1
+		free(format.matrix);
+#endif
 		errno = ENODEV;
 		return -OP_ERROR_ERRNO;
 	}
@@ -148,7 +162,21 @@ static int op_ao_open(sample_format_t sf, const channel_position_t *channel_map)
 			ao_append_option(&ao_options, "dev", libao_device_interface);
 		}
 		libao_device = ao_open_live(driver, &format, ao_options);
+		/* libao's Pulse driver accepts packed 24-bit, but rejects 32-bit
+		 * integer PCM returned by high-resolution FFmpeg decoders. */
+		if (!libao_device && format.bits == 32 && sf_get_signed(sf)) {
+			format.bits = 24;
+			libao_device = ao_open_live(driver, &format, ao_options);
+			pack_24 = libao_device != NULL;
+		}
+		int saved_errno = errno;
+		ao_free_options(ao_options);
+		errno = saved_errno;
 	}
+#ifdef AO_API_1
+	d_print("channel matrix: %s\n", format.matrix ? format.matrix : "default");
+	free(format.matrix);
+#endif
 
 	if (libao_device == NULL) {
 		switch (errno) {
@@ -177,15 +205,13 @@ static int op_ao_open(sample_format_t sf, const channel_position_t *channel_map)
 	libao_cur_buffer_space = is_wav ? 128 * 1024 : libao_buffer_space;
 	libao_cur_buffer_space -= libao_cur_buffer_space % sf_get_frame_size(sf);
 
-#ifdef AO_API_1
-	d_print("channel matrix: %s\n", format.matrix ? format.matrix : "default");
-#endif
 	return 0;
 }
 
 static int op_ao_close(void)
 {
 	ao_close(libao_device);
+	libao_device = NULL;
 	if (is_wav)
 		wav_counter++;
 	return 0;
@@ -193,7 +219,25 @@ static int op_ao_close(void)
 
 static int op_ao_write(const char *buffer, int count)
 {
-	if (ao_play(libao_device, (void *)buffer, count) == 0)
+	if (count < 0) { errno = EINVAL; return -1; }
+	if (!count) return 0;
+	if (!libao_device) { errno = ENODEV; return -1; }
+	const void *data = buffer;
+	int bytes = count;
+	if (pack_24) {
+		if (count < 0 || count % 4) { errno = EINVAL; return -1; }
+		bytes = count / 4 * 3;
+		if ((size_t)bytes > packed_capacity) {
+			void *next = realloc(packed, bytes);
+			if (!next) { errno = ENOMEM; return -1; }
+			packed = next;
+			packed_capacity = bytes;
+		}
+		for (int i = 0, j = 0; i < count; i += 4, j += 3)
+			memcpy(packed+j, buffer+i+(input_bigendian ? 0 : 1), 3);
+		data = packed;
+	}
+	if (ao_play(libao_device, (void *)data, bytes) == 0)
 		return -1;
 	return count;
 }

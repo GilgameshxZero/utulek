@@ -24,6 +24,8 @@
 
 ssize_t read_all(int fd, void *buf, size_t count);
 ssize_t write_all(int fd, const void *buf, size_t count);
+/* Flush and replace a regular file only after the complete callback succeeds. */
+int file_write_atomic(const char *filename, int (*write_cb)(int, void *), void *data);
 
 /* @filename  file to mmap for reading
  * @size      returned size of the file or -1 if failed

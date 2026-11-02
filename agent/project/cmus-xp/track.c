@@ -17,6 +17,7 @@
  */
 
 #include "track.h"
+#include "random.h"
 #include "lib.h"
 #include "iter.h"
 #include "search_mode.h"
@@ -324,12 +325,14 @@ static int compare_rand(const struct rb_node *a, const struct rb_node *b)
 	if (tr_a->rand > tr_b->rand)
 		return +1;
 
-	return 0;
+	/* A random collision must never require another draw or recursion.
+	 * uintptr_t avoids ordering unrelated C pointers directly. */
+	return ((uintptr_t)a > (uintptr_t)b) - ((uintptr_t)a < (uintptr_t)b);
 }
 
 static void shuffle_info_init(struct shuffle_info *info, struct album *album)
 {
-	info->rand = rand() / ((double) RAND_MAX + 1);
+	info->rand = (cmus_random_u64() >> 11) * 0x1p-53;
 	info->album = album;
 }
 
@@ -348,11 +351,8 @@ void shuffle_list_add(struct shuffle_info *track, struct rb_root *tree_root, str
 			new = &((*new)->rb_left);
 		else if (result > 0)
 			new = &((*new)->rb_right);
-		else {
-			/* very unlikely, try again! */
-			shuffle_list_add(track, tree_root, album);
-			return;
-		}
+		else
+			return; /* The same node is already present. */
 	}
 
 	rb_link_node(&track->tree_node, parent, new);
@@ -380,7 +380,7 @@ void list_add_rand(struct list_head *head, struct list_head *node, int nr)
 	struct list_head *item;
 	int pos;
 
-	pos = rand() % (nr + 1);
+	pos = cmus_random_bounded((uint64_t)nr + 1);
 	item = head;
 	if (pos <= nr / 2) {
 		while (pos) {

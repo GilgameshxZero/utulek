@@ -1,107 +1,83 @@
-# neomutt-xp: configuration adapters
+# neomutt-xp: configuration compatibility
 
-This first stage adapts the existing email configuration for a future native
-Windows NeoMutt. It does not contain a NeoMutt executable. The candidate is
-staged; the production configuration is not installed or executed by these tools.
-Keep testing isolated. The user explicitly deferred live installation: testing
-does not require installing the candidate into the active email module.
-
-The current scope is command launching, shell flows, and configuration glue.
-Portability and removal of third-party dependencies inside the existing Python
-scripts are explicitly deferred. Do not rewrite those scripts in this stage.
-Preserve the existing workflow, including prompts, timezone interpretation,
-scratch filenames, output formats, failure behavior, and attachment actions.
-Test against the originals rather than inferring behavior from their comments.
-Do not introduce new Python packages.
+Shared configuration helpers for Linux and a future native Windows NeoMutt.
+The configuration compatibility changes are installed and accepted. This project
+does not yet contain a Windows NeoMutt executable.
 
 ## Runtime design
 
-The executable `runtime/neomutt-command` and its `.bat` counterpart share an
-extensionless entry point. Unix launches the executable script; Windows cmd
-selects the batch launcher, which runs the same script with the installed Bash.
-The Windows test machine already supplies Bash, coreutils, iconv, GPG and
-cygpath through Git for Windows, and PowerShell through Windows.
+Keep commands inline when the tools exist on both platforms: ls, rm, iconv,
+xdg-open, mpv and Lynx. The configuration resolves my_active_dir using $HOME
+before invoking commands, quotes helper/token paths and sources GPG stdout
+directly. Password loading needs neither a script pair nor a plaintext scratch
+file. Calendar saving uses inline Python standard-library UUID generation and
+shutil.move.
 
-| Flow | Adapter behavior |
+| Source | Purpose |
 | --- | --- |
-| Helper paths | Resolve the email directory through NeoMutt's `cd` and emit an absolute native path; quote command paths. Restore the original snowfall working directory before other operations. |
-| Vault mailbox | Keep the directory-existence check with `ls`; emit a native Windows path rather than an MSYS path. |
-| OAuth | Explicitly invoke the existing Python script; retain its token and GPG arguments. Python internals are deferred. |
-| Encrypted settings | Run existing GPG and feed successful output to NeoMutt's source-pipe interface. No plaintext `/tmp` file or timed deletion. A GPG failure emits no partial settings. |
-| Address queries | Preserve the existing echo/xargs/khard `--parsable` behavior, including its status-line behavior and errors. Windows xargs invokes the installed native khard executable because it cannot execute the batch launcher directly. No migration to `--mutt` in this parity pass. |
-| Calendar capture and removal | Run the same iconv and rm commands inside Bash. |
-| Calendar save | Keep mv and UUID filenames; Windows UUIDs use PowerShell `([guid]::NewGuid()).ToString()` with CR removed. No clipboard operation. |
-| Calendar requests | Run the original Bash script unchanged, supplying the Windows UUID implementation as an exported Bash function. The original `date -u -d` behavior is retained. |
-| Calendar display/reply | Explicitly invoke the original Python script, preserving argv and current directory. |
-| HTML browser | Run the original script unchanged, preserving its wrapper bytes, stable scratch filename, BROWSER override and 64-second cleanup. When no BROWSER override exists, Windows bridges to the existing xdg-open.bat. |
-| Other attachments | Keep xdg-open and mpv routes. |
-| HTML pager | Keep the exact Lynx command. A compatible Windows Lynx executable is still required; it was absent from the test host's PATH. |
-| Mailcap | Expand a source template into a per-user `~/.neomutt/mailcap` containing quoted native helper paths. |
+| runtime/neomutt-html-open and .bat | One shared Bash HTML wrapper; Windows defaults BROWSER to xdg-open.bat and respects an explicit override. |
+| runtime/neomutt-ical-request and .bat | One shared interactive request generator; Windows UUID generation uses PowerShell. |
+| runtime/neomutt-query and .bat | Preserve echo/xargs/khard query semantics; Windows selects khard.exe because xargs cannot execute khard.bat. |
+| python/mutt-ical.py | Display invitations and generate replies with the existing prompts and response behavior. |
+| python/ical_support.py and timezones.zip | Standard-library calendar support and bundled IANA timezone data. |
+| python/mutt_oauth2.py | Existing OAuth provider/token flow with cross-platform command and private-storage handling. |
+| python/command_args.py and private_storage.py | Platform command splitting, Unix permission checks and Windows ACL checks. |
+| lynx.bat | Launcher for native Windows Lynx under app/lynx. |
 
-The original Python and `.sh` helpers are copied into an ignored staging tree,
-not tracked again here. `stage_config.py` reads the current configuration and
-fails if expected command patterns have changed. It does not copy tokens,
-encrypted credentials, mailboxes or signatures. The generated configuration
-retains the source's account/path settings and therefore belongs in ignored
-`.obj/`, never in the public source tree.
+The .bat launchers call the shared scripts through the existing Git for Windows
+Bash. They retain the working directory, inherit environment variables and
+forward exit status. NEOMUTT_FROM and BROWSER cross that boundary; setlocal keeps
+wrapper changes local without removing inherited values. There are no separate
+Windows implementations of the HTML/request/query workflows.
 
-## Validation
+Both platforms invoke the existing .py files explicitly through python3 with
+UTF-8 mode. Python runtime code uses only the standard library and bundled local
+modules/data; no pip packages are required. The calendar implementation requires
+Python 3.9 or newer. Native Windows Python 3.11.9 was used for verification.
 
-`test_adapters.py` compares adapter behavior against the original commands with
-disposable fixtures. It records command arguments instead of accessing contacts,
-decrypting credentials, contacting providers, or opening actual attachments.
-Tests cover extensionless dispatch, spaces/Unicode/shell punctuation, native
-paths, UTF-8 capture including invalid input and exit status, password output and
-failure, Python argv/cwd, UUID moves, query argument/error parity, calendar
-request output and failures, and HTML wrapper/opener parity. Random UUID and
-DTSTAMP values are normalized only for request comparisons. HTML tests substitute
-the timer and deletion commands; they do not measure the actual 64-second delay.
+The static mailcap and vault lookup use paths relative to the configured snowfall
+working directory. HTML viewing preserves the original wrapper bytes, stable
+scratch filename, BROWSER override and 64-second cleanup. Calendar macros create
+NeoMutt-owned attachments before generation, use a no-op composer and refresh
+encoding afterward; discarding a draft removes .reply.tmp.ics and
+.request.tmp.ics. Continued quoted strings in neomuttrc have no indentation
+inside the quoted value.
 
-`check_config.py` compares all parsed settings with Linux NeoMutt, synthetic
-Maildirs, and a fake GPG command. Only the intended external-command settings may
-differ; neither configuration may produce parser diagnostics. It also checks
-that all copied Python and original shell scripts remain byte-identical.
+## Dependencies and installed layout
 
-`argv_observer.go` is a test fixture compiled to a Windows executable for query
-argument recording; it adds no runtime dependency. `run_windows_tests.py` uploads
-only the fixtures and original shell scripts to an isolated temporary directory
-and removes it afterward. Host writes require explicit authorization.
+Windows uses its existing Bash, coreutils, iconv and GPG from Git for Windows,
+plus Python, PowerShell, khard and the existing viewers. Linux retains its
+existing tools. GPG settings are streamed directly to NeoMutt rather than buffered
+until successful decryption. The shared xdg-open launcher is unchanged.
 
-Private results are in `.obj/linux_results.json`, `.obj/windows_results.json`,
-and `.obj/config_check/results.json`.
+Email runtime files reside in monochrome/module/email. Native Windows Lynx
+runtime and notices reside in monochrome/app/lynx; monochrome/bin/lynx.bat exposes
+it on PATH. dependencies.json pins Lynx 2.9.2 and IANA timezone data 2026f.
+build_timezone_data.py rebuilds the bundled data from the pinned system database.
+Upstream notices and licenses are retained under licenses/ and in runtime files.
 
-`test_tui.py` exercises the actual attachment-save macro in disposable Linux
-Maildirs. Indentation tabs inside the original macro trigger completion in the
-command-entry field; there it falls back to filename completion, not an address
-book lookup. This is directory-dependent: an initially empty working directory
-and a directory with one ordinary file caused malformed commands. With two
-ordinary filenames having no shared prefix, the unchanged original and candidate
-both saved byte-identical ICS files and removed the capture scratch file. See
-`.obj/tui_multiple_files/results.json`. This is not evidence that the user's live
-workflow is broken. The user initially requested preserving that whitespace, then explicitly
-authorized fixing the live neomuttrc to use unindented continued strings. That
-formatting-only fix is now applied; layout spaces between macro actions were
-also removed while command argument separators were preserved. Both original
-and adapted versions pass the real save-macro TUI check in an empty directory;
-see `.obj/formatting_tui_check/results.json`. The Windows adapters remain
-uninstalled. All future continued multiline strings in neomuttrc should start
-at column one inside the quoted value.
+## Verification and limits
 
-## Limits before declaring full Windows parity
+Validation compared helper behavior on Linux and actual Windows using synthetic
+inputs and disposable homes/mailboxes. Coverage included arguments and Unicode,
+working directories, environment inheritance, exit codes, inline capture/save,
+query behavior, calendar display/replies/requests, OAuth with mocked providers
+and real fixture GPG encryption, and HTML rendering. Python helpers were tested
+without site packages.
 
-There is no native Windows NeoMutt yet. The port must preserve configuration,
-macro, mailcap and source-pipe behavior, expand home directories, launch cmd
-command strings correctly, and implement Windows escaping for queries and MIME
-filenames. Adapter tests cannot establish those core behaviors. In particular,
-arbitrary percent-variable strings and embedded quotes require testing through
-the eventual native launcher, not merely through a batch wrapper.
+Actual Linux NeoMutt UI checks covered saving invitations, reply/group reply
+acceptance/decline/tentative/cancellation, request creation, discard, postpone and
+capture-send. Parsed configuration settings were compared with fake credentials.
+No real credentials were decrypted, real mail sent or actual attachment viewers
+opened during automated verification. Temporary fixtures, test harnesses,
+migration scripts, downloads and rollback files were removed after acceptance;
+only runtime source, dependency metadata, licenses and documentation remain.
 
-The installed Windows Python lacks vobject; this is an existing dependency of
-the original calendar helper and belongs to the deferred Python work. OAuth's
-POSIX permission checks likewise remain deferred. Live GPG/pinentry, account
-authentication, message sending, actual default viewers, full TUI macro execution
-and concurrent scratch-file behavior have not been validated. The unchanged
-scripts retain their existing fixed-filename/concurrency limitations.
-
-Passing fixture tests is evidence for the tested behavior, not a proof of exact
-equivalence for every input, environment, or future Windows NeoMutt build.
+There is no Windows NeoMutt TUI/config parser to test yet. Live authentication,
+pinentry, real sending/viewers and the future native application's process
+launching still require validation. Fixed scratch filenames retain their
+concurrency limitations. The calendar parser is event-focused, not a general
+recurrence engine; unsupported custom VTIMEZONE rules fail. Generated timezone
+serialization can differ while preserving the tested calendar properties. Small
+native Lynx layout differences were accepted. Fixture tests establish the tested
+cases rather than universal behavioral equivalence.

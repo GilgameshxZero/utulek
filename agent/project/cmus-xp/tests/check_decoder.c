@@ -10,6 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <math.h>
+#include <float.h>
 
 extern const struct input_plugin_ops ip_ops;
 /* UI globals referenced by shared text helpers on PE linkers. */
@@ -90,8 +92,11 @@ int main(int argc, char **argv)
 		return 8;
 	const char *title = keyvals_get_val(comments, "title");
 	int title_ok = title && strcmp(title, "Decoder check") == 0;
-	int seek_ok = ip_ops.seek(&data, 1.0) == 0 &&
-		ip_ops.read(&data, buffer, sizeof(buffer)) > 0;
+	int invalid_seek_ok = ip_ops.seek(&data, NAN) < 0 && ip_ops.seek(&data, INFINITY) < 0 &&
+		ip_ops.seek(&data, -1.0) < 0 && ip_ops.seek(&data, DBL_MAX) < 0;
+	int seek_result = ip_ops.seek(&data, 1.0);
+	int seek_read = seek_result == 0 ? ip_ops.read(&data, buffer, sizeof(buffer)) : 0;
+	int seek_ok = seek_result == 0 && seek_read > 0;
 	/* Seeking to the beginning after EOF must restart the decoder. */
 	int restart_ok = ip_ops.seek(&data, 0.0) == 0 &&
 		ip_ops.read(&data, buffer, sizeof(buffer)) > 0;
@@ -104,13 +109,15 @@ int main(int argc, char **argv)
 	char *codec = ip_ops.codec(&data);
 	printf("{\"bytes\":%llu,\"rate\":%u,\"channels\":%u,\"bits\":%u,"
 		"\"duration\":%d,\"codec\":\"%s\",\"title_ok\":%d,\"seek_ok\":%d,\"restart_ok\":%d,"
-		"\"restart_pcm_ok\":%d,\"reference_ok\":%d,\"restarted_bytes\":%llu,\"decode_cpu_seconds\":%.6f}\n",
+		"\"restart_pcm_ok\":%d,\"reference_ok\":%d,\"restarted_bytes\":%llu,\"decode_cpu_seconds\":%.6f,"
+		"\"invalid_seek_ok\":%d,\"seek_result\":%d,\"seek_read\":%d}\n",
 		(unsigned long long)total, sf_get_rate(data.sf), sf_get_channels(data.sf),
 		sf_get_bits(data.sf), ip_ops.duration(&data), codec, title_ok, seek_ok, restart_ok,
-		restart_pcm_ok, reference_ok, (unsigned long long)restarted, decode_cpu_seconds);
+		restart_pcm_ok, reference_ok, (unsigned long long)restarted, decode_cpu_seconds,
+		invalid_seek_ok, seek_result, seek_read);
 	free(codec);
 	keyvals_free(comments);
 	ip_ops.close(&data);
 	if (data.fd >= 0) close(data.fd);
-	return !total || !seek_ok || !restart_ok || !restart_pcm_ok || !reference_ok;
+	return !total || !seek_ok || !restart_ok || !restart_pcm_ok || !reference_ok || !invalid_seek_ok;
 }

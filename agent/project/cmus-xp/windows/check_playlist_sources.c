@@ -104,7 +104,10 @@ static void quit_player(PROCESS_INFORMATION process)
     CloseHandle(process.hProcess);
 }
 
-int wmain(int argc, wchar_t **argv)
+#ifndef CMUS_PLAYLIST_CHECK_MAIN
+#define CMUS_PLAYLIST_CHECK_MAIN wmain
+#endif
+int CMUS_PLAYLIST_CHECK_MAIN(int argc, wchar_t **argv)
 {
     if (argc != 4) return 2;
     report = _wfopen(argv[3], L"wb");

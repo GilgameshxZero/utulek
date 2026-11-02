@@ -17,6 +17,7 @@
  */
 
 #include "misc.h"
+#include "random.h"
 #include "prog.h"
 #include "xmalloc.h"
 #include "xstrjoin.h"
@@ -361,8 +362,7 @@ void shuffle_array(void *array, size_t n, size_t size)
 	char tmp[size];
 	char *arr = array;
 	for (ssize_t i = 0; i < (ssize_t)n - 1; ++i) {
-		size_t rnd = (size_t) rand();
-		size_t j = i + rnd / (RAND_MAX / (n - i) + 1);
+		size_t j = i + cmus_random_bounded(n - i);
 		memcpy(tmp, arr + j * size, size);
 		memcpy(arr + j * size, arr + i * size, size);
 		memcpy(arr + i * size, tmp, size);

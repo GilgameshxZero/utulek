@@ -64,10 +64,20 @@ def main():
     parser.add_argument('--sanitize', action='store_true')
     parser.add_argument('--windows', action='store_true', help='Cross-compile the Windows checker only')
     parser.add_argument('--build-only', action='store_true')
+    parser.add_argument('--extended', action='store_true', help='Include additional generated codec fixtures')
     parser.add_argument('--source', type=Path, default=ROOT / 'ip/ffmpeg.c')
     parser.add_argument('--audio-libs', type=Path)
     parser.add_argument('--output-dir', type=Path)
     args = parser.parse_args()
+    formats = FORMATS + ([
+        ('mp2', 'mp2'), ('wmav1.wma', 'wmav1'),
+        ('nelly.flv', 'nellymoser'), ('gsm.wav', 'libgsm_ms'),
+        ('ima.aiff', 'adpcm_ima_qt'), ('swf.flv', 'adpcm_swf'),
+        ('8bit.wav', 'pcm_u8'), ('24bit.aiff', 'pcm_s24be'),
+        ('float.aiff', 'pcm_f32be'), ('alaw.au', 'pcm_alaw'),
+        ('mulaw.au', 'pcm_mulaw'), ('aac.ts', 'aac'),
+        ('mp2.mpg', 'mp2'), ('aac.flv', 'aac'),
+    ] if args.extended else [])
     out = args.output_dir or ROOT / ('.obj/decoder_checks_native' if args.native_channels else '.obj/decoder_checks')
     out.mkdir(parents=True, exist_ok=True)
     checker = build_checker(args)
@@ -90,10 +100,10 @@ def main():
         ('video_pcm.avi', 'pcm_s16le', False, False),
     ]
     fixtures = []
-    for extension, encoder in FORMATS:
+    for extension, encoder in formats:
         path = out / ('café-音.' + extension)
-        channels = '1' if extension in ('mono.opus', 'spx') else '6' if extension == 'surround.flac' else '2'
-        rate = '44100' if extension == '44k.mp3' else '768000' if extension == '768k.wav' else '32000' if extension == 'spx' else '48000'
+        channels = '1' if extension in ('mono.opus', 'spx', 'gsm.wav', 'nelly.flv') else '6' if extension == 'surround.flac' else '2'
+        rate = '8000' if extension == 'gsm.wav' else '44100' if extension in ('44k.mp3', 'nelly.flv', 'swf.flv') else '768000' if extension == '768k.wav' else '32000' if extension == 'spx' else '48000'
         extra = ['-sample_fmt', 's32'] if extension == '24bit.flac' else []
         if encoder in ('dca', 'truehd', 'mlp'): extra += ['-strict', '-2']
         if extension == 'truehd': extra += ['-f', 'truehd']
@@ -101,7 +111,7 @@ def main():
                         'sine=frequency=440:sample_rate=' + rate + ':duration=4', '-ac', channels,
                         '-c:a', encoder] + extra + ['-metadata', 'title=Decoder check',
                         '-metadata', 'artist=Test Artist', str(path)], check=True)
-        fixtures.append((path, '0:a:0', extension not in RAW_FORMATS))
+        fixtures.append((path, '0:a:0', extension not in RAW_FORMATS | {'mp2', 'alaw.au', 'mulaw.au', 'aac.ts', 'mp2.mpg'}))
     for name, encoder, surround, alternate in containers:
         path = out / name
         video_codec = 'libvpx-vp9' if path.suffix == '.webm' else 'mpeg4'

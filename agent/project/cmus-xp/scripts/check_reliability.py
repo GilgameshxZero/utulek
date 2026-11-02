@@ -38,7 +38,9 @@ def main():
             deep.mkdir(parents=True, exist_ok=True)
             (deep / 'long_music.opus').write_bytes(b'fixture')
             link = deep / 'loop'
-            if not link.is_symlink(): link.symlink_to(OUT.resolve(), target_is_directory=True)
+            # Recreate the fixture after a checkout move or project rename.
+            if link.is_symlink(): link.unlink()
+            if not link.exists(): link.symlink_to(OUT.resolve(), target_is_directory=True)
             command.append(str(deep))
         if name == 'wav_malformed':
             bad = OUT / 'oversized_fmt.wav'

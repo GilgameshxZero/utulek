@@ -18,8 +18,8 @@ DECODERS = ('opus,vorbis,flac,mp3,mp3float,mp2,mp2float,aac,aac_fixed,alac,'
             'dca,truehd,mlp,shorten,atrac3,atrac3p,amrnb,amrwb,gsm,gsm_ms,'
             'speex,nellymoser,sbc,adpcm_*,pcm_*')
 DEMUXERS = ('ogg,mp3,flac,mov,matroska,aac,ac3,eac3,wav,aiff,asf,ape,wv,'
-            'tta,tak,mpc,mpc8,dsf,dsdiff,au,dts,dtshd,truehd,mlp,shn,'
-            'amr,rm,oma,flv,avi,mpegts,mpeg,sbc')
+            'tta,tak,mpc,mpc8,dsf,iff,au,dts,dtshd,truehd,mlp,shorten,'
+            'amr,rm,oma,flv,avi,mpegts,mpegps,sbc')
 PARSERS = 'opus,vorbis,flac,mpegaudio,aac,ac3,dca,mlp,amr,gsm,sbc'
 
 
@@ -46,7 +46,7 @@ def main():
     configure = [str(source / 'configure'), '--prefix=' + str(prefix),
                  '--disable-autodetect', '--disable-shared', '--enable-static', '--enable-pic',
                  '--disable-programs', '--disable-doc', '--disable-debug',
-                 '--disable-network', '--disable-avdevice', '--disable-avfilter',
+                 '--disable-network', '--disable-iamf', '--disable-avdevice', '--disable-avfilter',
                  '--disable-swscale', '--disable-everything', '--enable-runtime-cpudetect',
                  '--enable-avcodec', '--enable-avformat', '--enable-swresample',
                  '--enable-protocol=file', '--enable-decoder=' + DECODERS,
@@ -78,6 +78,15 @@ def main():
                       '--enable-muxer=pcm_s16le,pcm_s32le', '--enable-protocol=pipe']
     env = dict(os.environ, LC_ALL='C')
     subprocess.run(configure, cwd=build, env=env, check=True)
+    # Configure can warn and succeed when a requested component is misspelled.
+    # Require the promised demuxers and the deliberately reduced attack surface.
+    components = (build / 'config_components.h').read_text()
+    config = (build / 'config.h').read_text()
+    for demuxer in DEMUXERS.split(','):
+        if '#define CONFIG_' + demuxer.upper() + '_DEMUXER 1' not in components:
+            raise SystemExit('Required FFmpeg demuxer missing: ' + demuxer)
+    if '#define CONFIG_IAMFDEC 0' not in config or '#define CONFIG_NETWORK 0' not in config:
+        raise SystemExit('Unexpected FFmpeg network or IAMF support')
     subprocess.run(['make', '-j' + str(args.jobs)], cwd=build, env=env, check=True)
     subprocess.run(['make', 'install'], cwd=build, env=env, check=True)
     print(prefix)

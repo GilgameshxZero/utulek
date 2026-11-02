@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-# Called by the original HTML helper through BROWSER when running in Git Bash.
-# Explicitly select the existing Windows launcher, rather than the Linux
-# extensionless xdg-open script selected by Bash's PATH lookup.
-launcher=$(command -v xdg-open.bat) || exit
-launcher=$(cygpath -w "$launcher") || exit
-file=$(cygpath -wa "$1") || exit
-MSYS_NO_PATHCONV=1 cmd.exe /d /c call "$launcher" "$file"

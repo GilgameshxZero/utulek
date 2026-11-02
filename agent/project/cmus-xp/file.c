@@ -26,6 +26,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdatomic.h>
+#include <stdio.h>
+#include <string.h>
 
 ssize_t read_all(int fd, void *buf, size_t count)
 {
@@ -53,21 +58,94 @@ ssize_t read_all(int fd, void *buf, size_t count)
 ssize_t write_all(int fd, const void *buf, size_t count)
 {
 	const char *buffer = buf;
-	int count_save = count;
+	if (count > PTRDIFF_MAX) { errno = EINVAL; return -1; }
+	ssize_t count_save = count;
 
 	do {
 		int rc;
 
-		rc = write(fd, buffer, count);
+		rc = write(fd, buffer, count > INT_MAX ? INT_MAX : count);
 		if (rc == -1) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
 			return -1;
 		}
+		if (!rc && count) { errno = EIO; return -1; }
 		buffer += rc;
 		count -= rc;
 	} while (count > 0);
 	return count_save;
+}
+
+static char *save_target(const char *filename)
+{
+#ifdef CMUS_NATIVE_WINDOWS
+	wchar_t *wide = win_path(filename);
+	if (!wide) return NULL;
+	HANDLE handle = CreateFileW(wide, FILE_READ_ATTRIBUTES,
+		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+	if (handle == INVALID_HANDLE_VALUE) {
+		DWORD error = GetLastError(), attrs = GetFileAttributesW(wide);
+		free(wide);
+		if ((error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) &&
+				(attrs == INVALID_FILE_ATTRIBUTES || !(attrs & FILE_ATTRIBUTE_REPARSE_POINT)))
+			return xstrdup(filename);
+		errno = EACCES; return NULL;
+	}
+	free(wide);
+	DWORD size = GetFinalPathNameByHandleW(handle, NULL, 0, FILE_NAME_NORMALIZED);
+	wide = size ? malloc((size + 1) * sizeof(*wide)) : NULL;
+	DWORD length = wide ? GetFinalPathNameByHandleW(handle, wide, size + 1, FILE_NAME_NORMALIZED) : 0;
+	CloseHandle(handle);
+	if (!length || length > size) { free(wide); errno = EIO; return NULL; }
+	char *plain = win_normalize(win_utf8(wide));
+	char *target = plain ? win_absolute_path(plain, NULL) : NULL;
+	free(plain);
+	free(wide);
+	return target;
+#else
+	char *target = realpath(filename, NULL);
+	if (target) return target;
+	if (errno != ENOENT) return NULL;
+	struct stat st;
+	/* Preserve dangling links rather than replacing them with a regular file. */
+	if (!lstat(filename, &st) && S_ISLNK(st.st_mode)) { errno = ENOENT; return NULL; }
+	return xstrdup(filename);
+#endif
+}
+
+int file_write_atomic(const char *filename, int (*write_cb)(int, void *), void *data)
+{
+	static _Atomic unsigned int sequence;
+	char *target = save_target(filename);
+	if (!target) return -1;
+	struct stat st;
+	int exists = stat(target, &st) == 0;
+	if (exists && !S_ISREG(st.st_mode)) { free(target); errno = EINVAL; return -1; }
+	char *temporary = xmalloc(strlen(target) + 64);
+	int fd = -1;
+	for (int attempt = 0; attempt < 64; attempt++) {
+		snprintf(temporary, strlen(target) + 64, "%s.tmp.%lu.%u", target,
+			(unsigned long)getpid(), atomic_fetch_add(&sequence, 1));
+		fd = open(temporary, O_WRONLY | O_CREAT | O_EXCL, 0666);
+		if (fd >= 0 || errno != EEXIST) break;
+	}
+	int rc = -1, saved_errno = errno;
+	if (fd >= 0) {
+#ifndef CMUS_NATIVE_WINDOWS
+		if (exists && fchmod(fd, st.st_mode & 0777)) goto close_temporary;
+#endif
+		rc = write_cb(fd, data);
+		if (!rc) rc = fsync(fd);
+close_temporary:
+		saved_errno = errno;
+		if (close(fd) && !rc) { rc = -1; saved_errno = errno; }
+		if (!rc) { rc = rename(temporary, target); saved_errno = errno; }
+		if (rc) unlink(temporary);
+	}
+	free(temporary); free(target);
+	errno = saved_errno;
+	return rc;
 }
 
 char *mmap_file(const char *filename, ssize_t *size)

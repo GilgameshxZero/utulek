@@ -79,6 +79,7 @@ STATIC_ASSERT(CACHE_ENTRY_TOTAL_SIZE == offsetof(struct cache_entry, strings));
 
 #define ALIGN(size) (((size) + sizeof(long) - 1) & ~(sizeof(long) - 1))
 #define HASH_SIZE 1023
+#define CACHE_ENTRY_MAX_SIZE (16 * 1024 * 1024)
 
 static struct track_info *hash_table[HASH_SIZE];
 static char *cache_filename;
@@ -115,7 +116,7 @@ static int valid_cache_entry(const struct cache_entry *e, unsigned int avail)
 		if (!e->strings[i])
 			count++;
 	}
-	if (count % 2 == 0)
+	if (count < 3 || count % 2 == 0 || !e->strings[0])
 		return 0;
 	if (e->strings[str_size - 1])
 		return 0;
@@ -218,52 +219,50 @@ void cache_remove_ti(struct track_info *ti)
 
 static int read_cache(void)
 {
-	unsigned int size, offset = 0;
-	struct stat st = {};
-	char *buf;
-	int fd;
-
-	fd = open(cache_filename, O_RDONLY);
-	if (fd < 0) {
+	struct stat st;
+	FILE *file = fopen(cache_filename, "rb");
+	struct cache_entry *entry = NULL;
+	size_t capacity = 0;
+	uint64_t offset = sizeof(cache_header);
+	int result = -2;
+	char header[sizeof(cache_header)];
+	if (!file) {
 		if (errno == ENOENT)
 			return 0;
 		return -1;
 	}
-	fstat(fd, &st);
-	if (st.st_size < sizeof(cache_header))
-		goto close;
-	size = st.st_size;
-
-	buf = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (buf == MAP_FAILED) {
-		close(fd);
-		return -1;
-	}
-
-	if (memcmp(buf, cache_header, sizeof(cache_header)))
-		goto corrupt;
-
-	offset = sizeof(cache_header);
-	while (offset < size) {
-		struct cache_entry *e = (void *)(buf + offset);
-		struct track_info *ti;
-
-		if (!valid_cache_entry(e, size - offset))
-			goto corrupt;
-
-		ti = cache_entry_to_ti(e);
+	if (fstat(fileno(file), &st) || !S_ISREG(st.st_mode)) { result = -1; goto done; }
+	if (st.st_size < sizeof(header) || fread(header, 1, sizeof(header), file) != sizeof(header) ||
+			memcmp(header, cache_header, sizeof(header))) goto done;
+	/* Bounded buffered reads tolerate external truncation, unlike mmap. The
+	 * original file size also bounds reads if another process appends data. */
+	while (offset < (uint64_t)st.st_size) {
+		size_t pad = ALIGN(offset) - offset;
+		char padding[sizeof(long)];
+		uint32_t size;
+		if (pad > (uint64_t)st.st_size - offset || fread(padding, 1, pad, file) != pad) goto done;
+		offset += pad;
+		if ((uint64_t)st.st_size - offset < sizeof(*entry) ||
+				fread(&size, 1, sizeof(size), file) != sizeof(size) || size < sizeof(*entry) ||
+				size > CACHE_ENTRY_MAX_SIZE || size > (uint64_t)st.st_size - offset) goto done;
+		if (size > capacity) {
+			void *next = realloc(entry, size);
+			if (!next) { result = -1; goto done; }
+			entry = next; capacity = size;
+		}
+		entry->size = size;
+		if (fread((char *)entry + sizeof(size), 1, size - sizeof(size), file) != size - sizeof(size) ||
+				!valid_cache_entry(entry, size)) goto done;
+		struct track_info *ti = cache_entry_to_ti(entry);
 		add_ti(ti, hash_str(ti->filename));
-		offset += ALIGN(e->size);
+		offset += size;
 	}
-	munmap(buf, size);
-	close(fd);
-	return 0;
-corrupt:
-	munmap(buf, size);
-close:
-	close(fd);
-	// corrupt
-	return -2;
+	result = 0;
+done:
+	if (ferror(file)) result = -1;
+	free(entry);
+	fclose(file);
+	return result;
 }
 
 int cache_init(void)
@@ -317,19 +316,20 @@ static struct track_info **get_track_infos(bool reference)
 	return tis;
 }
 
-static void flush_buffer(int fd, struct gbuf *buf)
+static int flush_buffer(int fd, struct gbuf *buf)
 {
 	if (buf->len) {
-		write_all(fd, buf->buffer, buf->len);
+		if (write_all(fd, buf->buffer, buf->len) < 0) return -1;
 		gbuf_clear(buf);
 	}
+	return 0;
 }
 
-static void write_ti(int fd, struct gbuf *buf, struct track_info *ti, unsigned int *offsetp)
+static int write_ti(int fd, struct gbuf *buf, struct track_info *ti, uint64_t *offsetp)
 {
 	char *proc_filename = pl_env_reduce(ti->filename);
 	const struct keyval *kv = ti->comments;
-	unsigned int offset = *offsetp;
+	uint64_t offset = *offsetp;
 	unsigned int pad;
 	struct cache_entry e;
 	int *len, alloc = 64, count, i;
@@ -362,8 +362,9 @@ static void write_ti(int fd, struct gbuf *buf, struct track_info *ti, unsigned i
 	}
 
 	pad = ALIGN(offset) - offset;
-	if (gbuf_avail(buf) < pad + e.size)
-		flush_buffer(fd, buf);
+	if (gbuf_avail(buf) < pad + e.size && flush_buffer(fd, buf) < 0) {
+		free(len); free(proc_filename); return -1;
+	}
 
 	count = 0;
 	if (pad)
@@ -381,38 +382,35 @@ static void write_ti(int fd, struct gbuf *buf, struct track_info *ti, unsigned i
 	*offsetp = offset + pad + e.size;
 
 	free(proc_filename);
+	return 0;
 }
 
-int cache_close(void)
+static int write_cache(int fd, void *unused)
 {
+	(void)unused;
 	GBUF(buf);
 	struct track_info **tis;
-	unsigned int offset;
-	int i, fd, rc;
-	char *tmp;
-
-	tmp = xstrjoin(cmus_config_dir, "/cache.tmp");
-	fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-	if (fd < 0) {
-		free(tmp);
-		return -1;
-	}
+	uint64_t offset;
+	int i, rc;
 
 	tis = get_track_infos(false);
 
 	gbuf_grow(&buf, 64 * 1024 - 1);
 	gbuf_add_bytes(&buf, cache_header, sizeof(cache_header));
 	offset = sizeof(cache_header);
-	for (i = 0; i < total; i++)
-		write_ti(fd, &buf, tis[i], &offset);
-	flush_buffer(fd, &buf);
+	rc = 0;
+	for (i = 0; i < total && !rc; i++)
+		rc = write_ti(fd, &buf, tis[i], &offset);
+	if (!rc) rc = flush_buffer(fd, &buf);
 	gbuf_free(&buf);
 	free(tis);
 
-	close(fd);
-	rc = rename(tmp, cache_filename);
-	free(tmp);
 	return rc;
+}
+
+int cache_close(void)
+{
+	return file_write_atomic(cache_filename, write_cache, NULL);
 }
 
 static struct track_info *ip_get_ti(const char *filename)

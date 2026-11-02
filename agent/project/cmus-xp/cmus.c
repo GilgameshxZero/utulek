@@ -207,65 +207,79 @@ void cmus_add(add_ti_cb add, const char *name, enum file_type ft, int jt, int fo
 	job_schedule_add(jt, data);
 }
 
+struct save_context {
+	int fd;
+	struct gbuf buffer;
+	for_each_ti_cb for_each;
+	save_tracks_cb callback;
+	void *opaque;
+};
+
+static int save_flush(struct save_context *data)
+{
+	if (write_all(data->fd, data->buffer.buffer, data->buffer.len) < 0) return -1;
+	gbuf_clear(&data->buffer);
+	return 0;
+}
+
 static int save_ext_playlist_cb(void *data, struct track_info *ti)
 {
-	GBUF(buf);
-	int fd = *(int *)data;
-	int i, rc;
+	struct save_context *context = data;
+	struct gbuf *buf = &context->buffer;
+	int i;
 
-	gbuf_addf(&buf, "file %s\n", escape(ti->filename));
-	gbuf_addf(&buf, "duration %d\n", ti->duration);
-	gbuf_addf(&buf, "codec %s\n", ti->codec);
-	gbuf_addf(&buf, "bitrate %ld\n", ti->bitrate);
+	gbuf_addf(buf, "file %s\n", escape(ti->filename));
+	gbuf_addf(buf, "duration %d\n", ti->duration);
+	gbuf_addf(buf, "codec %s\n", ti->codec ? ti->codec : "");
+	gbuf_addf(buf, "bitrate %ld\n", ti->bitrate);
 	for (i = 0; ti->comments[i].key; i++)
-		gbuf_addf(&buf, "tag %s %s\n",
+		gbuf_addf(buf, "tag %s %s\n",
 				ti->comments[i].key,
 				escape(ti->comments[i].val));
 
-	rc = write_all(fd, buf.buffer, buf.len);
-	gbuf_free(&buf);
-
-	if (rc == -1)
-		return -1;
-	return 0;
+	return buf->len >= 64 * 1024 ? save_flush(context) : 0;
 }
 
 static int save_playlist_cb(void *data, struct track_info *ti)
 {
 	char *proc_filename = pl_env_reduce(ti->filename);
-	int fd = *(int *)data;
-	const char nl = '\n';
-	int rc;
-
-	rc = write_all(fd, proc_filename, strlen(proc_filename));
+	struct save_context *context = data;
+	gbuf_add_str(&context->buffer, proc_filename);
+	gbuf_add_ch(&context->buffer, '\n');
 	free(proc_filename);
-	if (rc == -1)
-		return -1;
+	return context->buffer.len >= 64 * 1024 ? save_flush(context) : 0;
+}
 
-	rc = write_all(fd, &nl, 1);
-	if (rc == -1)
-		return -1;
-
-	return 0;
+static int save_to_fd(int fd, void *opaque)
+{
+	struct save_context *data = opaque;
+	data->fd = fd;
+	int rc = data->for_each(data->callback, data, data->opaque);
+	if (!rc) rc = save_flush(data);
+	return rc;
 }
 
 static int do_cmus_save(for_each_ti_cb for_each_ti, const char *filename,
 		save_tracks_cb save_tracks, void *opaque)
 {
-	int fd, rc;
+	int rc;
+	struct save_context context = {.buffer = {gbuf_empty_buffer, 0, 0}, .for_each = for_each_ti,
+		.callback = save_tracks, .opaque = opaque};
 
 	if (strcmp(filename, "-") == 0) {
 		if (get_client_fd() == -1) {
 			error_msg("saving to stdout works only remotely");
 			return 0;
 		}
-		fd = dup(get_client_fd());
+		int fd = dup(get_client_fd());
+		if (fd < 0) return -1;
+		rc = save_to_fd(fd, &context);
+		int saved_errno = errno;
+		if (close(fd) && !rc) { rc = -1; saved_errno = errno; }
+		errno = saved_errno;
 	} else
-		fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, 0666);
-	if (fd == -1)
-		return -1;
-	rc = for_each_ti(save_tracks, &fd, opaque);
-	close(fd);
+		rc = file_write_atomic(filename, save_to_fd, &context);
+	gbuf_free(&context.buffer);
 	return rc;
 }
 

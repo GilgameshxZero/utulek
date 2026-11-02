@@ -21,6 +21,7 @@
 #include "../debug.h"
 #include "../utils.h"
 #include "../comment.h"
+#include <pthread.h>
 #ifdef HAVE_CONFIG
 #include "config/ffmpeg.h"
 #endif
@@ -65,19 +66,13 @@ struct ffmpeg_private {
 
 static const char *ffmpeg_errmsg(int err)
 {
-	static char errstr[AV_ERROR_MAX_STRING_SIZE];
+	static _Thread_local char errstr[AV_ERROR_MAX_STRING_SIZE];
 	av_strerror(err, errstr, AV_ERROR_MAX_STRING_SIZE);
 	return errstr;
 }
 
-static void ffmpeg_init(void)
+static void ffmpeg_init_once(void)
 {
-	static int inited = 0;
-
-	if (inited != 0)
-		return;
-	inited = 1;
-
 	av_log_set_level(AV_LOG_QUIET);
 
 #if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58, 9, 100)
@@ -85,6 +80,12 @@ static void ffmpeg_init(void)
 	 * be careful about compatibility. */
 	av_register_all();
 #endif
+}
+
+static void ffmpeg_init(void)
+{
+	static pthread_once_t once = PTHREAD_ONCE_INIT;
+	pthread_once(&once, ffmpeg_init_once);
 }
 
 static int ffmpeg_open_input(struct input_plugin_data *ip_data,
@@ -330,13 +331,16 @@ static int64_t ffmpeg_calc_skip_samples(struct ffmpeg_private *priv)
 
 	AVStream *s = priv->format_ctx->streams[priv->stream_index];
 	int64_t start = s->start_time == AV_NOPTS_VALUE ? 0 : s->start_time;
-	double frame_ts = (ts - start) * av_q2d(s->time_base);
+	double frame_ts = ((double)ts - (double)start) * av_q2d(s->time_base);
 
 	d_print("seek_ts: %.6fs, frame_ts: %.6fs\n", priv->seek_ts, frame_ts);
 
 	if (frame_ts >= priv->seek_ts)
 		return 0;
-	return (priv->seek_ts - frame_ts) * priv->frame->sample_rate;
+	double skip = (priv->seek_ts - frame_ts) * priv->frame->sample_rate;
+	if (!isfinite(skip) || skip >= (double)INT64_MAX)
+		return -1;
+	return skip;
 }
 
 static void ffmpeg_skip_frame_part(struct ffmpeg_private *priv)
@@ -378,6 +382,7 @@ static void ffmpeg_skip_frame_part(struct ffmpeg_private *priv)
 static int ffmpeg_get_frame(struct ffmpeg_private *priv)
 {
 	int res;
+	int corrupt_packets = 0;
 retry:
 	av_frame_unref(priv->frame);
 	res = avcodec_receive_frame(priv->codec_ctx, priv->frame);
@@ -423,6 +428,10 @@ retry:
 err:
 	if (res == AVERROR_EOF)
 		return 0;
+	/* Seeking can begin inside an audio frame (notably MPEG-PS). Skip
+	 * recoverable damaged packets, with a bound for malformed inputs. */
+	if (res == AVERROR_INVALIDDATA && ++corrupt_packets <= 64)
+		goto retry;
 	d_print("%s\n", ffmpeg_errmsg(res));
 	return -IP_ERROR_INTERNAL;
 }
@@ -535,6 +544,8 @@ static int ffmpeg_read(struct input_plugin_data *ip_data, char *buffer, int coun
 
 static int ffmpeg_seek(struct input_plugin_data *ip_data, double offset)
 {
+	if (!isfinite(offset) || offset < 0)
+		return -IP_ERROR_FUNCTION_NOT_SUPPORTED;
 	if (offset == 0) {
 		/* Seeking to timestamp zero can skip negative-timestamp priming packets
 		 * (AAC/Opus), and some codecs retain state after flush. Reopen only at
@@ -551,12 +562,19 @@ static int ffmpeg_seek(struct input_plugin_data *ip_data, double offset)
 	struct ffmpeg_private *priv = ip_data->private;
 	AVStream *st = priv->format_ctx->streams[priv->stream_index];
 
-	int64_t ts = offset / av_q2d(st->time_base);
+	double timestamp = offset / av_q2d(st->time_base);
+	if (!isfinite(timestamp) || timestamp >= (double)INT64_MAX ||
+			(st->start_time > 0 && timestamp >= (double)(INT64_MAX - st->start_time)))
+		return -IP_ERROR_FUNCTION_NOT_SUPPORTED;
+	int64_t ts = timestamp;
 	if (offset > 0 && st->start_time != AV_NOPTS_VALUE)
 		ts += st->start_time;
 
 	int ret = avformat_seek_file(priv->format_ctx,
 			priv->stream_index, INT64_MIN, ts, ts, 0);
+	/* Some local demuxers implement the older timestamp-seek interface. */
+	if (ret < 0)
+		ret = av_seek_frame(priv->format_ctx, priv->stream_index, ts, AVSEEK_FLAG_BACKWARD);
 	if (ret < 0)
 		return -IP_ERROR_FUNCTION_NOT_SUPPORTED;
 	priv->seek_ts = offset > 0 ? offset : -1;

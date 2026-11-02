@@ -10,6 +10,8 @@ The local ical_support module uses only Python's standard library.
 __author__ = "Martin Sander"
 __license__ = "MIT"
 
+import atexit
+from pathlib import Path
 import locale
 import subprocess
 import sys
@@ -222,6 +224,14 @@ if __name__ == "__main__":
     generate_reply_to = None
     # Gilgamesh.
     opts, args = getopt(sys.argv[1:], "s:e:g:aidtD")
+    # A cancelled/failed generation must not leave an empty new-mime placeholder.
+    def remove_empty_reply():
+        for option, value in opts:
+            if option == '-g':
+                path = Path(value)
+                if path.is_file() and path.stat().st_size == 0:
+                    path.unlink()
+    atexit.register(remove_empty_reply)
 
     if len(args) < 1:
         sys.stderr.write(usage)

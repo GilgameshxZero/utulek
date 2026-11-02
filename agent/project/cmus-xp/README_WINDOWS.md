@@ -31,7 +31,8 @@ Supported common formats include **Opus** (`.opus`, and Opus inside `.ogg`),
 MP3, FLAC, Ogg Vorbis, AAC/M4A/M4B, ALAC, WAV, AIFF, WMA, and WavPack.
 Additional decoders include DTS, TrueHD/MLP, ADPCM, Speex, AMR, GSM, ATRAC3/3+,
 Shorten, DSD, APE, TTA, TAK, Musepack, and AC-3/E-AC-3. Local MKV/MKA, WebM,
-MP4, AVI, MPEG/TS, FLV, RealMedia and OMA containers are enabled. MKV playback
+MP4, AVI, MPEG-TS, FLV, RealMedia and OMA containers are enabled. MPEG program
+streams are unavailable in the current build. MKV playback
 selects the default decodable audio track and discards unused video, subtitles,
 and alternate audio; video is never decoded or displayed. FFmpeg surround
 audio is downmixed to stereo, respecting embedded downmix metadata. Track
@@ -121,7 +122,7 @@ The executable also has a read-only `--check-runtime` diagnostic: drive/UNC
 canonicalization, long-path and Unicode conversion, a system DLL read/map,
 and system-directory enumeration. It bypasses normal initialization and writes
 no configuration, fixtures, or reports. Windows diagnostics can run against the
-existing synced installation without uploading test files. The installed 0.3
+existing synced installation without uploading test files. The installed 0.5
 Windows batch launcher and these diagnostics passed, with its binary SHA-256
 matching the local build.
 
@@ -249,5 +250,5 @@ completion milestone:
 * Streaming/internet radio.
 * Remote control equivalent to `cmus-remote`.
 * CUE-sheet playback.
-* Multichannel output/downmixing.
+* Native multichannel output (FFmpeg surround downmixing is already supported).
 * Fuller Windows equivalents for external commands and status hooks.
