@@ -26,6 +26,13 @@ func (f *frame) add(y, x int, text string, attr int) {
 	f.Lines = append(f.Lines, drawLine{y, x, clip(text, f.Width-x-1), attr})
 }
 func (a *App) footer(w int, hints string) string {
+	connection := "Disconnected"
+	if a.Connected {
+		connection = "Connected"
+	}
+	return connection + " · " + a.footerContent(w-width(connection)-3, hints)
+}
+func (a *App) footerContent(w int, hints string) string {
 	if time.Now().Before(a.StatusUntil) {
 		hints = a.Status
 	}
@@ -168,7 +175,8 @@ func (a *App) render(w, h int) frame {
 		hints = "Accounts · Enter select · Esc back"
 	case "index", "contacts":
 		rows := a.entries()
-		a.Selected = max(0, min(a.Selected, len(rows)))
+		a.Selected = max(1, min(a.Selected, len(rows)))
+		a.Top = max(1, a.Top)
 		if a.Selected < a.Top {
 			a.Top = a.Selected
 		}
@@ -181,17 +189,6 @@ func (a *App) render(w, h int) frame {
 			if position == a.Selected {
 				attr = attrReverse
 			}
-			if position == 0 {
-				label := "+ New conversation…"
-				if a.View == "contacts" {
-					label = "+ Enter a phone number…"
-					if strings.HasPrefix(a.Query, "+") {
-						label = "+ Use " + a.Query
-					}
-				}
-				f.add(row, 0, label, attr|attrBold)
-				continue
-			}
 			number := rows[position-1]
 			c := a.contact(number)
 			right := number
@@ -202,9 +199,9 @@ func (a *App) render(w, h int) frame {
 			f.add(row, 0, clip(c.Name, nameWidth), attr)
 			f.add(row, nameWidth+2, right, attr|attrDim)
 		}
-		hints = "j/k Enter open · n new · y accounts · / · q quit"
+		hints = "j/k Enter open · + new · y accounts · / · q quit"
 		if a.View == "contacts" {
-			hints = "j/k Enter open · / · q back"
+			hints = "j/k Enter open · + number · / · q back"
 		}
 		if a.Search {
 			hints = "Enter open · Esc cancel"
@@ -267,7 +264,7 @@ func (a *App) render(w, h int) frame {
 		instructions := []string{
 			"j/k or arrows select recipients and scroll history. Enter opens.",
 			"y in a list opens Accounts; Enter selects an account.",
-			"n opens New conversation: search khard or enter a number.",
+			"+ opens New conversation: search khard or enter a number.",
 			"/ searches. Esc cancels and restores the previous position.",
 			"Enter accepts search. q clears the filter before going back.",
 			"Conversation: Enter writes. Compose: Enter or Esc finishes.",

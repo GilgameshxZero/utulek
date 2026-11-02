@@ -27,6 +27,12 @@ type Config struct {
 	SyncNumbers      []string `json:"sync_numbers,omitempty"`
 }
 
+var shortCodePattern = regexp.MustCompile(`^[0-9]{3,6}$`)
+
+func historyPeer(number string) bool {
+	return phonePattern.MatchString(number) || shortCodePattern.MatchString(number)
+}
+
 var phonePattern = regexp.MustCompile(`^\+[1-9][0-9]{7,14}$`)
 
 func homeDir() string {
@@ -101,8 +107,8 @@ func readConfig(home string) (Config, error) {
 		return c, e
 	}
 	for _, number := range c.SyncNumbers {
-		if !phonePattern.MatchString(number) {
-			return c, errors.New("sync_numbers must contain international phone numbers")
+		if !historyPeer(number) {
+			return c, errors.New("sync_numbers must contain international phone numbers or short codes")
 		}
 	}
 	if c.AuthRetrySeconds == 0 {

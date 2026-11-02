@@ -139,7 +139,7 @@ func TestHistorySearchCancelRestoresScroll(t *testing.T) {
 func TestNestedNewConversationAndUnknownNumber(t *testing.T) {
 	a := testApp(t)
 	a.Selected = 2
-	a.key('n', 12)
+	a.key('+', 12)
 	a.key('/', 12)
 	typeKeys(a, "Sam")
 	a.key(13, 12)
@@ -155,10 +155,9 @@ func TestNestedNewConversationAndUnknownNumber(t *testing.T) {
 	if a.View != "index" || a.Selected != 2 {
 		t.Fatal("original index selection lost")
 	}
-	a.key('n', 12)
+	a.key('+', 12)
 	a.Prompt = func(title, initial string, secret bool) (string, bool) { return "+1 (202) 555-0199", true }
-	a.Selected = 0
-	a.selectEntry()
+	a.key('+', 12)
 	if a.Number != "+12025550199" {
 		t.Fatal("manual number failed")
 	}
@@ -167,7 +166,7 @@ func TestFooterOnlyNoTitleOrRefreshing(t *testing.T) {
 	a := testApp(t)
 	a.Jobs["sync"] = true
 	f := a.render(40, 10)
-	if len(f.Lines) == 0 || f.Lines[0].Y != 0 || !strings.Contains(f.Lines[0].Text, "New conversation") {
+	if len(f.Lines) == 0 || f.Lines[0].Y != 0 || !strings.Contains(f.Lines[0].Text, "Alex Morgan") {
 		t.Fatal("title is consuming content row")
 	}
 	for _, line := range f.Lines {
@@ -295,5 +294,26 @@ func TestFilenamePickerAddsThenRemovesAttachment(t *testing.T) {
 	a.key('d', 12)
 	if len(a.DraftFiles) != 0 {
 		t.Fatal("attachment removal failed")
+	}
+}
+
+func TestPersistentConnectionFooter(t *testing.T) {
+	a := testApp(t)
+	for _, connected := range []bool{false, true} {
+		a.Connected = connected
+		want := "Disconnected"
+		if connected {
+			want = "Connected"
+		}
+		a.note("temporary notice")
+		if !strings.HasPrefix(a.footer(80, "hints"), want+" · ") {
+			t.Fatal("connection hidden by notice")
+		}
+		a.StatusUntil = time.Time{}
+		a.Search = true
+		a.Query = "Alex"
+		if !strings.HasPrefix(a.footer(80, "hints"), want+" · ") {
+			t.Fatal("connection hidden by search")
+		}
 	}
 }

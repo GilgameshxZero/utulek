@@ -4,6 +4,7 @@ The user's installation convention (updated November 1, 2026):
 
 * Keep software source projects under `project/` in the agent workspace.
 * Install compiled binaries under `~/main.syncthing/monochrome/app/`, rather than `monochrome/bin/`. A project subdirectory is appropriate when multiple runtime files belong together.
+* `monochrome/bin/` is for launcher scripts only: use executable shell scripts for Linux, not symlinks or raw binaries. `monochrome/app/` holds binaries and their runtime resources.
 * Put executable shell launchers and Windows `.bat` launchers in `~/main.syncthing/monochrome/bin/`. Follow existing launchers in that directory.
 * Launchers must quote the executable path and forward every argument: shell `exec ".../app/program" "$@"`; batch `@"%~dp0..\app\program.exe" %*`. Preserve the program's exit code and do not change the caller's working directory unnecessarily.
 * For SMSGate, install `app/smsgatec` and `app/smsgatec.exe`; expose `bin/smsgatec` and `bin/smsgatec.bat`. Remove obsolete raw binaries from `bin/` after installing their replacements.

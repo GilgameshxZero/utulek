@@ -5,7 +5,7 @@ The canonical project is `project/smsgatec/`; see `project/smsgatec/README.md`. 
 ## Interface and private state
 
 * NeoMutt-like index/contact picker and full-width conversation view; no title/sidebar. Search, hints, and errors share one bottom line. Background refresh is silent.
-* j/k or arrows navigate, Enter opens a recipient. n opens New conversation with vCard contact search and manual number entry.
+* j/k or arrows navigate, Enter opens a recipient. + opens New conversation with vCard contact search; + again enters a number. There is no dedicated new-conversation row. The status line persistently shows the last known server connection state.
 * Conversation Enter opens compose. Compose Enter or Esc finishes into review; Shift+Enter inserts a newline (F4 fallback). Review y or Enter sends; e edits, a attaches a file, s sets/clears the MMS subject, d removes the last selected file. E optionally uses the external editor.
 * Conversation o chooses an attachment to open; s chooses one to save. Saving never overwrites an existing file.
 * / searches. Esc cancels search and restores the previous view position. Enter confirms a filter; q backs through it and then through the originating list. Selection remains pinned to the same recipient across index reordering. q quits only at the unfiltered root index.
@@ -70,3 +70,11 @@ For browser-side receipt/reply checks, use `workflow/google_voice-workflow.md` a
 Do not use inbox reimport as a callback probe: already-imported messages suppress duplicate webhooks. Do not toggle ping as a probe: changing its interval through the API requires an app restart. Use a real authorized Google Voice -> Android incoming event, with both listeners ready, to validate callbacks. Keep ping disabled unless the user separately wants it.
 
 Accounts: y in the list opens the account picker; Enter selects, Esc cancels. Only the selected account connects. Configuration uses accounts plus active_account; legacy flat configs remain supported.
+
+## Google Voice bridge deployment
+
+The user runs `smsgate-gv` manually. Install its binary under `monochrome/app/`;
+do not create or enable a systemd service. Temporary verification runs must stop
+before finishing. Bridge history includes international numbers and numeric short
+codes, preserving sender identity. Decoder-version changes invalidate older sync
+cursors so previously skipped messages can be backfilled.

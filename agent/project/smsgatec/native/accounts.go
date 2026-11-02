@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -66,7 +65,6 @@ func (a *App) accountsKey(key int) {
 		a.contacts("")
 		a.sync()
 		a.Dirty = true
-		a.note(fmt.Sprintf("Account: %s", c.Accounts[a.accountIndex()].Name))
 	}
 }
 func (a *App) accountIndex() int {

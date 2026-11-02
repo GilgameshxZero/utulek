@@ -94,7 +94,7 @@ func (b *Browser) verify() error {
 func (b *Browser) sync(store *Store) error {
 	if b.historyRequest == nil && b.cursor == "" {
 		var saved syncCursor
-		if data, e := os.ReadFile(filepath.Join(filepath.Dir(store.path), "sync_cursor.json")); e == nil && json.Unmarshal(data, &saved) == nil && saved.Account == b.config.Number && len(store.list(true))+len(store.list(false)) > 0 {
+		if data, e := os.ReadFile(filepath.Join(filepath.Dir(store.path), "sync_cursor.json")); e == nil && json.Unmarshal(data, &saved) == nil && saved.Version == syncCursorVersion && saved.Account == b.config.Number && len(store.list(true))+len(store.list(false)) > 0 {
 			b.cursor = saved.Token
 		}
 	}

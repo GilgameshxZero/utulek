@@ -1,0 +1,29 @@
+# Copy to ~/.config/khard/khard.conf on either Windows or Linux.
+# This is the same ConfigObj format used by upstream khard.
+# Use home-relative paths and commands available on both platforms.
+[addressbooks]
+[[default]]
+path = ~/contacts/default/
+
+[general]
+default_action = list
+# Leave editor unset for the default Windows text editor.
+# On Linux, an unset editor uses EDITOR, then vim.
+# editor = vim, -i, NONE
+merge_editor = vimdiff
+
+[contact table]
+display = formatted_name
+sort = formatted_name
+reverse = no
+group_by_addressbook = no
+show_nicknames = no
+show_uids = no
+show_kinds = no
+localize_dates = yes
+
+[vcard]
+preferred_version = 3.0
+private_objects = ,
+search_in_source_files = yes
+skip_unparsable = no

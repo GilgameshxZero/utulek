@@ -42,6 +42,7 @@ type App struct {
 	AccountBase                 snapshot
 	MMSWait                     map[string]pendingMMS
 	SyncSince                   time.Time
+	Connected                   bool
 	Dirty                       bool
 	ContactReader               *contactReader
 	HistoryCache                []drawLine
@@ -95,7 +96,7 @@ func newApp(c Config, path string, demo bool) (*App, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	a := &App{Config: c, ConfigPath: path, Cache: cache, Gateway: newGateway(c), Demo: demo, View: "index", Phase: "read", Contacts: map[string]Contact{}, Jobs: map[string]bool{}, Results: make(chan result, 16), Context: ctx, Cancel: cancel, Running: true}
+	a := &App{Config: c, ConfigPath: path, Cache: cache, Gateway: newGateway(c), Demo: demo, Selected: 1, View: "index", Phase: "read", Contacts: map[string]Contact{}, Jobs: map[string]bool{}, Results: make(chan result, 16), Context: ctx, Cancel: cancel, Running: true}
 	a.MediaTemp, err = os.MkdirTemp("", "smsgatec-media-")
 	if err != nil {
 		cancel()
@@ -200,6 +201,9 @@ func (a *App) drain() {
 			a.Dirty = true
 			delete(a.Jobs, r.Kind)
 			if r.Err != nil {
+				if r.Kind == "sync" || r.Kind == "events" || r.Kind == "mms" || r.Kind == "send" || r.Kind == "push" {
+					a.Connected = false
+				}
 				if r.Kind == "sync" {
 					a.SyncFailures++
 				}
@@ -229,6 +233,9 @@ func (a *App) drain() {
 				}
 				continue
 			}
+			if r.Kind == "sync" || r.Kind == "events" || r.Kind == "mms" || r.Kind == "send" || r.Kind == "push" {
+				a.Connected = true
+			}
 			switch r.Kind {
 			case "contacts":
 				a.HistoryCache = nil
@@ -247,7 +254,6 @@ func (a *App) drain() {
 				}
 			case "push":
 				a.Push = r.Push
-				a.note("push updates connected")
 			case "sync", "events", "mms":
 				if r.Kind == "sync" {
 					a.SyncFailures = 0
@@ -448,13 +454,17 @@ func (a *App) restore(s snapshot) {
 }
 func (a *App) openContacts() {
 	if a.View == "contacts" {
-		a.newNumber("", "New conversation · Number")
+		initial := ""
+		if strings.HasPrefix(a.Query, "+") {
+			initial = a.Query
+		}
+		a.newNumber(initial, "New conversation · Number")
 		return
 	}
 	a.Stack = append(a.Stack, a.capture())
 	a.View = "contacts"
 	a.Query = ""
-	a.Selected = 0
+	a.Selected = 1
 	a.Top = 0
 	a.Aliases = nil
 	a.FilterBase = nil
@@ -498,7 +508,7 @@ func (a *App) back() {
 	} else {
 		a.View = "index"
 		a.Query = ""
-		a.Selected = 0
+		a.Selected = 1
 		a.Top = 0
 	}
 }
@@ -540,23 +550,14 @@ func (a *App) searchChanged() {
 		a.Selected = 1
 		a.Top = 0
 	} else {
-		a.Selected = 0
+		a.Selected = 1
 		a.Top = 0
 	}
 }
 func (a *App) selectEntry() {
 	rows := a.entries()
-	a.Selected = max(0, min(a.Selected, len(rows)))
-	if a.Selected == 0 {
-		if a.View == "index" {
-			a.openContacts()
-		} else {
-			initial := ""
-			if strings.HasPrefix(a.Query, "+") {
-				initial = a.Query
-			}
-			a.newNumber(initial, "New conversation · Number")
-		}
+	a.Selected = max(1, min(a.Selected, len(rows)))
+	if len(rows) == 0 {
 		return
 	}
 	number := rows[a.Selected-1]
@@ -760,7 +761,7 @@ func (a *App) key(key int, height int) {
 				a.searchChanged()
 			}
 		case keyUp:
-			a.Selected = max(0, a.Selected-1)
+			a.Selected = max(1, a.Selected-1)
 		case keyDown:
 			a.Selected = min(len(a.entries()), a.Selected+1)
 		default:
@@ -890,19 +891,19 @@ func (a *App) key(key int, height int) {
 		case 'j', keyDown:
 			a.Selected = min(len(a.entries()), a.Selected+1)
 		case 'k', keyUp:
-			a.Selected = max(0, a.Selected-1)
+			a.Selected = max(1, a.Selected-1)
 		case 10, 13, keyEnter:
 			a.selectEntry()
-		case 'n':
+		case '+', 'n':
 			a.openContacts()
 		case 'b', 27:
 			a.back()
 		case 'g':
-			a.Selected = 0
+			a.Selected = 1
 		case 'G':
 			a.Selected = len(a.entries())
 		case keyPageUp:
-			a.Selected = max(0, a.Selected-max(1, height-1))
+			a.Selected = max(1, a.Selected-max(1, height-1))
 		case keyPageDown:
 			a.Selected = min(len(a.entries()), a.Selected+max(1, height-1))
 		}
@@ -968,7 +969,7 @@ func (a *App) settings() {
 	a.FilterBase = nil
 	a.View = "index"
 	a.Query = ""
-	a.Selected = 0
+	a.Selected = 1
 	a.Top = 0
 	a.Body = nil
 	a.DraftFiles = nil
@@ -1039,6 +1040,7 @@ func (a *App) tick() {
 			case <-a.Push.done:
 				a.Push.close()
 				a.Push = nil
+				a.Connected = false
 				a.note("push disconnected; retrying connection")
 			default:
 			}

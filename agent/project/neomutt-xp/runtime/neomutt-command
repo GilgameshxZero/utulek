@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Paired with neomutt-command.bat. Keep Unix command syntax inside Bash on
+# both systems. Python helpers use the standard library and local modules.
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit
+action=${1:?Missing command}
+shift
+python=python3
+if [[ $OSTYPE == msys* || $OSTYPE == cygwin* ]]; then
+    python=python
+    # Same UUID facility used by module/gx/generate.bat, without clipboard I/O.
+    uuidgen() { powershell.exe -NoLogo -NoProfile -NonInteractive -Command '([guid]::NewGuid()).ToString()' | tr -d '\r'; }
+    export -f uuidgen
+fi
+expand_home() {
+    case $1 in
+        '~/'*) printf '%s/%s' "$HOME" "${1:2}" ;;
+        *) printf '%s' "$1" ;;
+    esac
+}
+native_path() {
+    if [[ $OSTYPE == msys* || $OSTYPE == cygwin* ]]; then
+        cygpath -am "$1"
+    else
+        printf '%s\n' "$1"
+    fi
+}
+case $action in
+    path)
+        native_path "$script_dir/neomutt-command"
+        ;;
+    mailcap)
+        mkdir -p "$HOME/.neomutt" || exit
+        destination="$HOME/.neomutt/mailcap"
+        command_path=$(native_path "$script_dir/neomutt-command") || exit
+        while IFS= read -r line || [[ -n $line ]]; do
+            printf '%s\n' "${line//@NEOMUTT_COMMAND@/$command_path}"
+        done < "$script_dir/mailcap" > "$destination" || exit
+        native_path "$destination"
+        ;;
+    password)
+        # Do not emit partial configuration if GPG fails.
+        config=$(gpg --decrypt "$script_dir/neomuttrc.password.gpg") || exit $?
+        printf '%s\n' "$config"
+        ;;
+    oauth)
+        token=$(expand_home "$1")
+        shift
+        exec "$python" "$script_dir/mutt_oauth2.py" "$token" "$@"
+        ;;
+    ical) exec "$python" "$script_dir/mutt-ical.py" "$@" ;;
+    request) exec bash "$script_dir/neomutt-ical-request.sh" "$@" ;;
+    html)
+        if [[ $OSTYPE == msys* || $OSTYPE == cygwin* ]] && [[ -z ${BROWSER:-} ]]; then
+            export BROWSER="$script_dir/neomutt-windows-open"
+        fi
+        exec bash "$script_dir/neomutt-html-open.sh" "$@"
+        ;;
+    capture) iconv -c --to-code=UTF-8 > "$1" ;;
+    remove) exec rm "$@" ;;
+    save) exec mv "$1" "$(expand_home "$2")/$(uuidgen).ics" ;;
+    vault)
+        directory=$(expand_home "$1")
+        if [[ $OSTYPE == msys* || $OSTYPE == cygwin* ]]; then
+            ls -d "$directory" >/dev/null || exit
+            native_path "$directory"
+        else
+            exec ls -d "$directory"
+        fi
+        ;;
+    query)
+        khard=khard
+        if [[ $OSTYPE == msys* || $OSTYPE == cygwin* ]]; then
+            # xargs cannot directly execute a .bat launcher.
+            khard="$script_dir/../../app/khard.exe"
+        fi
+        # Preserve the current echo/xargs/--parsable query semantics. Adopting
+        # khard's --mutt protocol is a separate behavior change.
+        echo "$1" | xargs "$khard" email -d formatted_name --parsable --
+        ;;
+    *) printf 'Unknown command: %s\n' "$action" >&2; exit 2 ;;
+esac

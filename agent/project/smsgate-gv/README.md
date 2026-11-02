@@ -2,7 +2,7 @@
 
 Linux Google Voice bridge exposing a subset of the SMSGate local API to the
 existing SMSGate terminal client. Current preview supports reading recent
-one-to-one conversation history with native message identity and UTC timestamps.
+one-to-one and short-code conversation history with native message identity and UTC timestamps.
 One-to-one SMS sending and interrupted-send reconciliation are verified with the
 existing Android conversation. Full historical synchronization, attachment
 downloads, groups, webhooks and unattended systemd deployment remain unfinished.
@@ -27,8 +27,8 @@ Configuration contains:
 * `auth_retry_seconds`: authentication recovery interval, default 300.
 * `poll_seconds`: background history reconciliation; new configurations use 300.
 * `max_threads`: maximum supported threads imported from a history response.
-* `sync_numbers`: optional list of international peer numbers to include; omit
-  to include supported recent one-to-one threads.
+* `sync_numbers`: optional list of international peer numbers or short codes; omit
+  to include supported recent one-to-one and short-code threads.
 
 The bridge first injects its saved Google session into a disposable headless
 browser, verifies the configured number, and persists refreshed cookies. If that
@@ -52,6 +52,8 @@ The initial page bootstrap identifies the authenticated Google Voice API
 transport. A cold inbox snapshot imports up to 100 threads with 50 messages per
 thread, restricted by `max_threads` and optional `sync_numbers`. Subsequent
 refreshes call `inbox/warmsync` with the saved cursor and fetch only changes.
+Cursor files include a decoder version; upgrading from older cursor files triggers
+a fresh snapshot to backfill previously skipped short-code messages.
 The cursor advances only after message records have been durably committed;
 failed cursor writes replay safely. Cursor state is scoped to the own GV number.
 Continuation batches are committed individually, and a server cursor reset
@@ -75,8 +77,8 @@ Native IDs are scoped by own GV number. Imports preserve UTC millisecond times,
 direction, text, subjects and known client-assigned IDs. Unchanged imports skip
 journal writes. Local `/inbox` and `/messages` support pagination and RFC3339
 `from` filters. An empty initial journal returns 503 until synchronization is
-complete. Group and non-international thread IDs are skipped; historical
-server-side deletions are not mirrored into the retained local message journal.
+complete. Numeric short codes retain their original sender identity. Group and
+unsupported thread IDs are skipped; historical server-side deletions are not mirrored into the retained local message journal.
 MMS text is readable, with explicit open-GV media placeholders; attachment
 sending/downloading is not implemented.
 

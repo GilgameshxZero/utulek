@@ -18,7 +18,11 @@ const warmSyncPath = "/voice/v1/voiceclient/inbox/warmsync"
 
 var errSyncReset = errors.New("Google Voice sync cursor requires reset")
 
+// Bump when decoding expands so records skipped by older builds are backfilled.
+const syncCursorVersion = 1
+
 type syncCursor struct {
+	Version int    `json:"version"`
 	Account string `json:"account"`
 	Token   string `json:"token"`
 }
@@ -237,7 +241,7 @@ func (b *Browser) commitCursor(store *Store) error {
 		return nil
 	}
 	if b.pendingCursor != b.cursor {
-		if e := writeJSON(filepath.Join(filepath.Dir(store.path), "sync_cursor.json"), syncCursor{Account: b.config.Number, Token: b.pendingCursor}); e != nil {
+		if e := writeJSON(filepath.Join(filepath.Dir(store.path), "sync_cursor.json"), syncCursor{Version: syncCursorVersion, Account: b.config.Number, Token: b.pendingCursor}); e != nil {
 			return e
 		}
 	}

@@ -137,7 +137,7 @@ func decodeHistory(body []byte, c Config) ([]Message, error) {
 			continue
 		}
 		number := strings.TrimPrefix(threadID, "t.")
-		if !phonePattern.MatchString(number) || (len(allowed) > 0 && !allowed[number]) {
+		if !historyPeer(number) || (len(allowed) > 0 && !allowed[number]) {
 			continue
 		}
 		if selected >= c.MaxThreads {
