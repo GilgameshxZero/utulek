@@ -1,0 +1,61 @@
+# normal ignores
+.*
+*~
+*.[ao]
+*.lo
+*.so
+*.obj
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.dylib
+*.dSYM/
+tags
+cscope.out
+!.gitignore
+!.travis.yml
+!.github
+
+# top-level ignores
+/*.spec
+/config
+/config.mk
+/cmus
+/cmus-remote
+
+# Cygwin stuff
+*.exe
+/cmus.base
+/cmus.def
+/cmus.exp
+
+# cmus-win build output
+/out/
+/build/
+/dist/
+/Doc/ttman
+
+# Generated build directories, compiler output, and test artifacts.
+/bin/
+__pycache__/
+*.py[cod]
+*.test
+*.o
+*.a
+*.so.*
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+/coverage.out
+/coverage.html
+
+# Compiler dependency files and release archives.
+*.d
+/cmus-*.tar.*
+
+# Project-local intermediates and finished binaries.
+/.obj/
+/.bin/

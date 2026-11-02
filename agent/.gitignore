@@ -1,0 +1,31 @@
+# Reusable source, scripts, and workflow docs belong in this public repository.
+# Keep private task state, credentials, and browser artifacts local.
+/context/
+/.agents/
+/.aws/
+/.codex/
+/.git/
+/.playwright-mcp/
+
+# Local configuration and authentication material; examples can be tracked.
+.env
+.env.*
+!.env.example
+!.env.sample
+config.local.*
+credentials.json
+secrets.json
+auth.json
+cookies.json
+cookies.sqlite*
+storage_state.json
+
+# Message caches, logs, and generated output.
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.db
+*.db-*
+*.log
+__pycache__/

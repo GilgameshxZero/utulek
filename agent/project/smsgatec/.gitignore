@@ -1,0 +1,46 @@
+*.test
+/smsgatec
+/smsgatec.exe
+/smsgatec-tests.exe
+/smsgatec.next
+
+# Legacy build outputs retained during the rename.
+/smsgate
+/smsgate.exe
+/smsgate-tests.exe
+/smsgate.next
+
+# Generated build directories, compiler output, and test artifacts.
+/out/
+/build/
+/dist/
+/bin/
+__pycache__/
+*.py[cod]
+*.exe
+*.o
+*.obj
+*.a
+*.lo
+*.so
+*.so.*
+*.dll
+*.lib
+*.dylib
+*.dSYM/
+*.pdb
+*.ilk
+*.exp
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+/coverage.out
+/coverage.html
+
+# Default Go build output from the native module.
+/native/native
+
+# Project-local intermediates and finished binaries.
+/.obj/
+/.bin/
