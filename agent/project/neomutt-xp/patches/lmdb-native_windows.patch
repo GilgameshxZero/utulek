@@ -1,0 +1,24 @@
+--- a/libraries/liblmdb/mdb.c
++++ b/libraries/liblmdb/mdb.c
+@@ -41,6 +41,7 @@
+ #ifdef _WIN32
+ #include <malloc.h>
+ #include <windows.h>
++#include <winioctl.h>
+ #include <wchar.h>				/* get wcscpy() */
+ 
+ /** getpid() returns int; MinGW defines pid_t but MinGW64 typedefs it
+@@ -4124,6 +4125,13 @@
+ 		sizelo = 0;
+ 		sizehi = 0;
+ 	} else {
++		/* Reserve the mapping in logical space without allocating its full
++		 * maximum size on disk. Fail cache setup on non-sparse filesystems
++		 * rather than allocating up to 100 GiB for a tiny header cache. */
++		DWORD sparse_bytes;
++		if (!DeviceIoControl(env->me_fd, FSCTL_SET_SPARSE, NULL, 0, NULL, 0,
++			&sparse_bytes, NULL))
++			return ErrCode();
+ 		msize = env->me_mapsize;
+ 		sizelo = msize & 0xffffffff;
+ 		sizehi = msize >> 16 >> 16; /* only needed on Win64 */

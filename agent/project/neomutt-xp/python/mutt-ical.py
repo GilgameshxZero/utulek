@@ -24,7 +24,7 @@ from email.message import EmailMessage
 from getopt import gnu_getopt as getopt
 
 import ical_support as vobject
-from command_args import split_command
+from command_args import split_command, read_draft_headers, mailbox_address
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', newline='\n')
@@ -41,6 +41,7 @@ OPTIONS:
     -D display only
     -s <sendmail command>
     -g generate ICS reply only
+    --compose-message <file> read actual sender and consume compose scratch message
 """ % sys.argv[0]
 
 
@@ -215,6 +216,14 @@ def organizer(ical):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == '--draft-headers':
+        headers = read_draft_headers(sys.argv[2])
+        for name in ('Subject', 'To', 'From'):
+            sys.stdout.buffer.write(headers[name].encode('utf-8') + b'\0')
+        sys.exit(0)
+    if len(sys.argv) == 3 and sys.argv[1] == '--mailbox-address':
+        print(mailbox_address(sys.argv[2]))
+        sys.exit(0)
     # Parse options and drive the interactive or non-interactive reply flow
     sendmail_resolver = sendmail_command
     # Gilgamesh: default with NEOMUTT_FROM.
@@ -223,7 +232,15 @@ if __name__ == "__main__":
     accept_decline = 'ACCEPTED'
     generate_reply_to = None
     # Gilgamesh.
-    opts, args = getopt(sys.argv[1:], "s:e:g:aidtD")
+    opts, args = getopt(sys.argv[1:], "s:e:g:aidtD", ['compose-message='])
+    for option, value in opts:
+        if option == '--compose-message':
+            try:
+                email_address = read_draft_headers(value)['From']
+            finally:
+                Path(value).unlink(missing_ok=True)
+    if email_address:
+        email_address = mailbox_address(email_address)
     # A cancelled/failed generation must not leave an empty new-mime placeholder.
     def remove_empty_reply():
         for option, value in opts:
@@ -247,7 +264,7 @@ if __name__ == "__main__":
             # If -s is provided, override sendmail with a lambda that returns the command
             sendmail_resolver = (lambda a=arg: split_command(a))
         if opt == '-e':
-            email_address = arg
+            email_address = mailbox_address(arg)
         if opt == '-i':
             print("\nAs:", email_address, end=".")
             accept_decline = get_accept_decline()

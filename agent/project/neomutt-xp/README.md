@@ -1,8 +1,60 @@
-# neomutt-xp: configuration compatibility
+# neomutt-xp: cross-platform NeoMutt
 
-Shared configuration helpers for Linux and a future native Windows NeoMutt.
-The configuration compatibility changes are installed and accepted. This project
-does not yet contain a Windows NeoMutt executable.
+Linux and native Windows builds of one shared NeoMutt codebase, based on the
+pinned upstream source plus reviewable patches and Windows platform services.
+The configuration compatibility helpers are installed and accepted. The native
+application is an early development candidate, not a production replacement.
+
+## Native application development
+
+Both platforms build the same patched `.obj/upstream` source. `scripts/verify_sources.py`
+reconstructs that tree and patched dependencies from pinned archives and checks
+all original source files against the working trees. Windows services
+under `native/` provide UTF-8 filesystem operations, full file identities,
+locking, child processes, and Winsock transport. The Windows executable imports
+Windows system/UCRT libraries; Git Bash is an external runtime dependency for
+upstream shell commands and the existing shared helper scripts. The UTF-8
+application manifest requires Windows 10 1903 or newer.
+
+Dependency versions and SHA256 hashes are pinned in `dependencies.json`.
+`scripts/prepare.py` verifies/downloads archives and applies `patches/` to fresh
+sources. `scripts/build_deps.py` builds native ncurses, libiconv and PCRE2;
+`scripts/build_openssl.py` builds native TLS libraries. These Windows dependency scripts accept a
+`--toolchain` directory containing LLVM-MinGW. `scripts/build.py` builds the
+`linux` or `windows` target; Windows also requires `--toolchain`. The Makefile exposes platform build targets, source verification and optional
+toolchain preparation; `TOOLCHAIN` can select an existing LLVM-MinGW installation.
+Build outputs stay in `.obj/`, finished executables in `.bin/{linux,windows}/`.
+
+`scripts/checkpoint.py` saves source, binaries, SHA256 metadata and retained
+verification results under `.obj/checkpoints/`. No Git commits are needed.
+Checkpoints are developmental snapshots with explicit limits, not installations.
+The current UI candidate passed actual Windows system/editor ConPTY navigation,
+reading, search, Unicode subject serialization, editor handoff, discard, flags,
+purge, tagged moves, postponement, restart/recall and clean exit using synthetic
+mail. Parsed terminal screens validate resize and editor-return layouts on both
+Windows terminal implementations; Linux screen checks also pass. Native Windows
+HTML/Lynx, calendar mailcap display and synthetic contact queries pass.
+Native calendar macros also exercise invitation responses, request generation and
+owned-attachment cleanup. The cancellation regression covers acknowledging an
+external helper failure; Windows uses console events for that single-key prompt
+and flushes pending input without a blocking CRT drain read. Linux stock and patched builds passed the basic PTY workflows.
+Native file/process/cache regression sources and terminal harnesses are in `tests/`.
+Mailbox/workflow parity remains under development. Actual SMTP/TLS fixture tests
+cover password/OAuth authentication, encrypted fixture passwords/tokens, trust
+rejection and interrupted submissions on both platforms. Native sendmail process
+execution passes capture-only success/failure/background checks on both platforms.
+The configuration parser also consumes real GPG-encrypted synthetic settings.
+Interactive Windows GPG loopback pinentry passes through both ConPTY implementations:
+a typed passphrase stays hidden and decryption succeeds. Git's MSYS GPG requires
+an MSYS-style path for an explicit `--homedir` so its agent can create a socket;
+the tests use isolated homes and leave user GPG settings unchanged.
+PGP/MIME reader tests also pass on Linux and both Windows terminal implementations:
+the correct passphrase decrypts the synthetic message into the pager, and wrong
+or cancelled input reveals no plaintext. Native anonymous temporary files use
+exclusive creation, private ACLs and deletion sharing, preserving NeoMutt's
+open-then-unlink behavior.
+No production account or credential is used by the fixture tests; configuration
+compatibility checks reproduce the installed configuration structure with fake data.
 
 ## Runtime design
 
@@ -69,13 +121,12 @@ Actual Linux NeoMutt UI checks covered saving invitations, reply/group reply
 acceptance/decline/tentative/cancellation, request creation, discard, postpone and
 capture-send. Parsed configuration settings were compared with fake credentials.
 No real credentials were decrypted, real mail sent or actual attachment viewers
-opened during automated verification. Temporary fixtures, test harnesses,
-migration scripts, downloads and rollback files were removed after acceptance;
-only runtime source, dependency metadata, licenses and documentation remain.
+opened during automated verification. The earlier configuration acceptance cleanup removed its temporary artifacts.
+Native-port test harnesses and ignored development evidence are retained separately.
 
-There is no Windows NeoMutt TUI/config parser to test yet. Live authentication,
-pinentry, real sending/viewers and the future native application's process
-launching still require validation. Fixed scratch filenames retain their
+The earlier helper verification predates the native Windows application.
+Production account authentication, GUI pinentry, external attachment applications,
+IMAP, synchronization races and clean-machine packaging still need validation. Fixed scratch filenames retain their
 concurrency limitations. The calendar parser is event-focused, not a general
 recurrence engine; unsupported custom VTIMEZONE rules fail. Generated timezone
 serialization can differ while preserving the tested calendar properties. Small

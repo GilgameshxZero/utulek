@@ -12,5 +12,78 @@
     "format": "TZif data in python/timezones.zip; no Python tzdata package",
     "source": "IANA timezone database, packaged from /usr/share/zoneinfo",
     "license": "licenses/timezone_data.txt"
+  },
+  "neomutt": {
+    "version": "20260616",
+    "url": "https://github.com/neomutt/neomutt/archive/refs/tags/20260616.tar.gz",
+    "archive": "neomutt-20260616.tar.gz",
+    "sha256": "2c34fdd2166d5765e6bfdc21d1248bc4e92ddc0a33537b9418c17cd90e2dda80"
+  },
+  "ncurses": {
+    "version": "6.5",
+    "url": "https://ftp.gnu.org/gnu/ncurses/ncurses-6.5.tar.gz",
+    "archive": "ncurses-6.5.tar.gz",
+    "sha256": "136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6"
+  },
+  "libiconv": {
+    "version": "1.19",
+    "url": "https://ftp.gnu.org/gnu/libiconv/libiconv-1.19.tar.gz",
+    "archive": "libiconv-1.19.tar.gz",
+    "sha256": "88dd96a8c0464eca144fc791ae60cd31cd8ee78321e67397e25fc095c4a19aa6"
+  },
+  "pcre2": {
+    "version": "10.46",
+    "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.46/pcre2-10.46.tar.gz",
+    "archive": "pcre2-10.46.tar.gz",
+    "sha256": "8d28d7f2c3b970c3a4bf3776bcbb5adfc923183ce74bc8df1ebaad8c1985bd07"
+  },
+  "openssl": {
+    "version": "3.5.9",
+    "archive": "openssl-3.5.9.tar.gz",
+    "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+    "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a"
+  },
+  "lmdb": {
+    "version": "0.9.37",
+    "archive": "lmdb-0.9.37.tar.gz",
+    "url": "https://codeload.github.com/openldap/openldap/tar.gz/refs/tags/LMDB_0.9.37",
+    "sha256": "d184ab085d8b9705749b76f310b508152cb5884d92a2777e647fb6cbc77d185b"
+  },
+  "llvm_mingw": {
+    "version": "20260908",
+    "archive": "llvm_mingw.tar.xz",
+    "url": "https://github.com/mstorsjo/llvm-mingw/releases/download/20260908/llvm-mingw-20260908-ucrt-ubuntu-22.04-x86_64.tar.xz",
+    "sha256": "2258c745e3155870c80793f3e8c80b28fbde11b9ff73c4c78783635b3440b092"
+  },
+  "libgpg-error": {
+    "version": "1.61",
+    "url": "https://gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-1.61.tar.bz2",
+    "archive": "libgpg-error-1.61.tar.bz2",
+    "sha256": "7a85413f2bc354f4f8aa832b718af122e48965e9e0eb9012ee659c13c6385c93"
+  },
+  "libassuan": {
+    "version": "3.0.2",
+    "url": "https://gnupg.org/ftp/gcrypt/libassuan/libassuan-3.0.2.tar.bz2",
+    "archive": "libassuan-3.0.2.tar.bz2",
+    "sha256": "d2931cdad266e633510f9970e1a2f346055e351bb19f9b78912475b8074c36f6"
+  },
+  "gpgme": {
+    "version": "2.2.0",
+    "url": "https://gnupg.org/ftp/gcrypt/gpgme/gpgme-2.2.0.tar.bz2",
+    "archive": "gpgme-2.2.0.tar.bz2",
+    "sha256": "7160e80e84dafd00d956c84891c533bb7ab16a6a54fbe1574b2f3acf0496977b"
+  },
+  "sqlite": {
+    "version": "3.54.1",
+    "url": "https://www.sqlite.org/2026/sqlite-autoconf-3540100.tar.gz",
+    "archive": "sqlite-autoconf-3540100.tar.gz",
+    "sha256": "926ef8d3eab93fbf6e06011901273eec076b25594a4e1cdadd50c987f4f6d64e"
+  },
+  "gnupg_windows": {
+    "version": "2.5.24",
+    "url": "https://gnupg.org/ftp/gcrypt/binary/gnupg-w32-2.5.24_20260923.exe",
+    "archive": "gnupg-w32-2.5.24_20260923.exe",
+    "sha256": "ea6f9dee2cccd83287432625b8b399173805add81d27067fcaf019c0c4da1ad8",
+    "extraction": "7z, without executing installer; private GPGME engine only"
   }
 }

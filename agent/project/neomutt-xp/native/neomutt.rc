@@ -1,0 +1,2 @@
+/* UTF-8 argv and environment require Windows 10 1903 or newer. */
+1 24 "neomutt.manifest"

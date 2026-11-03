@@ -1,0 +1,39 @@
+# Entirely synthetic cross-platform configuration. No real accounts or paths.
+set my_active_dir="$HOME/main.syncthing/monochrome/module/email/"
+cd ~/main.syncthing/snowfall/
+set my_archive_dir="~/main.syncthing/monochrome/archive.syncthing/module/email/"
+set spool_file="${my_active_dir}postponed.maildir/"
+set record="${my_archive_dir}archive.maildir/"
+set postponed="${my_active_dir}postponed.maildir/"
+set trash="$record"
+set maildir_field_delimiter=";"
+named-mailboxes inbox $spool_file
+named-mailboxes -nonotify postponed $postponed archive $trash vault `ls -d "../monochrome/local.syncthing/module/email/vault.maildir/"`
+set real_name="Fixture Reader"
+set from="reader@example.invalid"
+source "fixture password source replaced by test runner"
+set my_smtp_url_fixture="smtp://fixture@localhost:48127"
+send2-hook "~f @example\\.invalid$" "set \
+smtp_url='$my_smtp_url_fixture' \
+smtp_authenticators='plain' \
+smtp_pass='$my_smtp_pass_fixture'"
+send2-hook "~f .*" "setenv NEOMUTT_FROM='$from'"
+set imap_authenticators="oauthbearer:xoauth2"
+set imap_oauth_refresh_command="echo fixture-oauth-token"
+set smtp_oauth_refresh_command="$imap_oauth_refresh_command"
+set query_command="echo fixture-query %s"
+set header_cache="~/.neomutt/cache/"
+set message_cache_dir="~/.neomutt/cache/"
+set index_format="%4C %Z %{%m-%d} %-15.15L %4cr %s"
+set folder_format="%t %f"
+set mailcap_path="${my_active_dir}mailcap"
+set delete=yes
+set include=yes
+set reverse_name
+set wait_key=no
+set sort=reverse-date
+set use_threads=no
+bind index,pager j next-entry
+bind index,pager k previous-entry
+macro index,pager X "<tag-prefix><save-message>$record<enter>"
+macro compose X "<edit-subject>fixture subject<enter>"

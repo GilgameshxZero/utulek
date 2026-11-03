@@ -1,0 +1,838 @@
+--- a/Makefile.autosetup
++++ b/Makefile.autosetup
+@@ -942,7 +942,7 @@
+ 		$(LIBDEBUG) $(LIBCLI) $(LIBMUTT)
+ 
+ # neomutt
+-$(NEOMUTT): $(GENERATED) $(NEOMUTTOBJS) $(MUTTLIBS)
++$(NEOMUTT): $(GENERATED) $(NEOMUTTOBJS) $(MUTTLIBS) $(XP_PLATFORM_OBJECTS)
+ 	$(CC) -o $@ $(NEOMUTTOBJS) $(MUTTLIBS) $(LDFLAGS) $(LIBS)
+ 
+ # clean
+--- a/auto.def
++++ b/auto.def
+@@ -723,7 +723,7 @@
+ 
+ if {[get-define want-ssl]} {
+   # OpenSSL
+-  if {[pkgconf false openssl]} {
++  if {![string match *mingw* [get-define host]] && [pkgconf false openssl]} {
+     # cool - we do not make pkg-config mandatory for OpenSSL because BSDs still
+     # ship OpenSSL in the base system. Those aren't available through
+     # pkg-config.
+@@ -791,7 +791,11 @@
+ ###############################################################################
+ # PCRE2
+ if {[get-define want-pcre2]} {
+-  pkgconf true libpcre2-8
++  if {[string match *mingw* [get-define host]]} {
++    cc-check-function-in-lib pcre2_compile_8 pcre2-8
++  } else {
++    pkgconf true libpcre2-8
++  }
+   define-feature pcre2
+ } elseif {[cc-check-functions pcre2_regcomp]} {
+   # See https://bugs.exim.org/show_bug.cgi?id=2707 and
+@@ -886,7 +890,7 @@
+ ###############################################################################
+ # Header cache - LMDB
+ if {[get-define want-lmdb]} {
+-  if {[pkgconf false lmdb]} {
++  if {![string match *mingw* [get-define host]] && [pkgconf false lmdb]} {
+     define-feature lmdb
+   } elseif {![check-inc-and-lib lmdb [opt-val with-lmdb $prefix] \
+                                 lmdb.h mdb_env_create lmdb]} {
+@@ -1180,6 +1184,13 @@
+ }
+ 
+ ###############################################################################
++# Native Windows platform implementations supplied by neomutt-xp.
++if {[string match *mingw* [get-define host]]} {
++  define HAVE_STRSEP 1
++  define HAVE_STRCASESTR 1
++  define HAVE_GETADDRINFO 1
++  define HAVE_QSORT_S 0
++}
+ # Definitions that are going to be substituted in config.h
+ set auto_rep {
+   _*
+--- a/autosetup/pkg-config.tcl
++++ b/autosetup/pkg-config.tcl
+@@ -78,7 +78,9 @@
+ 			# but it doesn't seem to work that way in practice
+ 			set env(PKG_CONFIG_PATH) ""
+ 			# Do we need to try /usr/local as well or instead?
+-			set env(PKG_CONFIG_LIBDIR) $sysroot/usr/lib/pkgconfig:$sysroot/usr/share/pkgconfig
++			if {![info exists env(PKG_CONFIG_LIBDIR)] || $env(PKG_CONFIG_LIBDIR) eq ""} {
++                set env(PKG_CONFIG_LIBDIR) $sysroot/usr/lib/pkgconfig:$sysroot/usr/share/pkgconfig
++            }
+ 			set env(PKG_CONFIG_SYSROOT_DIR) $sysroot
+ 		}
+ 	}
+--- a/commands.c
++++ b/commands.c
+@@ -223,15 +223,19 @@
+   struct Buffer *token = NULL, *linebuf = NULL;
+   char *line = NULL;
+   char *currentline = NULL;
+-  char rcfile[PATH_MAX + 1] = { 0 };
++  const size_t rcfile_capacity = MAX((size_t) PATH_MAX + 1, mutt_str_len(rcfile_path) + 1);
++  char *rcfile = MUTT_MEM_CALLOC(rcfile_capacity, char);
+   size_t linelen = 0;
+   pid_t pid;
+ 
+-  mutt_str_copy(rcfile, rcfile_path, sizeof(rcfile));
++  mutt_str_copy(rcfile, rcfile_path, rcfile_capacity);
+ 
+   size_t rcfilelen = mutt_str_len(rcfile);
+   if (rcfilelen == 0)
++  {
++    FREE(&rcfile);
+     return -1;
++  }
+ 
+   bool ispipe = rcfile[rcfilelen - 1] == '|';
+ 
+@@ -241,6 +245,7 @@
+     if (!mutt_path_to_absolute(rcfile, np ? NONULL(np->data) : ""))
+     {
+       mutt_error(_("Error: Can't build path of '%s'"), rcfile_path);
++      FREE(&rcfile);
+       return -1;
+     }
+ 
+@@ -254,6 +259,7 @@
+     if (np)
+     {
+       mutt_error(_("Error: Cyclic sourcing of configuration file '%s'"), rcfile);
++      FREE(&rcfile);
+       return -1;
+     }
+ 
+@@ -266,6 +272,7 @@
+   if (!fp)
+   {
+     buf_printf(err, "%s: %s", rcfile, strerror(errno));
++    FREE(&rcfile);
+     return -1;
+   }
+ 
+@@ -358,6 +365,7 @@
+ 
+   buf_pool_release(&token);
+   buf_pool_release(&linebuf);
++  FREE(&rcfile);
+   return rc;
+ }
+ 
+--- a/conn/connaccount.c
++++ b/conn/connaccount.c
+@@ -213,6 +213,11 @@
+     return NULL;
+   }
+ 
++#ifdef _WIN32
++  /* External credential helpers may need the console for GPG pinentry. */
++  if (OptGui)
++    mutt_endwin();
++#endif
+   FILE *fp = NULL;
+   pid_t pid = filter_create(cmd, NULL, &fp, NULL, NeoMutt->env);
+   if (pid < 0)
+@@ -224,11 +229,18 @@
+   size_t token_size = 0;
+   char *token = mutt_file_read_line(NULL, &token_size, fp, NULL, MUTT_RL_NO_FLAGS);
+   mutt_file_fclose(&fp);
+-  filter_wait(pid);
++  int command_status = filter_wait(pid);
+ 
+   /* The refresh cmd in some cases will invoke gpg to decrypt a token */
+   if (OptGui)
+     mutt_need_hard_redraw();
++
++  if (command_status != 0)
++  {
++    FREE(&token);
++    mutt_error(_("OAUTH refresh command failed"));
++    return NULL;
++  }
+ 
+   if (!token || (*token == '\0'))
+   {
+--- a/conn/connection.h
++++ b/conn/connection.h
+@@ -50,7 +50,11 @@
+   unsigned int ssf;           ///< Security strength factor, in bits (see notes)
+   char inbuf[1024];           ///< Buffer for incoming traffic
+   int bufpos;                 ///< Current position in the buffer
++#ifdef _WIN32
++  intptr_t fd;
++#else
+   int fd;                     ///< Socket file descriptor
++#endif
+   int available;              ///< Amount of data waiting to be read
+   void *sockdata;             ///< Backend-specific socket data
+ 
+--- a/conn/openssl.c
++++ b/conn/openssl.c
+@@ -30,6 +30,9 @@
+  */
+ 
+ #include "config.h"
++#ifdef _WIN32
++#include "tls_io.h"
++#endif
+ #include <errno.h>
+ #include <openssl/asn1.h>
+ #include <openssl/bio.h>
+@@ -1251,7 +1254,11 @@
+   const bool c_ssl_use_system_certs = cs_subset_bool(NeoMutt->sub, "ssl_use_system_certs");
+   if (c_ssl_use_system_certs)
+   {
++#ifdef _WIN32
++    if (!xp_tls_system_certs(sockdata(conn)->sctx))
++#else
+     if (!SSL_CTX_set_default_verify_paths(sockdata(conn)->sctx))
++#endif
+     {
+       mutt_debug(LL_DEBUG1, "Error setting default verify paths\n");
+       goto free_ctx;
+@@ -1276,7 +1283,13 @@
+   }
+ 
+   sockdata(conn)->ssl = SSL_new(sockdata(conn)->sctx);
++#ifdef _WIN32
++  if (!xp_tls_set_socket(sockdata(conn)->ssl, conn->fd,
++                        cs_subset_number(NeoMutt->sub, "socket_timeout"), &SigInt))
++    goto free_ssl;
++#else
+   SSL_set_fd(sockdata(conn)->ssl, conn->fd);
++#endif
+ 
+   if (ssl_negotiate(conn, sockdata(conn)))
+     goto free_ssl;
+--- a/conn/raw.c
++++ b/conn/raw.c
+@@ -57,6 +57,23 @@
+ #include <stdbool.h>
+ #endif
+ 
++#ifdef _WIN32
++#include "xp_socket.h"
++int raw_socket_open(struct Connection *conn)
++{
++  conn->fd = xp_socket_open(conn->account.host, conn->account.port,
++      cs_subset_number(NeoMutt->sub, "socket_timeout"),
++      cs_subset_bool(NeoMutt->sub, "use_ipv6"), &SigInt);
++  return conn->fd == -1 ? -1 : 0;
++}
++int raw_socket_read(struct Connection *conn, char *buf, size_t count)
++{ return xp_socket_read(conn->fd, buf, count, cs_subset_number(NeoMutt->sub, "socket_timeout"), &SigInt); }
++int raw_socket_write(struct Connection *conn, const char *buf, size_t count)
++{ return xp_socket_write(conn->fd, buf, count, cs_subset_number(NeoMutt->sub, "socket_timeout"), &SigInt); }
++int raw_socket_poll(struct Connection *conn, time_t seconds)
++{ return xp_socket_poll(conn->fd, seconds < 0 ? -1 : seconds > INT_MAX / 1000 ? INT_MAX : (int) seconds * 1000, 0, &SigInt); }
++int raw_socket_close(struct Connection *conn) { return xp_socket_close(conn->fd); }
++#else
+ /**
+  * socket_connect - Set up to connect to a socket fd
+  * @param fd File descriptor to connect with
+@@ -394,3 +411,5 @@
+ {
+   return close(conn->fd);
+ }
++
++#endif
+--- a/conn/tunnel.c
++++ b/conn/tunnel.c
+@@ -57,6 +57,26 @@
+  */
+ static int tunnel_socket_open(struct Connection *conn)
+ {
++#ifdef _WIN32
++  FILE *input = NULL, *output = NULL;
++  const char *const c_tunnel = cs_subset_string(NeoMutt->sub, "tunnel");
++  pid_t pid = filter_create(c_tunnel, &input, &output, NULL, NeoMutt->env);
++  if (pid < 0) return -1;
++  struct TunnelSockData *tunnel = MUTT_MEM_CALLOC(1, struct TunnelSockData);
++  tunnel->fd_read = dup(fileno(output));
++  tunnel->fd_write = dup(fileno(input));
++  fclose(output); fclose(input);
++  if (tunnel->fd_read < 0 || tunnel->fd_write < 0)
++  {
++    if (tunnel->fd_read >= 0) close(tunnel->fd_read);
++    if (tunnel->fd_write >= 0) close(tunnel->fd_write);
++    filter_wait(pid);
++    FREE(&tunnel);
++    return -1;
++  }
++  tunnel->pid = pid;
++  conn->sockdata = tunnel;
++#else
+   int pin[2], pout[2];
+ 
+   struct TunnelSockData *tunnel = MUTT_MEM_MALLOC(1, struct TunnelSockData);
+@@ -129,6 +149,7 @@
+   tunnel->fd_write = pout[1];
+   tunnel->pid = pid;
+ 
++#endif
+   conn->fd = 42; /* stupid hack */
+ 
+   /* Note we are using ssf as a boolean in this case.  See the notes in
+--- a/gui/curs_lib.c
++++ b/gui/curs_lib.c
+@@ -194,19 +194,28 @@
+     fputs(_("Press any key to continue..."), stdout);
+   fflush(stdout);
+ 
++#ifdef _WIN32
++  int ch = xp_console_read_key(fd);
++#else
+   char ch = '\0';
+   // Wait for a character.  This might timeout, so loop.
+   while (read(fd, &ch, 1) == 0)
+     ; // do nothing
++#endif
+ 
+   // Change the tty settings to be non-blocking
+   term.c_cc[VMIN] = 0;  // Returning with zero characters is acceptable
+   term.c_cc[VTIME] = 0; // Don't wait
+   tcsetattr(fd, TCSANOW, &term);
+ 
++#ifdef _WIN32
++  /* CRT console reads have no VMIN=0 equivalent and would block here. */
++  xp_console_flush_input(fd);
++#else
+   char buf[64] = { 0 };
+   while (read(fd, buf, sizeof(buf)) > 0)
+     ; // Mop up any remaining chars
++#endif
+ 
+   tcsetattr(fd, TCSANOW, &old); // Restore the previous tty settings
+   close(fd);
+--- a/imap/util.c
++++ b/imap/util.c
+@@ -1019,6 +1019,18 @@
+  */
+ int imap_wait_keep_alive(pid_t pid)
+ {
++#ifdef _WIN32
++  int status = 0;
++  ULONGLONG last = GetTickCount64();
++  const short interval = cs_subset_number(NeoMutt->sub, "imap_keep_alive");
++  while (waitpid(pid, &status, WNOHANG) == 0)
++  {
++    Sleep(50);
++    if (interval > 0 && GetTickCount64() - last >= (ULONGLONG) interval * 1000)
++    { imap_keep_alive(); last = GetTickCount64(); }
++  }
++  return status;
++#else
+   struct sigaction oldalrm = { 0 };
+   struct sigaction act = { 0 };
+   sigset_t oldmask = { 0 };
+@@ -1058,6 +1070,7 @@
+   cs_subset_str_native_set(NeoMutt->sub, "imap_passive", c_imap_passive, NULL);
+ 
+   return rc;
++#endif
+ }
+ 
+ /**
+--- a/key/extended.c
++++ b/key/extended.c
+@@ -123,7 +123,7 @@
+       if (keyname)
+       {
+         const char *s = mutt_tigetstr((char *) keyname);
+-        if (s && ((long) (s) != -1))
++        if (s && (s != (const char *) -1))
+         {
+           int code = key_defined(s);
+           if (code > 0)
+--- a/key/get.c
++++ b/key/get.c
+@@ -251,6 +251,11 @@
+     {
+       // do nothing
+     }
++#ifdef _WIN32
++    if (ch != ERR) mutt_unget_ch(ch);
++    notify_send(NeoMutt->notify_resize, NT_RESIZE, 0, NULL);
++    return event_repaint;
++#endif
+   }
+ 
+   if (ch == ERR)
+--- a/main.c
++++ b/main.c
+@@ -772,7 +772,15 @@
+  */
+ static void init_locale(void)
+ {
++#ifdef _WIN32
++  setlocale(LC_ALL, ".UTF8");
++  _set_fmode(_O_BINARY);
++  _setmode(_fileno(stdin), _O_BINARY);
++  if (!_isatty(_fileno(stdout))) _setmode(_fileno(stdout), _O_BINARY);
++  if (!_isatty(_fileno(stderr))) _setmode(_fileno(stderr), _O_BINARY);
++#else
+   setlocale(LC_ALL, "");
++#endif
+ 
+ #ifdef ENABLE_NLS
+   const char *domdir = mutt_str_getenv("TEXTDOMAINDIR");
+@@ -1077,6 +1085,10 @@
+  */
+ int main(int argc, char *argv[], char *envp[])
+ {
++#ifdef _WIN32
++  xp_platform_init();
++  envp = environ;
++#endif
+   struct Email *e = NULL;
+   SendFlags sendflags = SEND_NO_FLAGS;
+   int rc = 1;
+@@ -1107,6 +1119,10 @@
+   NeoMutt->env = envlist_init(envp);
+   mutt_str_replace(&NeoMutt->username, mutt_str_getenv("USER"));
+   mutt_str_replace(&NeoMutt->home_dir, mutt_str_getenv("HOME"));
++#ifdef _WIN32
++  if (NeoMutt->home_dir)
++    for (char *p = NeoMutt->home_dir; *p; p++) if (*p == '\\') *p = '/';
++#endif
+ 
+   init_config(cs);
+ 
+--- a/mutt/date.c
++++ b/mutt/date.c
+@@ -981,9 +981,13 @@
+  */
+ void mutt_date_sleep_ms(size_t ms)
+ {
++#ifdef _WIN32
++  Sleep((DWORD) ms);
++#else
+   const struct timespec sleep = {
+     .tv_sec = ms / 1000,
+     .tv_nsec = (ms % 1000) * 1000000UL,
+   };
+   nanosleep(&sleep, NULL);
+-}
++#endif
++}
+--- a/mutt/file.c
++++ b/mutt/file.c
+@@ -877,6 +877,9 @@
+   {
+     if (*p != '/')
+       continue;
++#ifdef _WIN32
++    if (p == tmp_path + 2 && tmp_path[1] == ':') continue;
++#endif
+ 
+     /* Temporarily truncate the path */
+     *p = '\0';
+--- a/mutt/filter.c
++++ b/mutt/filter.c
+@@ -33,6 +33,9 @@
+ #include <sys/wait.h>
+ #include <unistd.h>
+ #include "filter.h"
++#ifdef _WIN32
++#include "xp_process.h"
++#endif
+ #include "signal2.h"
+ 
+ /**
+@@ -62,6 +65,9 @@
+ pid_t filter_create_fd(const char *cmd, FILE **fp_in, FILE **fp_out, FILE **fp_err,
+                        int fdin, int fdout, int fderr, char **envlist)
+ {
++#ifdef _WIN32
++  return xp_filter_create(cmd, fp_in, fp_out, fp_err, fdin, fdout, fderr, envlist);
++#else
+   int pin[2], pout[2], perr[2], pid;
+ 
+   if (fp_in)
+@@ -195,6 +201,7 @@
+   }
+ 
+   return pid;
++#endif
+ }
+ 
+ /**
+--- a/mutt/notify.c
++++ b/mutt/notify.c
+@@ -117,7 +117,7 @@
+  * @note If Observers call `notify_observer_remove()`, then we garbage-collect
+  *       any dead list entries after we've finished.
+  */
+-static bool send(struct Notify *source, struct Notify *current,
++static bool notify_send_internal(struct Notify *source, struct Notify *current,
+                  enum NotifyType event_type, int event_subtype, void *event_data)
+ {
+   if (!source || !current)
+@@ -144,7 +144,7 @@
+   }
+ 
+   if (current->parent)
+-    return send(source, current->parent, event_type, event_subtype, event_data);
++    return notify_send_internal(source, current->parent, event_type, event_subtype, event_data);
+ 
+   // Garbage collection time
+   struct ObserverNode *tmp = NULL;
+@@ -168,13 +168,13 @@
+  * @param event_data    Private data associated with the event
+  * @retval true Successfully sent
+  *
+- * See send() for more details.
++ * See notify_send_internal() for more details.
+  */
+ bool notify_send(struct Notify *notify, enum NotifyType event_type,
+                  int event_subtype, void *event_data)
+ {
+   mutt_debug(LL_NOTIFY, "sending: %s/%d\n", NotifyTypeNames[event_type], event_subtype);
+-  return send(notify, notify, event_type, event_subtype, event_data);
++  return notify_send_internal(notify, notify, event_type, event_subtype, event_data);
+ }
+ 
+ /**
+@@ -224,7 +224,7 @@
+  * @retval true Successful
+  *
+  * @note This function frees the Observer, but doesn't free the ObserverNode.
+- *       If `send()` is present higher up the call stack,
++ *       If `notify_send_internal()` is present higher up the call stack,
+  *       removing multiple entries from the list will cause it to crash.
+  */
+ bool notify_observer_remove(struct Notify *notify, const observer_t callback,
+--- a/mutt/path.c
++++ b/mutt/path.c
+@@ -108,6 +108,9 @@
+  */
+ bool mutt_path_tidy_dotdot(char *buf)
+ {
++#ifdef _WIN32
++  if (buf && strlen(buf) > 2 && buf[1] == ':' && buf[2] == '/') buf += 2;
++#endif
+   if (!buf || (buf[0] != '/'))
+     return false;
+ 
+@@ -168,6 +171,19 @@
+  */
+ bool mutt_path_tidy(struct Buffer *path, bool is_dir)
+ {
++#ifdef _WIN32
++  if (!buf_is_empty(path))
++  {
++    for (char *p = path->data; *p; p++) if (*p == '\\') *p = '/';
++    if (strlen(path->data) > 2 && path->data[1] == ':' && path->data[2] == '/')
++    {
++      mutt_path_tidy_slash(path->data + 2, is_dir);
++      mutt_path_tidy_dotdot(path->data);
++      buf_fix_dptr(path);
++      return true;
++    }
++  }
++#endif
+   if (buf_is_empty(path) || (buf_at(path, 0) != '/'))
+     return false;
+ 
+@@ -254,7 +270,11 @@
+   {
+     mutt_path_tilde(path, homedir);
+   }
+-  else if (buf_at(path, 0) != '/')
++  else if (buf_at(path, 0) != '/'
++#ifdef _WIN32
++           && !(buf_len(path) > 2 && buf_at(path, 1) == ':' && (buf_at(path, 2) == '/' || buf_at(path, 2) == '\\'))
++#endif
++          )
+   {
+     char cwd[PATH_MAX] = { 0 };
+     if (!getcwd(cwd, sizeof(cwd)))
+@@ -285,6 +305,10 @@
+     return NULL;
+ 
+   const char *p = strrchr(path, '/');
++#ifdef _WIN32
++  const char *backslash = strrchr(path, '\\');
++  if (backslash && (!p || backslash > p)) p = backslash;
++#endif
+   if (p)
+   {
+     if (p[1] == '\0')
+@@ -335,6 +359,11 @@
+   if (!path || !reference)
+     return false;
+ 
++#ifdef _WIN32
++  for (char *p = path; *p; p++) if (*p == '\\') *p = '/';
++  if (((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) &&
++      path[1] == ':' && path[2] == '/') return true;
++#endif
+   /* if path is already absolute, don't do anything */
+   if ((strlen(path) > 1) && (path[0] == '/'))
+   {
+--- a/mutt/random.c
++++ b/mutt/random.c
+@@ -27,6 +27,10 @@
+  */
+ 
+ #include "config.h"
++#ifdef _WIN32
++#include <windows.h>
++#include <bcrypt.h>
++#endif
+ #include <errno.h>
+ #include <stddef.h>
+ #include <stdint.h>
+@@ -63,6 +67,12 @@
+     return -1;
+   }
+ 
++#ifdef _WIN32
++  if (BCryptGenRandom(NULL, buf, (ULONG) buflen, BCRYPT_USE_SYSTEM_PREFERRED_RNG) == 0)
++    return 0;
++  errno = EIO;
++  return -1;
++#endif
+ #ifdef HAVE_GETRANDOM
+   ssize_t rc;
+   ssize_t count = 0;
+--- a/ncrypt/crypt.c
++++ b/ncrypt/crypt.c
+@@ -105,12 +105,17 @@
+ }
+ 
+ #ifndef DEBUG
++#ifndef _WIN32
+ #include <sys/resource.h>
++#endif
+ /**
+  * disable_coredumps - Prevent coredumps if neomutt were to crash
+  */
+ static void disable_coredumps(void)
+ {
++#ifdef _WIN32
++  SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
++#else
+   struct rlimit rl = { 0, 0 };
+   static bool done = false;
+ 
+@@ -119,6 +124,7 @@
+     setrlimit(RLIMIT_CORE, &rl);
+     done = true;
+   }
++#endif
+ }
+ #endif
+ 
+--- a/ncrypt/crypt_gpgme.c
++++ b/ncrypt/crypt_gpgme.c
+@@ -3827,6 +3827,11 @@
+   if (has_run)
+     return;
+ 
++#ifdef _WIN32
++  const char *crypto_directory = xp_crypto_directory();
++  if (crypto_directory)
++    gpgme_set_global_flag("w32-inst-dir", crypto_directory);
++#endif
+   gpgme_check_version(NULL);
+   gpgme_set_locale(NULL, LC_CTYPE, setlocale(LC_CTYPE, NULL));
+ #ifdef ENABLE_NLS
+--- a/send/sendlib.c
++++ b/send/sendlib.c
+@@ -85,6 +85,9 @@
+   enum ContentType type = TYPE_OTHER;
+ 
+   int szf = mutt_str_len(path);
++#ifdef _WIN32
++  const char *runtime_types = xp_runtime_path("neomutt/mime.types");
++#endif
+ 
+   for (int count = 0; count < 4; count++)
+   {
+@@ -95,7 +98,11 @@
+       /* last file with last entry to match wins type/xtype */
+       case 0:
+         /* check default unix mimetypes location first */
++#ifdef _WIN32
++        mutt_str_copy(buf, runtime_types ? runtime_types : "/etc/mime.types", sizeof(buf));
++#else
+         mutt_str_copy(buf, "/etc/mime.types", sizeof(buf));
++#endif
+         break;
+       case 1:
+         mutt_str_copy(buf, SYSCONFDIR "/mime.types", sizeof(buf));
+--- a/send/sendmail.c
++++ b/send/sendmail.c
+@@ -30,6 +30,9 @@
+  */
+ 
+ #include "config.h"
++#ifdef _WIN32
++#include "xp_process.h"
++#endif
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <limits.h>
+@@ -58,10 +61,11 @@
+ #endif
+ 
+ /* For execvp environment setting in send_msg() */
+-#ifndef __USE_GNU
++#if !defined(__USE_GNU) && !defined(_WIN32)
+ extern char **environ;
+ #endif
+ 
++#ifndef _WIN32
+ static volatile sig_atomic_t SigAlrm; ///< true after SIGALRM is received
+ 
+ /**
+@@ -72,6 +76,7 @@
+ {
+   SigAlrm = 1;
+ }
++#endif
+ 
+ /**
+  * send_msg - Invoke sendmail in a subshell
+@@ -89,6 +94,39 @@
+ static int send_msg(const char *path, struct StringArray *args, const char *msg,
+                     char **tempfile, int wait_time)
+ {
++#ifdef _WIN32
++  int input = open(msg, O_RDONLY);
++  if (input < 0) return S_ERR;
++  int output = -1;
++  if (tempfile)
++  {
++    if (wait_time >= 0)
++    {
++      struct Buffer *name = buf_pool_get();
++      buf_mktemp(name);
++      *tempfile = buf_strdup(name);
++      buf_pool_release(&name);
++      output = open(*tempfile, O_WRONLY | O_CREAT | O_EXCL, 0600);
++    }
++    else output = open("NUL", O_WRONLY);
++    if (output < 0) { close(input); FREE(tempfile); return S_ERR; }
++  }
++  pid_t child = xp_spawn_arguments(path, args->entries, input, output, output, NeoMutt->env);
++  close(input);
++  if (output >= 0) close(output);
++  if (child < 0)
++  {
++    if (tempfile && *tempfile) { unlink(*tempfile); FREE(tempfile); }
++    return S_ERR;
++  }
++  unlink(msg);
++  if (wait_time < 0) { xp_detach_process(child); return EX_OK; }
++  int status = 0;
++  int waited = xp_waitpid_timeout(child, &status, wait_time > 0 ? wait_time * 1000 : -1);
++  if (waited == 0) { xp_detach_process(child); return S_BKG; }
++  if (waited < 0) { xp_detach_process(child); return S_ERR; }
++  return WIFEXITED(status) ? WEXITSTATUS(status) : S_ERR;
++#else
+   sigset_t set;
+   int st;
+ 
+@@ -247,6 +285,7 @@
+   mutt_sig_unblock_system(true);
+ 
+   return st;
++#endif
+ }
+ 
+ /**
+--- a/send/smtp.c
++++ b/send/smtp.c
+@@ -733,7 +733,7 @@
+ {
+   /* If they did not explicitly request or configure oauth then fail quietly */
+   const char *const c_smtp_oauth_refresh_command = cs_subset_string(NeoMutt->sub, "smtp_oauth_refresh_command");
+-  if (!method && !c_smtp_oauth_refresh_command)
++  if (!c_smtp_oauth_refresh_command || !*c_smtp_oauth_refresh_command)
+     return SMTP_AUTH_UNAVAIL;
+ 
+   const char *authtype = xoauth2 ? "XOAUTH2" : "OAUTHBEARER";
+@@ -850,9 +850,9 @@
+     goto error;
+   }
+ 
+-  /* Read the 334 VXNlcm5hbWU6 challenge ("Username:" base64-encoded) */
++  /* LOGIN challenge text varies by server; only the 334 status is fixed. */
+   int rc = mutt_socket_readln_d(buf, sizeof(buf), adata->conn, MUTT_SOCK_LOG_FULL);
+-  if ((rc < 0) || !mutt_str_equal(buf, "334 VXNlcm5hbWU6"))
++  if ((rc < 0) || (!mutt_str_startswith(buf, "334") || (buf[3] && buf[3] != ' ')))
+   {
+     goto error;
+   }
+@@ -866,9 +866,9 @@
+     goto error;
+   }
+ 
+-  /* Read the 334 UGFzc3dvcmQ6 challenge ("Password:" base64-encoded) */
++  /* Accept the password challenge independently of its display text. */
+   rc = mutt_socket_readln_d(buf, sizeof(buf), adata->conn, MUTT_SOCK_LOG_FULL);
+-  if ((rc < 0) || !mutt_str_equal(buf, "334 UGFzc3dvcmQ6"))
++  if ((rc < 0) || (!mutt_str_startswith(buf, "334") || (buf[3] && buf[3] != ' ')))
+   {
+     goto error;
+   }
+@@ -935,6 +935,21 @@
+   return false;
+ }
+ 
++/* Match whole EHLO mechanism names, as the SASL backends do. */
++static bool smtp_auth_offered(const char *offered, const char *method)
++{
++  if (!offered || !method) return false;
++  while (*offered)
++  {
++    offered += strspn(offered, " \t");
++    size_t length = strcspn(offered, " \t");
++    if (length == strlen(method) && mutt_istrn_equal(offered, method, length))
++      return true;
++    offered += length;
++  }
++  return false;
++}
++
+ /**
+  * smtp_authenticate - Authenticate to an SMTP server
+  * @param adata SMTP Account data
+@@ -983,6 +998,8 @@
+     for (size_t i = 0; i < countof(SmtpAuthenticators); i++)
+     {
+       const struct SmtpAuth *auth = &SmtpAuthenticators[i];
++      if (auth->method && !smtp_auth_offered(adata->auth_mechs, auth->method))
++        continue;
+       mutt_debug(LL_DEBUG2, "Trying method %s\n", auth->method ? auth->method : "<variable>");
+       r = auth->authenticate(adata, auth->method);
+       if (r == SMTP_AUTH_SUCCESS)
+--- a/system.c
++++ b/system.c
+@@ -51,6 +51,11 @@
+  */
+ int mutt_system(const char *cmd)
+ {
++#ifdef _WIN32
++  if (!cmd || !*cmd) return 0;
++  pid_t child = filter_create(cmd, NULL, NULL, NULL, NeoMutt->env);
++  return child < 0 ? -1 : filter_wait(child);
++#else
+   int rc = -1;
+   struct sigaction act = { 0 };
+   struct sigaction oldtstp = { 0 };
+@@ -98,4 +103,5 @@
+   rc = (pid != -1) ? (WIFEXITED(rc) ? WEXITSTATUS(rc) : -1) : -1;
+ 
+   return rc;
++#endif
+ }
