@@ -26,7 +26,7 @@ async function check(bundled,state){
   return{surface:bundled?'editor_conpty':'system_conpty',state,passed:true,directory:path.basename(scratch),phases};
  }finally{capture('final');if(exit===null)child.kill();}
 }
-(async()=>{const results=[];for(const bundled of [false,true])for(const state of ['success','wrong','cancel']){
+(async()=>{fs.mkdirSync(root,{recursive:true});const results=[];for(const bundled of [false,true])for(const state of ['success','wrong','cancel']){
  try{results.push(await check(bundled,state));}catch(e){results.push({surface:bundled?'editor_conpty':'system_conpty',state,passed:false,error:String(e)});}
  fs.writeFileSync(path.join(root,'encrypted_viewer_results.json'),JSON.stringify(results,null,2));}
  console.log(JSON.stringify(results,null,2));process.exit(results.every(r=>r.passed)?0:1);})();

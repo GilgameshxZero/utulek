@@ -3,7 +3,7 @@
 const fs=require('fs'),path=require('path'),pty=require(process.argv[2]);
 const [app,root,helpers]=process.argv.slice(3);const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const posix=p=>p.replace(/\\/g,'/');
-async function check(bundled,state){
+async function check(bundled,state,replyKey='r'){
  const scratch=fs.mkdtempSync(path.join(root,'calendar-'+(bundled?'editor-':'system-')+state+'-'));
  const box=path.join(scratch,'inbox.maildir');for(const sub of ['cur','new','tmp'])fs.mkdirSync(path.join(box,sub),{recursive:true});
  const ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Fixture//EN\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:fixture-reply@example.invalid\r\nDTSTAMP:20261103T000000Z\r\nDTSTART:20300501T100000Z\r\nDTEND:20300501T110000Z\r\nSUMMARY:Calendar macro fixture\r\nORGANIZER:mailto:sender@example.invalid\r\nATTENDEE;RSVP=TRUE:mailto:reader@example.invalid\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n';
@@ -17,7 +17,7 @@ async function check(bundled,state){
  const rc=path.join(scratch,'test.rc');fs.writeFileSync(rc,'set folder="."\nset from="reader@example.invalid"\nset realname="Fixture Reader"\n'+
   'set maildir_field_delimiter=";"\nset charset="utf-8"\nset quit=yes\nset delete=yes\nset move=no\nset fast_reply=yes\nset include=yes\nset postpone=no\nset wait_key=no\nset confirm_create=no\nset confirm_append=no\nset sleep_time=0\n'+
   'unset record\nunset beep\nbind editor <space> noop\nset editor="'+editor+'"\nset mailcap_path="'+posix(mailcap)+'"\nauto_view text/calendar\n'+
-  'send2-hook "~f .*" "setenv NEOMUTT_FROM=\'$from\'"\nmacro attach r "'+quote(macro)+'"\nmacro compose R "'+quote(request)+'"\n');
+  'send2-hook "~f .*" "setenv NEOMUTT_FROM=\'$from\'"\nmacro attach r "'+quote(macro)+'"\nmacro attach R "'+quote(macro.replace('<reply>','<group-reply>'))+'"\nmacro compose R "'+quote(request)+'"\n');
  const env={...process.env,HOME:scratch,USERPROFILE:scratch,TMPDIR:scratch,TERM:'xterm-256color',TZ:'UTC',LANG:'C.UTF-8'};
  const child=pty.spawn(app,['-n','-F',rc,'-f',box],{cols:120,rows:40,cwd:scratch,env,useConpty:true,useConptyDll:bundled});
  let output='',exit=null;const phases=[];
@@ -39,10 +39,10 @@ async function check(bundled,state){
    if(fs.existsSync(file))throw Error('Discarded request file remains');capture('request_discarded');
    child.write('q');for(let i=0;i<100&&exit===null;i++)await pause(50);
    if(exit!==0)throw Error('Unclean request exit '+exit);
-   return{surface:bundled?'editor_conpty':'system_conpty',state,passed:true,directory:path.basename(scratch),phases};
+   return{surface:bundled?'editor_conpty':'system_conpty',state,reply_key:replyKey,passed:true,directory:path.basename(scratch),phases};
   }
   child.write('v');await until('Attachments');capture('calendar_attach');
-  output='';child.write('r');await until('Accept Invitation?');capture('reply_prompt');
+  output='';child.write(replyKey);await until('Accept Invitation?');capture('reply_prompt');
   output='';child.write(({accept:'y',decline:'n',tentative:'t',cancel:'c'})[state]+'\r');
   if(state==='cancel'){await until('Press any key to continue');child.write(' ');}
   await until('Attachments');await pause(2200);
@@ -61,10 +61,10 @@ async function check(bundled,state){
   for(let i=0;i<3&&exit===null;i++){child.write('q');await pause(1400);}
   for(let i=0;i<100&&exit===null;i++)await pause(50);
   if(exit!==0)throw Error('Unclean exit '+exit);
-  return{surface:bundled?'editor_conpty':'system_conpty',state,passed:true,directory:path.basename(scratch),phases};
+  return{surface:bundled?'editor_conpty':'system_conpty',state,reply_key:replyKey,passed:true,directory:path.basename(scratch),phases};
  }finally{capture('calendar_final');if(exit===null)child.kill();}
 }
-(async()=>{const results=[];for(const bundled of [false,true])for(const state of (process.argv[6]?process.argv[6].split(','):['accept','decline','tentative','cancel','request'])){
- try{results.push(await check(bundled,state));}catch(e){results.push({surface:bundled?'editor_conpty':'system_conpty',state,passed:false,error:String(e)});}
+(async()=>{fs.mkdirSync(root,{recursive:true});const results=[];for(const bundled of [false,true])for(const state of (process.argv[6]?process.argv[6].split(','):['accept','decline','tentative','cancel','request'])){
+ for(const replyKey of (state==='request'?['r']:['r','R'])){try{results.push(await check(bundled,state,replyKey));}catch(e){results.push({surface:bundled?'editor_conpty':'system_conpty',state,reply_key:replyKey,passed:false,error:String(e)});}}
  fs.writeFileSync(path.join(root,'calendar_results.json'),JSON.stringify(results,null,2));}
  console.log(JSON.stringify(results,null,2));process.stdout.write('',()=>process.exit(results.every(r=>r.passed)?0:1));})();

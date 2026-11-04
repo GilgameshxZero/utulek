@@ -24,17 +24,14 @@ void xp_platform_init(void)
     }
   }
   if (!getenv("TMPDIR")) { const char *temp = getenv("TEMP"); if (temp) _putenv_s("TMPDIR", temp); }
-  if (!getenv("NEOMUTT_XP_SHELL"))
-  {
-    wchar_t shell[32768];
-    DWORD n = SearchPathW(NULL, L"bash.exe", NULL, 32768, shell, NULL);
-    if (n && n < 32768)
-    {
-      char utf8[65536];
-      if (WideCharToMultiByte(CP_UTF8, 0, shell, -1, utf8, sizeof(utf8), NULL, NULL))
-        _putenv_s("NEOMUTT_XP_SHELL", utf8);
-    }
-  }
+  /* Generated CMD arguments use one non-recursive percent substitution.
+   * Keep delayed expansion disabled so literal exclamation marks survive. */
+  _putenv_s("NEOMUTT_XP_LITERAL_PERCENT", "%");
+  /* Git/MSYS helpers otherwise default to ASCII under native Windows.
+   * Calendar/text pipes must preserve the same UTF-8 data as NeoMutt.
+   * LC_ALL/LC_CTYPE and an explicitly supplied LANG keep their precedence. */
+  const char *language = getenv("LANG");
+  if (!language || !*language) _putenv_s("LANG", "C.UTF-8");
   SetConsoleCP(CP_UTF8); SetConsoleOutputCP(CP_UTF8);
   SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 }

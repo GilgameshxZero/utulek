@@ -1,0 +1,18 @@
+--- a/shims/python3.bat
++++ b/shims/python3.bat
+@@ -1,3 +1,3 @@
+ @echo off
+ chcp 1250 > NUL
+-call pyenv exec %~n0 %*
++pyenv exec %~n0 %*
+--- a/libexec/libs/pyenv-lib.vbs
++++ b/libexec/libs/pyenv-lib.vbs
+@@ -340,7 +340,7 @@
+             With objfs.CreateTextFile(filespec)
+                 .WriteLine("@echo off")
+                 .WriteLine("chcp 1250 > NUL")
+-                .WriteLine("call pyenv exec %~n0 %*")
++                .WriteLine("pyenv exec %~n0 %*")
+                 .Close
+             End With
+         End If

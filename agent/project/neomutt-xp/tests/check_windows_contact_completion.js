@@ -1,0 +1,15 @@
+/* Real To/CC/BCC Tab and query-menu interactions; never submit a message. */
+const fs=require('fs'),path=require('path');
+const [modulePath,app,config,root,settingsFile]=process.argv.slice(2),pty=require(modulePath),settings=JSON.parse(fs.readFileSync(settingsFile));
+const {Terminal}=require(settings.terminalModule),pause=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{fs.mkdirSync(root,{recursive:true});const box=path.join(root,'fixture.maildir');for(const d of ['cur','new','tmp'])fs.mkdirSync(path.join(box,d),{recursive:true});fs.writeFileSync(path.join(box,'cur','fixture;2,S'),'From: fixture@example.invalid\nTo: reader@example.invalid\nSubject: Contact completion fixture\n\nSynthetic body\n');
+let output='',exit=null;const t=new Terminal({cols:120,rows:40,allowProposedApi:true});
+const p=pty.spawn(app,['-n','-F',config,'-f',box,'-e','set quit=yes postpone=no recall=no ask_cc=yes ask_bcc=yes editor="'+settings.editor.replace(/\\/g,'/')+'"'],{cols:120,rows:40,cwd:root,env:{...process.env,TERM:'xterm-256color'},useConpty:true,useConptyDll:true});
+p.onData(s=>{output+=s;t.write(s);if(s.includes('\x1b[6n'))p.write('\x1b[1;1R');if(s.includes('\x1b[c'))p.write('\x1b[?1;2c');});p.onExit(e=>exit=e.exitCode);
+const screen=()=>Array.from({length:40},(_,i)=>t.buffer.active.getLine(t.buffer.active.viewportY+i)?.translateToString(true)||'').join('\n');
+const until=async token=>{let start=Date.now();while(!screen().includes(token)&&exit===null&&Date.now()-start<15000)await pause(50);if(!screen().includes(token))throw Error('Missing rendered token '+token);};
+const results=[];try{await until('Contact completion fixture');p.write('m');await until('To:');
+for(const field of ['To:','Cc:','Bcc:']){await until(field);p.write(settings.query+'\t');await until(settings.expectedEmail);const line=screen().split('\n').find(l=>l.includes(field));if(!line?.includes(settings.expectedEmail))throw Error(field+' did not complete');results.push({field,passed:true});p.write('\r');}
+await until('Subject:');p.write('Contact completion draft\r');await until('Attachments');p.write('t');await pause(300);p.write('\x15'+settings.query+'\t');await until(settings.expectedEmail);await pause(400);if(!screen().split('\n').slice(-2).join(' ').includes(settings.expectedEmail))throw Error('Compose edit-To did not complete');results.push({field:'compose edit-To',passed:true});p.write('\r');await pause(200);p.write('q');await until('Mail not sent');await pause(300);p.write('Q');await until('Query:');p.write(settings.query+'\r');await until(settings.expectedEmail);results.push({field:'index query',passed:true});p.write('q');await pause(300);p.write('q');for(let i=0;i<100&&exit===null;i++)await pause(50);if(exit!==0)throw Error('Unclean exit '+exit);
+}catch(e){results.push({passed:false,error:String(e)});}finally{fs.writeFileSync(path.join(root,'terminal.vt'),output);if(exit===null)p.kill();t.dispose();}
+fs.writeFileSync(path.join(root,'results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));process.exit(results.every(r=>r.passed)?0:1);})();

@@ -12,8 +12,9 @@ reconstructs that tree and patched dependencies from pinned archives and checks
 all original source files against the working trees. Windows services
 under `native/` provide UTF-8 filesystem operations, full file identities,
 locking, child processes, and Winsock transport. The Windows executable imports
-Windows system/UCRT libraries; Git Bash is an external runtime dependency for
-upstream shell commands and the existing shared helper scripts. The UTF-8
+Windows system/UCRT libraries. Windows shell commands use CMD with delayed
+expansion disabled; paired batch launchers invoke Git Bash for the shared helper
+scripts. The UTF-8
 application manifest requires Windows 10 1903 or newer.
 
 Dependency versions and SHA256 hashes are pinned in `dependencies.json`.
@@ -23,6 +24,14 @@ sources. `scripts/build_deps.py` builds native ncurses, libiconv and PCRE2;
 `--toolchain` directory containing LLVM-MinGW. `scripts/build.py` builds the
 `linux` or `windows` target; Windows also requires `--toolchain`. The Makefile exposes platform build targets, source verification and optional
 toolchain preparation; `TOOLCHAIN` can select an existing LLVM-MinGW installation.
+`scripts/build_crypto.py` builds pinned static libgpg-error, libassuan, GPGME
+and SQLite for both platforms. The platform Makefile targets prepare and build
+these dependencies too. Windows packaging extracts the pinned GnuPG installer
+without executing it and stages private engines, MIME types, the portable system
+configuration and local manual under `.bin/windows/neomutt/`. Install that resource
+directory alongside `neomutt.exe`; the executable alone is insufficient for GPGME.
+The private engine does not replace the user's GPG installation or keyring.
+
 Build outputs stay in `.obj/`, finished executables in `.bin/{linux,windows}/`.
 
 `scripts/checkpoint.py` saves source, binaries, SHA256 metadata and retained
@@ -56,6 +65,28 @@ open-then-unlink behavior.
 No production account or credential is used by the fixture tests; configuration
 compatibility checks reproduce the installed configuration structure with fake data.
 
+The Windows baseline opts credential/token GPG pipes into loopback pinentry;
+the shared configuration defaults that option to empty on Linux. Synthetic
+console tests include decrypting an expired token, a mocked provider refresh,
+re-encryption, and verification with the original password. This does not change
+global GPG settings or replace GPGME's message-crypto pinentry.
+
+Windows reverse-video cells preserve terminal default colors rather than
+swapping fixed palette entries. Default-colored bold text keeps the theme's
+foreground color; the legacy console cell API cannot represent a separate bold
+font weight for that default color. Explicit palette colors retain intensity.
+
+The attachment tests cover production mailcap invocation, base64/Unicode HTML,
+spaced paths, actual isolated Edge/Chromium rendering, failure status, and
+overlapping cleanup timers. HTML keeps its existing stable filename and 64-second
+lifetime; reloading a browser tab after cleanup still requires reopening the
+attachment. Calendar workflow fixtures mirror the shared configuration with fake
+credentials and isolated mailboxes/calendar storage, and exercise both reply
+bindings, response choices, save, display and discard cleanup. Reply-address
+drafts are compared against stock Linux behavior, including self-replies and
+Reply-To. These checks do not certify every mailbox failure or synchronization
+race.
+
 ## Runtime design
 
 Keep commands inline when the tools exist on both platforms: ls, rm, iconv,
@@ -67,8 +98,8 @@ shutil.move.
 
 | Source | Purpose |
 | --- | --- |
-| runtime/neomutt-html-open and .bat | One shared Bash HTML wrapper; Windows defaults BROWSER to xdg-open.bat and respects an explicit override. |
-| runtime/neomutt-ical-request and .bat | One shared interactive request generator; Windows UUID generation uses PowerShell. |
+| runtime/neomutt-html-open and .bat | Shared HTML wrapper; absolute browser path, atomic page publication, guarded detached cleanup, and Windows batch argument handling. |
+| runtime/neomutt-ical-request and .bat | One shared interactive request generator; identities come from the current serialized draft. |
 | runtime/neomutt-query and .bat | Preserve echo/xargs/khard query semantics; Windows selects khard.exe because xargs cannot execute khard.bat. |
 | python/mutt-ical.py | Display invitations and generate replies with the existing prompts and response behavior. |
 | python/ical_support.py and timezones.zip | Standard-library calendar support and bundled IANA timezone data. |
@@ -79,7 +110,8 @@ shutil.move.
 The .bat launchers call the shared scripts through the existing Git for Windows
 Bash. They retain the working directory, inherit environment variables and
 forward exit status. NEOMUTT_FROM and BROWSER cross that boundary; setlocal keeps
-wrapper changes local without removing inherited values. There are no separate
+wrapper changes local without removing inherited values. The query batch wrapper
+selects the native khard executable through NEOMUTT_QUERY_KHARD. There are no separate
 Windows implementations of the HTML/request/query workflows.
 
 Both platforms invoke the existing .py files explicitly through python3 with
@@ -100,7 +132,8 @@ inside the quoted value.
 Windows uses its existing Bash, coreutils, iconv and GPG from Git for Windows,
 plus Python, PowerShell, khard and the existing viewers. Linux retains its
 existing tools. GPG settings are streamed directly to NeoMutt rather than buffered
-until successful decryption. The shared xdg-open launcher is unchanged.
+until successful decryption. The extensionless xdg-open script retains its Linux behavior; Windows uses the
+native START-based xdg-open.bat, quoting its single file/URL argument.
 
 Email runtime files reside in monochrome/module/email. Native Windows Lynx
 runtime and notices reside in monochrome/app/lynx; monochrome/bin/lynx.bat exposes
@@ -132,3 +165,23 @@ recurrence engine; unsupported custom VTIMEZONE rules fail. Generated timezone
 serialization can differ while preserving the tested calendar properties. Small
 native Lynx layout differences were accepted. Fixture tests establish the tested
 cases rather than universal behavioral equivalence.
+
+## Submission reliability checks
+
+The shared SMTP implementation distinguishes a lost final DATA acknowledgment
+from a definite rejection. If the terminator may have reached the server but no
+valid response arrives, it reports that delivery status is unknown and the server
+may have accepted the message. It retains the draft and does not automatically
+resend. A received acceptance remains successful if the connection closes during
+QUIT. Recording follows acknowledged submission.
+
+`tests/check_smtp.py` covers isolated authentication/TLS and archive consistency,
+including Unicode calendar/image attachments. The Windows and Linux SMTP outcome
+UI checks exercise compose/send, retained draft content, no automatic resend and
+archive counts. Native GPGME and classic GPG reader checks use disposable keyrings
+and genuinely encrypted messages.
+
+A same-message Maildir flag conflict remains an upstream limitation: an external
+rename can replace a pending local flag change. This was reproduced in stock Linux
+NeoMutt, the shared Linux build and Windows. Message contents remained intact;
+concurrent changes to different messages passed the tested cases.

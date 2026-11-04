@@ -16,6 +16,7 @@ p=argparse.ArgumentParser()
 p.add_argument('app',type=Path)
 p.add_argument('--config',type=Path)
 p.add_argument('--synthetic',action='store_true')
+p.add_argument('--system-config',type=Path)
 p.add_argument('--ssh-host')
 p.add_argument('--wrong-passphrase',action='store_true')
 p.add_argument('--output',type=Path,required=True)
@@ -39,7 +40,7 @@ for relative in ('main.syncthing/monochrome/module/email/postponed.maildir',
                  'main.syncthing/monochrome/local.syncthing/module/email/vault.maildir'):
  for sub in ('cur','new','tmp'):(home/relative/sub).mkdir(parents=True,exist_ok=True)
 credential_lines=[line for line in source.splitlines() if line.lstrip().startswith('source ')]
-if len(credential_lines)!=1 or ('gpg --decrypt' not in credential_lines[0] and not a.synthetic):
+if len(credential_lines)!=1 or (not re.search(r'gpg (?:\$my_gpg_pinentry |--pinentry-mode loopback )?--decrypt',credential_lines[0]) and not a.synthetic):
  raise SystemExit('Refusing unexpected configuration source commands')
 password_names=sorted(set(re.findall(r'\$([a-z_]*smtp_pass[a-z_]*)',source)))
 plaintext='\n'.join('set '+name+'="fixture-password"' for name in password_names)
@@ -56,6 +57,7 @@ if a.wrong_passphrase:passphrase.write_text('incorrect-fixture-passphrase\n')
 gpg_command='gpg --homedir "${my_active_dir}fixture_gpg" --batch --quiet --no-symkey-cache --pinentry-mode loopback --passphrase-file "${my_active_dir}fixture_passphrase.txt" --status-fd 2 --decrypt "${my_active_dir}neomuttrc.password.gpg"'
 replacement='source "'+gpg_command.replace('"','\\"')+'|"'
 source=source.replace(credential_lines[0],replacement)
+if a.system_config:source=a.system_config.read_text()+'\n'+source
 if (module/'fixture-passwords.py').exists():(module/'fixture-passwords.py').unlink()
 config=home/'fixture.rc';config.write_text(source)
 app=a.app.resolve()
@@ -65,11 +67,14 @@ if a.ssh_host:
  remote=remote_home+'/neomutt-xp-config'
  subprocess.run([*ssh,a.ssh_host,f'if not exist "{remote}" mkdir "{remote}"'],check=True)
  archive=out/'fixture.tar.gz'
- with tarfile.open(archive,'w:gz') as tar:tar.add(home,arcname='home')
+ with tarfile.open(archive,'w:gz') as tar:
+  tar.add(home,arcname='home')
+  resources=app.parent/'neomutt'
+  if resources.is_dir():tar.add(resources,arcname='neomutt')
  subprocess.run(['scp','-F','/dev/null',str(archive),a.ssh_host+':neomutt-xp-config/fixture.tar.gz'],check=True)
- subprocess.run(['scp','-F','/dev/null',str(app),a.ssh_host+':neomutt-xp-test.exe'],check=True)
+ subprocess.run(['scp','-F','/dev/null',str(app),a.ssh_host+':neomutt-xp-config/neomutt.exe'],check=True)
  subprocess.run([*ssh,a.ssh_host,f'tar -xzf "{remote}/fixture.tar.gz" -C "{remote}"'],check=True)
- command=[*ssh,a.ssh_host,f'set "HOME={remote}/home"&& set "TMPDIR={remote}/home"&& set "EDITOR=fixture-editor"&& neomutt-xp-test.exe -n -F "{remote}/home/fixture.rc" -D']
+ command=[*ssh,a.ssh_host,f'set "HOME={remote}/home"&& set "TMPDIR={remote}/home"&& set "EDITOR=fixture-editor"&& "{remote}/neomutt.exe" -n -F "{remote}/home/fixture.rc" -D']
  env=None
 else:
  command=[str(app),'-n','-F',str(config),'-D']
@@ -85,7 +90,9 @@ decrypted=b'[GNUPG:] DECRYPTION_OKAY' in run.stderr
 marker='decrypted Grüße 日本語' in settings.get('my_fixture_decryption_marker','')
 parser_errors=[line for line in run.stderr.decode(errors='replace').splitlines() if line and not line.startswith(('[GNUPG:]','gpg:'))]
 expected=(not decrypted and not marker) if a.wrong_passphrase else (decrypted and marker and not parser_errors and run.returncode==0)
-result={'passed':expected,'exit':run.returncode,'settings':len(settings),
+console_flags=settings.get('imap_oauth_refresh_command','').count('--pinentry-mode loopback')
+if a.system_config:expected=expected and console_flags==2
+result={'console_pipe_flag_count':console_flags,'passed':expected,'exit':run.returncode,'settings':len(settings),
         'credential_source_replaced':True,'synthetic_password_variables':password_names,
         'gpg_decryption_ok':decrypted,'decrypted_marker':marker,'intentional_wrong_passphrase':a.wrong_passphrase,
         'parser_errors':parser_errors}

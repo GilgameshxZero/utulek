@@ -60,8 +60,9 @@ under `.obj/performance_stage4_after.txt`.
 
 * Untyped phone/email properties retain empty labels in stored data and TSV;
   never infer CELL. Human pretty/search text may use upstream's implied labels.
-* Ordinary email TSV stays headerless; `email --mutt` has its explicit status
-  protocol. `--remove-first-line` is accepted. Zero-match mutt queries succeed.
+* Email TSV includes upstream’s query status line by default;
+  `--remove-first-line` explicitly requests headerless rows. `email --mutt`
+  retains its optional blank-status protocol. Zero-match mutt queries succeed.
 * ASCII controls are sanitized in TSV. Unicode/CJK table padding uses display
   cells, fixing upstream's one-character/one-column assumption.
 * Existing YAML query aliases and case-insensitive field names remain extensions.

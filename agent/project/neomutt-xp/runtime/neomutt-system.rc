@@ -63,9 +63,9 @@ macro pager y "<exit><change-folder>?" "show incoming mailboxes list"
 bind browser y exit
 
 # Handler for gzip compressed mailboxes
-# open-hook   '\.gz$' "gzip --stdout --decompress '%f' >  '%t'"
-# close-hook  '\.gz$' "gzip --stdout              '%t' >  '%f'"
-# append-hook '\.gz$' "gzip --stdout              '%t' >> '%f'"
+# open-hook   '\.gz$' "gzip --stdout --decompress \"%f\" >  \"%t\""
+# close-hook  '\.gz$' "gzip --stdout              \"%t\" >  \"%f\""
+# append-hook '\.gz$' "gzip --stdout              \"%t\" >> \"%f\""
 
 bind editor <delete> delete-char
 
@@ -166,12 +166,12 @@ color tree	red black
 
 
 # Use folders which match on \\.gz$ or \\.bz2$ as [gb]zipped folders:
-open-hook	\\.gz$ "gzip -cd '%f' > '%t'"
-close-hook	\\.gz$ "gzip -c '%t' > '%f'"
-append-hook	\\.gz$ "gzip -c '%t' >> '%f'"
-open-hook	\\.bz2$ "bzip2 -cd '%f' > '%t'"
-close-hook	\\.bz2$ "bzip2 -c '%t' > '%f'"
-append-hook	\\.bz2$ "bzip2 -c '%t' >> '%f'"
-open-hook   \\.xz$ "xz -cd %f > %t"
-close-hook  \\.xz$ "xz -c %t > %f"
-append-hook \\.xz$ "xz -c %t >> %f"
+open-hook	\\.gz$ "gzip -cd \"%f\" > \"%t\""
+close-hook	\\.gz$ "gzip -c \"%t\" > \"%f\""
+append-hook	\\.gz$ "gzip -c \"%t\" >> \"%f\""
+open-hook	\\.bz2$ "bzip2 -cd \"%f\" > \"%t\""
+close-hook	\\.bz2$ "bzip2 -c \"%t\" > \"%f\""
+append-hook	\\.bz2$ "bzip2 -c \"%t\" >> \"%f\""
+open-hook   \\.xz$ "xz -cd \"%f\" > \"%t\""
+close-hook  \\.xz$ "xz -c \"%t\" > \"%f\""
+append-hook \\.xz$ "xz -c \"%t\" >> \"%f\""

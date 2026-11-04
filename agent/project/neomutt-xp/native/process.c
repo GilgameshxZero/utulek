@@ -50,6 +50,37 @@ static wchar_t *quote_argument(const wchar_t *text)
   return out;
 }
 
+/* Quotes accepted by both CMD and the Microsoft argv decoder. Doubling an
+ * embedded quote keeps CMD's quote state balanced; backslashes remain data.
+ * Percent signs expand through a constant, once, rather than expanding user
+ * input such as %PATH%. No delayed expansion or shell dispatcher is needed. */
+char *xp_quote_cmd_argument(const char *text, int outer)
+{
+  if (!text) { errno = EINVAL; return NULL; }
+  size_t length = strlen(text);
+  static const char percent[] = "%NEOMUTT_XP_LITERAL_PERCENT%";
+  if (length > (SIZE_MAX - 3) / sizeof(percent)) { errno = ENOMEM; return NULL; }
+  char *result = malloc(length * sizeof(percent) + 3);
+  if (!result) return NULL;
+  char *at = result;
+  if (outer) *at++ = '"';
+  size_t slashes = 0;
+  for (const char *p = text; ; p++)
+  {
+    if (*p == '\\') { slashes++; continue; }
+    size_t copies = (*p == '"' || (!*p && outer)) ? slashes * 2 : slashes;
+    while (copies--) *at++ = '\\';
+    slashes = 0;
+    if (!*p) break;
+    if (*p == '%') { memcpy(at, percent, sizeof(percent)-1); at += sizeof(percent)-1; }
+    else if (*p == '"') { *at++ = '"'; *at++ = '"'; }
+    else *at++ = *p;
+  }
+  if (outer) *at++ = '"';
+  *at = 0;
+  return result;
+}
+
 static int env_compare(const void *a, const void *b)
 {
   return _wcsicmp(*(const wchar_t *const *) a, *(const wchar_t *const *) b);

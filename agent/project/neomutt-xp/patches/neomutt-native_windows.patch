@@ -383,7 +383,19 @@
  
  #ifdef ENABLE_NLS
    const char *domdir = mutt_str_getenv("TEXTDOMAINDIR");
-@@ -1077,6 +1085,10 @@
+@@ -800,7 +808,11 @@
+  */
+ static bool get_user_info(struct ConfigSet *cs)
+ {
++#ifdef _WIN32
++  const char *shell = mutt_str_getenv("COMSPEC");
++#else
+   const char *shell = mutt_str_getenv("SHELL");
++#endif
+ 
+   /* Get some information about the user */
+   struct passwd *pw = getpwuid(getuid());
+@@ -1077,6 +1089,10 @@
   */
  int main(int argc, char *argv[], char *envp[])
  {
@@ -394,7 +406,7 @@
    struct Email *e = NULL;
    SendFlags sendflags = SEND_NO_FLAGS;
    int rc = 1;
-@@ -1107,6 +1119,10 @@
+@@ -1107,6 +1123,10 @@
    NeoMutt->env = envlist_init(envp);
    mutt_str_replace(&NeoMutt->username, mutt_str_getenv("USER"));
    mutt_str_replace(&NeoMutt->home_dir, mutt_str_getenv("HOME"));
@@ -424,7 +436,44 @@
 +}
 --- a/mutt/file.c
 +++ b/mutt/file.c
-@@ -877,6 +877,9 @@
+@@ -36,6 +36,9 @@
+  */
+ 
+ #include "config.h"
++#ifdef _WIN32
++#include "xp_process.h"
++#endif
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <limits.h>
+@@ -49,6 +52,7 @@
+ #include <utime.h>
+ #include <wchar.h>
+ #include "file.h"
++#include "exit.h"
+ #include "buffer.h"
+ #include "charset.h"
+ #include "ctype2.h"
+@@ -812,6 +816,18 @@
+   if (!buf || !filename)
+     return;
+ 
++#ifdef _WIN32
++  const char *posix_shell = getenv("NEOMUTT_XP_SHELL");
++  if (!posix_shell || !*posix_shell)
++  {
++    char *quoted = xp_quote_cmd_argument(filename, add_outer);
++    if (!quoted)
++      mutt_exit(1);
++    buf_strcpy(buf, quoted);
++    free(quoted);
++    return;
++  }
++#endif
+   buf_reset(buf);
+   if (add_outer)
+     buf_addch(buf, '\'');
+@@ -877,6 +893,9 @@
    {
      if (*p != '/')
        continue;
@@ -752,7 +801,32 @@
  /**
 --- a/send/smtp.c
 +++ b/send/smtp.c
-@@ -733,7 +733,7 @@
+@@ -67,6 +67,7 @@
+ #define SMTP_ERR_READ -2
+ #define SMTP_ERR_WRITE -3
+ #define SMTP_ERR_CODE -4
++#define SMTP_ERR_UNCERTAIN -5
+ 
+ #define SMTP_PORT 25
+ #define SMTPS_PORT 465
+@@ -304,11 +305,16 @@
+   }
+   mutt_file_fclose(&fp);
+ 
++  /* Once the terminator may have reached the server, a lost response cannot
++   * distinguish rejection from acceptance.  Do not encourage a blind retry. */
++  rc = SMTP_ERR_UNCERTAIN;
+   /* terminate the message body */
+   if (mutt_socket_send(adata->conn, ".\r\n") == -1)
+     goto done;
+ 
+   rc = smtp_get_resp(adata);
++  if ((rc == SMTP_ERR_READ) || (rc == SMTP_ERR_CODE))
++    rc = SMTP_ERR_UNCERTAIN;
+ 
+ done:
+   progress_free(&progress);
+@@ -733,7 +739,7 @@
  {
    /* If they did not explicitly request or configure oauth then fail quietly */
    const char *const c_smtp_oauth_refresh_command = cs_subset_string(NeoMutt->sub, "smtp_oauth_refresh_command");
@@ -761,7 +835,7 @@
      return SMTP_AUTH_UNAVAIL;
  
    const char *authtype = xoauth2 ? "XOAUTH2" : "OAUTHBEARER";
-@@ -850,9 +850,9 @@
+@@ -850,9 +856,9 @@
      goto error;
    }
  
@@ -773,7 +847,7 @@
    {
      goto error;
    }
-@@ -866,9 +866,9 @@
+@@ -866,9 +872,9 @@
      goto error;
    }
  
@@ -785,7 +859,7 @@
    {
      goto error;
    }
-@@ -935,6 +935,21 @@
+@@ -935,6 +941,21 @@
    return false;
  }
  
@@ -807,7 +881,7 @@
  /**
   * smtp_authenticate - Authenticate to an SMTP server
   * @param adata SMTP Account data
-@@ -983,6 +998,8 @@
+@@ -983,6 +1004,8 @@
      for (size_t i = 0; i < countof(SmtpAuthenticators); i++)
      {
        const struct SmtpAuth *auth = &SmtpAuthenticators[i];
@@ -816,6 +890,17 @@
        mutt_debug(LL_DEBUG2, "Trying method %s\n", auth->method ? auth->method : "<variable>");
        r = auth->authenticate(adata, auth->method);
        if (r == SMTP_AUTH_SUCCESS)
+@@ -1192,7 +1215,9 @@
+   FREE(&adata.conn);
+   FREE(&adata.auth_mechs);
+ 
+-  if (rc == SMTP_ERR_READ)
++  if (rc == SMTP_ERR_UNCERTAIN)
++    mutt_error(_("SMTP delivery status is unknown; the server may have accepted the message"));
++  else if (rc == SMTP_ERR_READ)
+     mutt_error(_("SMTP session failed: read error"));
+   else if (rc == SMTP_ERR_WRITE)
+     mutt_error(_("SMTP session failed: write error"));
 --- a/system.c
 +++ b/system.c
 @@ -51,6 +51,11 @@

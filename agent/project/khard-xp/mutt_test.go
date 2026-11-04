@@ -31,7 +31,7 @@ func TestMuttExecutableProtocol(t *testing.T) {
 		{"single", []string{"email", "--mutt", "--", "Alice Zoë"}, "\nalice@example.invalid\tAlice Zoë\toffice, work\n", false},
 		{"literal", []string{"email", "--mutt", "--", name}, "\nliteral@example.invalid\t" + name + "\twork\n", false},
 		{"multiple", []string{"email", "--mutt", "--", "example.invalid"}, "\nalice@example.invalid\tAlice Zoë\toffice, work\nliteral@example.invalid\t" + name + "\twork\n", false},
-		{"parsable", []string{"email", "--parsable", "--", "Alice Zoë"}, "alice@example.invalid\tAlice Zoë\toffice, work\n", false},
+		{"parsable", []string{"email", "--parsable", "--", "Alice Zoë"}, "searching for 'alice zoë' ...\nalice@example.invalid\tAlice Zoë\toffice, work\n", false},
 		{"missing-config", []string{"email", "--mutt", "-c", filepath.Join(t.TempDir(), "missing.conf")}, "", true},
 		{"unknown-book", []string{"email", "--mutt", "-a", "missing-book"}, "", true},
 		{"invalid-option", []string{"email", "--bad-option", "--mutt"}, "", true},
@@ -95,11 +95,11 @@ func TestMuttQueryProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if before != "alice@example.invalid\tAlice Zoë\toffice, work\n" {
+	if before != "searching for 'alice zoë' ...\nalice@example.invalid\tAlice Zoë\toffice, work\n" {
 		t.Fatalf("parsable output changed: %q", before)
 	}
 	out, _, err := runTest(t, path, "", false, "email", "--parsable", "--mutt", "--", "Alice Zoë")
-	if err != nil || out != "\n"+before {
+	if err != nil || out != "\nalice@example.invalid\tAlice Zoë\toffice, work\n" {
 		t.Fatalf("combined flags: %q %v", out, err)
 	}
 }
@@ -152,5 +152,50 @@ func TestMuttFlagDetectionRespectsDataArguments(t *testing.T) {
 	}
 	if !muttRequested([]string{"email", "--bad-option", "--mutt"}) {
 		t.Fatal("protocol missing after parse error")
+	}
+}
+
+// Default email --parsable is already Mutt's protocol in upstream khard.
+// Test the zero/single/multiple boundary without stripping the first line.
+func TestEmailParsableStatusContract(t *testing.T) {
+	cfg, config := testConfig(t)
+	mustWrite(t, filepath.Join(cfg.Books[0].Path, "one.vcf"), []byte(fixture))
+	second := strings.NewReplacer("example-one", "example-two", "Alice", "Bob", "alice@", "bob@").Replace(fixture)
+	mustWrite(t, filepath.Join(cfg.Books[0].Path, "two.vcf"), []byte(second))
+	for _, tc := range []struct {
+		query string
+		count int
+	}{{"missing", 0}, {"ALICE", 1}, {"example.invalid", 2}, {"", 2}} {
+		for _, remove := range []bool{false, true} {
+			args := []string{"email", "--parsable"}
+			if remove {
+				args = append(args, "--remove-first-line")
+			}
+			args = append(args, "--")
+			if tc.query != "" {
+				args = append(args, tc.query)
+			}
+			out, _, err := runTest(t, config, "", false, args...)
+			if (err != nil) != (tc.count == 0) {
+				t.Fatalf("wrong exit for %q: %v", tc.query, err)
+			}
+			rows := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+			if !remove {
+				description := strings.ToLower(tc.query)
+				if description == "" {
+					description = "ALL"
+				}
+				want := "searching for '" + description + "' ..."
+				if rows[0] != want {
+					t.Fatalf("status: got %q want %q", rows[0], want)
+				}
+				rows = rows[1:]
+			} else if out == "" {
+				rows = nil
+			}
+			if len(rows) != tc.count {
+				t.Fatalf("first row lost for %q remove=%t: %q", tc.query, remove, out)
+			}
+		}
 	}
 }

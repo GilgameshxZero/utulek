@@ -3,6 +3,7 @@
 #define NEOMUTT_XP_PROCESS_H
 #include <stdio.h>
 #include <sys/types.h>
+char *xp_quote_cmd_argument(const char *, int);
 pid_t xp_filter_create(const char *command, FILE **input, FILE **output,
                        FILE **error, int fdin, int fdout, int fderr, char **environment);
 int xp_waitpid(pid_t pid, int *status, int flags);

@@ -168,6 +168,27 @@ func (r Runner) list(cards []*Card, cfg Config, o Options) error {
 	}
 	var rows [][]string
 	query := compileSearch(o.Terms)
+	// Upstream email TSV reserves its first line for Mutt/NeoMutt status.
+	// Headerless consumers explicitly request --remove-first-line.
+	if o.Command == "email" && o.Parsable && !o.RemoveFirstLine && !o.Mutt {
+		terms := make([]string, 0, len(query))
+		for _, term := range query {
+			value := term.value
+			if term.field != "" {
+				field := term.field
+				if field == "phone_numbers" {
+					field = "phone numbers"
+				}
+				value = field + ":" + value
+			}
+			terms = append(terms, value)
+		}
+		description := strings.Join(terms, " ")
+		if len(terms) == 0 {
+			description = "ALL"
+		}
+		fmt.Fprintf(r.Out, "searching for '%s' ...\n", safe(description))
+	}
 	for _, c := range cards {
 		view := columnValues{card: c}
 		values, _ := view.property(field).(map[string]any)

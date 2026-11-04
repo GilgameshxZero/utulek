@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parents[1]
 manifest=json.loads((ROOT/'dependencies.json').read_text())
 verification=ROOT/'.obj/source-verification';verification.mkdir(exist_ok=True)
 results=[]
-for name in ('neomutt','ncurses','lmdb'):
+for name in ('neomutt','ncurses','lmdb','libgpg-error','libassuan','gpgme','sqlite'):
  item=manifest[name];archive=ROOT/'.obj/downloads'/item['archive']
  if hashlib.sha256(archive.read_bytes()).hexdigest()!=item['sha256']:raise SystemExit('Archive hash mismatch: '+name)
  target=verification/name

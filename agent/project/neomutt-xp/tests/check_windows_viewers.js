@@ -6,6 +6,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const posix=p=>p.replace(/\\/g,'/');
 async function check(bundled){
  const scratch=fs.mkdtempSync(path.join(root,bundled?'viewer-editor-':'viewer-system-'));
+ const cwd=process.argv[6]?path.join(scratch,'snowfall'):scratch;fs.mkdirSync(cwd,{recursive:true});if(process.argv[6])fs.symlinkSync(process.argv[6],path.join(scratch,'monochrome'),'junction');
  const box=path.join(scratch,'inbox.maildir');
  for(const sub of ['cur','new','tmp'])fs.mkdirSync(path.join(box,sub),{recursive:true});
  const headers=subject=>`From: Sender <sender@example.invalid>\nTo: Reader <reader@example.invalid>\nDate: Tue, 03 Nov 2026 00:00:00 +0000\nSubject: ${subject}\nMIME-Version: 1.0\n`;
@@ -27,10 +28,10 @@ async function check(bundled){
  fs.writeFileSync(rc,'set folder="."\nset maildir_field_delimiter=";"\nset charset="utf-8"\n'+
   'set realname="Fixture Reader"\nset from="reader@example.invalid"\nset quit=yes\nset delete=yes\nset move=no\nset mark_old=no\n'+
   'set timeout=1\nset sleep_time=0\nset wait_key=no\nset pager_stop=yes\nset sort=date\nset sort_aux=date\n'+
-  'unset record\nunset beep\nset mailcap_path="'+posix(mailcap)+'"\nauto_view text/calendar text/html\n'+
+  'unset record\nunset beep\nset mailcap_path="'+posix(process.argv[6]?path.join(process.argv[6],'module/email/mailcap'):mailcap)+'"\nauto_view text/calendar text/html\n'+
   'set query_command="python3 -X utf8 \\"'+posix(query)+'\\" %s"\nbind editor <space> noop\n');
  const env={...process.env,HOME:scratch,USERPROFILE:scratch,TMPDIR:scratch,TERM:'xterm-256color',LANG:'C.UTF-8'};
- const child=pty.spawn(app,['-n','-F',rc,'-f',box],{cols:120,rows:40,cwd:scratch,env,useConpty:true,useConptyDll:bundled});
+ const child=pty.spawn(app,['-n','-F',rc,'-f',box],{cols:120,rows:40,cwd,env,useConpty:true,useConptyDll:bundled});
  let output='',exit=null;const phases=[];
  child.onData(data=>{output+=data;if(data.includes('\x1b[6n'))child.write('\x1b[1;1R');if(data.includes('\x1b[c'))child.write('\x1b[?1;2c');});
  child.onExit(event=>exit=event.exitCode);

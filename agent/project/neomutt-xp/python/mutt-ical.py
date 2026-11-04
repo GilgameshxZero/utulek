@@ -41,7 +41,6 @@ OPTIONS:
     -D display only
     -s <sendmail command>
     -g generate ICS reply only
-    --compose-message <file> read actual sender and consume compose scratch message
 """ % sys.argv[0]
 
 
@@ -232,15 +231,7 @@ if __name__ == "__main__":
     accept_decline = 'ACCEPTED'
     generate_reply_to = None
     # Gilgamesh.
-    opts, args = getopt(sys.argv[1:], "s:e:g:aidtD", ['compose-message='])
-    for option, value in opts:
-        if option == '--compose-message':
-            try:
-                email_address = read_draft_headers(value)['From']
-            finally:
-                Path(value).unlink(missing_ok=True)
-    if email_address:
-        email_address = mailbox_address(email_address)
+    opts, args = getopt(sys.argv[1:], "s:e:g:aidtD")
     # A cancelled/failed generation must not leave an empty new-mime placeholder.
     def remove_empty_reply():
         for option, value in opts:
@@ -264,7 +255,7 @@ if __name__ == "__main__":
             # If -s is provided, override sendmail with a lambda that returns the command
             sendmail_resolver = (lambda a=arg: split_command(a))
         if opt == '-e':
-            email_address = mailbox_address(arg)
+            email_address = arg
         if opt == '-i':
             print("\nAs:", email_address, end=".")
             accept_decline = get_accept_decline()

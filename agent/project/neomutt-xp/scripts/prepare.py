@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('names', nargs='*', default=['neomutt', 'ncurses', 'libiconv', 'pcre2', 'openssl', 'lmdb'])
+    p.add_argument('names', nargs='*', default=['neomutt', 'ncurses', 'libiconv', 'pcre2', 'openssl', 'lmdb', 'libgpg-error', 'libassuan', 'gpgme', 'sqlite'])
     args = p.parse_args()
     manifest = json.loads((ROOT / 'dependencies.json').read_text())
     for name in args.names:

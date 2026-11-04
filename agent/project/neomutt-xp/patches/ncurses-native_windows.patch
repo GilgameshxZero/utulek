@@ -25,15 +25,16 @@
  
  MODULE_ID("$Id: win_driver.c,v 1.74 2023/09/16 16:27:44 tom Exp $")
  
-@@ -136,6 +142,7 @@
+@@ -136,6 +142,8 @@
      DWORD map[MAPSIZE];
      DWORD rmap[MAPSIZE];
      WORD pairs[NUMPAIRS];
++    BOOL default_foreground[NUMPAIRS];
 +    WORD default_attributes;
      COORD origin;
      CHAR_INFO *save_screen;
      COORD save_size;
-@@ -164,12 +171,13 @@
+@@ -164,32 +172,37 @@
  
  #define RevAttr(attr) \
  	       (WORD) (((attr) & 0xff00) | \
@@ -45,11 +46,41 @@
  static WORD
  MapAttr(WORD res, attr_t ch)
  {
-+    res = (WORD)((res & 0xff00) | CON.pairs[0]);
++    int pair = 0;
++    res = CON.pairs[0];
      if (ch & A_COLOR) {
  	int p;
  
-@@ -274,8 +282,12 @@
+ 	p = PairNumber(ch);
+ 	if (p > 0 && p < NUMPAIRS) {
+ 	    WORD a;
++	    pair = p;
+ 	    a = CON.pairs[p];
+-	    res = (WORD) ((res & 0xff00) | a);
++	    res = a;
+ 	}
+     }
+ 
+     if (ch & A_REVERSE) {
+-	res = RevAttr(res);
++	res ^= COMMON_LVB_REVERSE_VIDEO;
+     }
+ 
+     if (ch & A_STANDOUT) {
+-	res = RevAttr(res) | BACKGROUND_INTENSITY;
+-    }
+-
+-    if (ch & A_BOLD)
++	res ^= COMMON_LVB_REVERSE_VIDEO;
++    }
++
++    /* Legacy intensity selects bright white, rather than bold default text.
++     * Keep theme defaults semantic, especially when reversed in ConPTY. */
++    if ((ch & A_BOLD) && !CON.default_foreground[pair])
+ 	res |= FOREGROUND_INTENSITY;
+ 
+     if (ch & A_DIM)
+@@ -274,8 +287,12 @@
  
      for (i = actual = 0; i < limit; i++) {
  	ch = str[i];
@@ -63,7 +94,7 @@
  	ci[actual].Char.UnicodeChar = CharOf(ch);
  	ci[actual].Attributes = MapAttr(CON.SBI.wAttributes,
  					AttrOf(ch));
-@@ -291,6 +303,8 @@
+@@ -291,6 +308,8 @@
  		}
  	    }
  	}
@@ -72,7 +103,7 @@
  	++actual;
      }
  
-@@ -744,8 +758,8 @@
+@@ -744,8 +763,8 @@
  
  static int
  wcon_defaultcolors(TERMINAL_CONTROL_BLOCK * TCB,
@@ -83,7 +114,7 @@
  {
      SCREEN *sp;
      int code = ERR;
-@@ -753,6 +767,19 @@
+@@ -753,6 +772,19 @@
      AssertTCB();
      SetSP();
  
@@ -103,7 +134,7 @@
      return (code);
  }
  
-@@ -840,6 +867,7 @@
+@@ -840,6 +872,7 @@
      if (okConsoleHandle(TCB) &&
  	Lines != NULL &&
  	Cols != NULL) {
@@ -111,7 +142,7 @@
  	if (CON.buffered) {
  	    *Lines = (int) (CON.SBI.dwSize.Y);
  	    *Cols = (int) (CON.SBI.dwSize.X);
-@@ -894,7 +922,7 @@
+@@ -894,7 +927,7 @@
  	    else
  		dwFlag &= (DWORD) (~ENABLE_PROCESSED_INPUT);
  
@@ -120,7 +151,7 @@
  
  	    buf->c_iflag = iflag;
  	    buf->c_lflag = lflag;
-@@ -1008,6 +1036,30 @@
+@@ -1008,6 +1041,30 @@
      returnVoid;
  }
  
@@ -151,7 +182,7 @@
  static int
  wcon_mode(TERMINAL_CONTROL_BLOCK * TCB, int progFlag, int defFlag)
  {
-@@ -1021,6 +1073,9 @@
+@@ -1021,6 +1078,9 @@
  	T((T_CALLED("win32con::wcon_mode(%p, prog=%d, def=%d)"),
  	   TCB, progFlag, defFlag));
  
@@ -161,7 +192,7 @@
  	CON.progMode = progFlag;
  	CON.lastOut = progFlag ? CON.hdl : CON.out;
  	SetConsoleActiveScreenBuffer(CON.lastOut);
-@@ -1280,9 +1335,11 @@
+@@ -1280,9 +1340,12 @@
      if (okConsoleHandle(TCB)) {
  	SetSP();
  
@@ -173,10 +204,11 @@
 +            WORD fore = f < 0 ? CON.default_attributes & 0x0f : MapColor(true, f);
 +            WORD back = b < 0 ? CON.default_attributes & 0xf0 : MapColor(false, b);
 +            CON.pairs[pair] = fore | back;
++            CON.default_foreground[pair] = (f < 0);
  	}
      }
  }
-@@ -1545,7 +1602,10 @@
+@@ -1545,7 +1608,10 @@
      (void) evl;			/* TODO: implement wgetch-events */
  #endif
  
@@ -188,7 +220,7 @@
  
      assert(sp);
  
-@@ -1571,13 +1631,13 @@
+@@ -1571,13 +1637,13 @@
  	    if (mode) {
  		b = GetNumberOfConsoleInputEvents(fd, &nRead);
  		if (b && nRead > 0) {
@@ -204,7 +236,7 @@
  
  				if (inp_rec.Event.KeyEvent.bKeyDown) {
  				    if (0 == ch) {
-@@ -1593,6 +1653,10 @@
+@@ -1593,6 +1659,10 @@
  				    CONSUME();
  				}
  			    }
@@ -215,7 +247,7 @@
  			    continue;
  			case MOUSE_EVENT:
  			    if (decode_mouse(sp,
-@@ -2038,7 +2102,7 @@
+@@ -2038,7 +2108,7 @@
  		else
  		    dwFlag = dwFlag & (DWORD) (~ENABLE_PROCESSED_INPUT);
  	    }
@@ -224,7 +256,7 @@
  	    SetConsoleMode(ofd, dwFlag);
  	    code = OK;
  	}
-@@ -2112,15 +2176,21 @@
+@@ -2112,15 +2182,21 @@
      BOOL b;
      DWORD nRead;
      WORD vk;
@@ -247,7 +279,7 @@
  	if (b && nRead > 0) {
  	    if (rc < 0)
  		rc = 0;
-@@ -2128,7 +2198,35 @@
+@@ -2128,7 +2204,35 @@
  	    if (inp_rec.EventType == KEY_EVENT) {
  		if (!inp_rec.Event.KeyEvent.bKeyDown)
  		    continue;
@@ -284,7 +316,7 @@
  		vk = inp_rec.Event.KeyEvent.wVirtualKeyCode;
  		/*
  		 * There are 24 virtual function-keys (defined in winuser.h),
-@@ -2156,6 +2254,16 @@
+@@ -2156,6 +2260,16 @@
  			*buf = KEY_BACKSPACE;
  		    }
  		}
@@ -301,14 +333,17 @@
  		break;
  	    } else if (inp_rec.EventType == MOUSE_EVENT) {
  		if (handle_mouse(sp,
-@@ -2227,6 +2335,10 @@
+@@ -2227,6 +2341,13 @@
  
  	CON.inp = GetDirectHandle("CONIN$", FILE_SHARE_READ);
  	CON.out = GetDirectHandle("CONOUT$", FILE_SHARE_WRITE);
 +        CONSOLE_SCREEN_BUFFER_INFO original_info;
 +        CON.default_attributes = GetConsoleScreenBufferInfo(CON.out, &original_info)
 +            ? original_info.wAttributes : 7;
-+        for (i = 0; i < NUMPAIRS; i++) CON.pairs[i] = CON.default_attributes;
++        for (i = 0; i < NUMPAIRS; i++) {
++            CON.pairs[i] = CON.default_attributes;
++            CON.default_foreground[i] = TRUE;
++        }
  
  	if (getenv("NCGDB") || getenv("NCURSES_CONSOLE2")) {
  	    T(("... will not buffer console"));

@@ -15,7 +15,7 @@ a=p.parse_args()
 root=Path.home()/'main.syncthing/monochrome'
 app=root/'app/neomutt.exe';launcher=root/'bin/neomutt.bat'
 loader=Path.home()/'.config/neomutt/neomuttrc'
-source='source ~/main.syncthing/monochrome/module/email/neomuttrc\n'
+source='source ~/main.syncthing/monochrome/app/neomutt/system.rc\nsource ~/main.syncthing/monochrome/module/email/neomuttrc\n'
 if a.write_config_loader:
  loader.parent.mkdir(parents=True,exist_ok=True)
  try:
@@ -27,7 +27,7 @@ results=[]
 with tempfile.TemporaryDirectory(prefix='neomutt install space 日本語 ') as scratch:
  rc=Path(scratch)/'fixture space.rc'
  rc.write_text('set my_install_marker="Grüße 日本語 with spaces"\n',encoding='utf-8')
- cases=[('version','-v',0,'NeoMutt 20260616'),('quoted_config_arguments','-n -F "'+str(rc)+'" -Q my_install_marker',0,'Grüße 日本語 with spaces'),('failure_exit_status','-n -F \"'+str(Path(scratch)/'missing.rc')+'\" -D',1,'')]
+ cases=[('version','-v',0,'NeoMutt 20260616'),('quoted_config_arguments','-n -F "'+str(rc)+'" -Q my_install_marker',0,'Grüße 日本語 with spaces'),('failure_exit_status','-n -F "'+str(Path(scratch)/'missing.rc')+'" -D',1,'')]
  for name,args,code,token in cases:
   command='cmd.exe /d /s /c ""'+str(launcher)+'" '+args+'"'
   run=subprocess.run(command,cwd=scratch,capture_output=True,timeout=20)

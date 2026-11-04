@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const version = "0.1.5-preview"
+const version = "0.1.6-preview"
 
 var errNoResults = fmt.Errorf("found no contacts")
 
@@ -181,7 +181,7 @@ Options:
   --format FORMAT        show: pretty/yaml/vcard; edit/new: yaml/vcard
   --open-editor          Open input in editor before saving
   --patch                edit only: preserve fields omitted from YAML input
-  --remove-first-line    email parsable: omit upstream status line (default here)
+  --remove-first-line    email parsable: omit upstream status line
   --force                Remove the selected contact without confirmation
   --vcard-version 3.0|4.0 Version for new contacts
   -d, --display ORDER    first_name / last_name / formatted_name

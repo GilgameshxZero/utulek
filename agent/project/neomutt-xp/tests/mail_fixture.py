@@ -92,8 +92,12 @@ class SmtpHandler(socketserver.StreamRequestHandler):
                     payload.extend(piece)
                     if len(payload) > 10485760: return
                 if self.server.drop_data: return
+                if self.server.reject_data:
+                    self.send('550 5.7.1 fixture DATA rejected');continue
                 session['messages'].append({'sender':sender,'recipients':recipients,'data':bytes(payload)})
+                if self.server.drop_ack:return
                 self.send('250 2.0.0 fixture captured')
+                if self.server.drop_after_ack:return
             elif verb == 'QUIT': self.send('221 bye'); return
             elif verb in ('RSET','NOOP'): self.send('250 OK')
             else: self.send('502 unsupported fixture command')
@@ -101,13 +105,16 @@ class SmtpHandler(socketserver.StreamRequestHandler):
 class SmtpFixture(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
     daemon_threads = True
-    def __init__(self, context=None, implicit_tls=False, drop_data=False, auth_methods=None, login_prompts=None):
+    def __init__(self, context=None, implicit_tls=False, drop_data=False, auth_methods=None, login_prompts=None, drop_ack=False, drop_after_ack=False, reject_data=False):
         super().__init__(('127.0.0.1',0),SmtpHandler)
         self.login_prompts=login_prompts if login_prompts is not None else (b'Username:',b'Password:')
         self.auth_methods=auth_methods or ['PLAIN','LOGIN','XOAUTH2']
         self.context=context
         self.implicit_tls=implicit_tls
         self.drop_data=drop_data
+        self.drop_ack=drop_ack
+        self.reject_data=reject_data
+        self.drop_after_ack=drop_after_ack
         self.sessions=[]
         self.errors=[]
     def handle_error(self, request, client_address):
