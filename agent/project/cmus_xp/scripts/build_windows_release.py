@@ -94,6 +94,8 @@ def main():
                     '--jobs', str(args.jobs)], env=env, check=True)
     subprocess.run([sys.executable, str(ROOT / 'scripts/build_http_deps.py'),
                     '--jobs', str(args.jobs)], env=env, check=True)
+    subprocess.run([sys.executable, str(ROOT / 'scripts/build_modplug_windows.py')],
+                   env=env, check=True)
     subprocess.run([sys.executable, str(ROOT / 'scripts/build_native_windows.py'),
                     '--jobs', str(args.jobs), '--install-dir', str(args.install_dir.resolve()),
                     '--launcher-dir', str(args.launcher_dir.resolve())], env=env, check=True)

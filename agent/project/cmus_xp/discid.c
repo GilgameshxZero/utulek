@@ -87,6 +87,8 @@ int parse_cdda_url(const char *url, char **disc_id, int *start_track, int *end_t
 char *gen_cdda_url(const char *disc_id, int start_track, int end_track)
 {
 	char buf[256];
+	if (!disc_id)
+		disc_id = "";
 	if (end_track != -1)
 		snprintf(buf, sizeof(buf), "cdda://%s/%d-%d", disc_id, start_track, end_track);
 	else
@@ -104,8 +106,9 @@ char *complete_cdda_url(const char *device, const char *url)
 	if (!url_disc_id || is_range) {
 		if (url_disc_id && strchr(url_disc_id, '/'))
 			device = url_disc_id;
-		get_disc_id(device, &disc_id, &num_tracks);
-		if (is_range)
+		if (!get_disc_id(device, &disc_id, &num_tracks))
+			disc_id = NULL;
+		if (is_range && num_tracks > 0)
 			end_track = num_tracks;
 		if (!url_disc_id)
 			url_disc_id = disc_id;

@@ -22,22 +22,32 @@ type MediaText struct {
 	Text    string `json:"text"`
 	Subject string `json:"subject,omitempty"`
 }
+type Attachment struct {
+	PartID      int64  `json:"partId"`
+	Name        string `json:"name"`
+	ContentType string `json:"contentType"`
+	Size        int64  `json:"size"`
+	SourceID    string `json:"sourceId,omitempty"`
+}
 type Message struct {
-	Account     string      `json:"googleVoiceNumber,omitempty"`
-	ID          string      `json:"id"`
-	Created     string      `json:"createdAt"`
-	State       string      `json:"state"`
-	Recipients  []Recipient `json:"recipients,omitempty"`
-	Body        *Text       `json:"textMessage,omitempty"`
-	Sender      string      `json:"sender,omitempty"`
-	Preview     string      `json:"contentPreview,omitempty"`
-	Type        string      `json:"type"`
-	Source      string      `json:"googleVoiceId,omitempty"`
-	Error       string      `json:"error,omitempty"`
-	MMS         *MediaText  `json:"mmsMessage,omitempty"`
-	SendToken   string      `json:"googleVoiceClientId,omitempty"`
-	Submitted   bool        `json:"submitted,omitempty"`
-	AttemptedAt string      `json:"attemptedAt,omitempty"`
+	Account      string       `json:"googleVoiceNumber,omitempty"`
+	ID           string       `json:"id"`
+	Created      string       `json:"createdAt"`
+	State        string       `json:"state"`
+	Recipients   []Recipient  `json:"recipients,omitempty"`
+	Body         *Text        `json:"textMessage,omitempty"`
+	Sender       string       `json:"sender,omitempty"`
+	Preview      string       `json:"contentPreview,omitempty"`
+	Type         string       `json:"type"`
+	Source       string       `json:"googleVoiceId,omitempty"`
+	Error        string       `json:"error,omitempty"`
+	MMS          *MediaText   `json:"mmsMessage,omitempty"`
+	Attachments  []Attachment `json:"attachments,omitempty"`
+	GroupID      string       `json:"groupId,omitempty"`
+	Participants []string     `json:"participants,omitempty"`
+	SendToken    string       `json:"googleVoiceClientId,omitempty"`
+	Submitted    bool         `json:"submitted,omitempty"`
+	AttemptedAt  string       `json:"attemptedAt,omitempty"`
 }
 type Store struct {
 	mu          sync.Mutex
@@ -204,6 +214,8 @@ func cloneMessage(m Message) Message {
 		media := *m.MMS
 		m.MMS = &media
 	}
+	m.Attachments = append([]Attachment(nil), m.Attachments...)
+	m.Participants = append([]string(nil), m.Participants...)
 	return m
 }
 

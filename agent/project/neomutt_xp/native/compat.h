@@ -97,7 +97,9 @@ struct sigaction { void (*sa_handler)(int); sigset_t sa_mask; int sa_flags; };
 #define SIG_BLOCK 0
 #define SIG_UNBLOCK 1
 #define SIG_SETMASK 2
-const char *xp_runtime_path(const char *relative);
+const char *xp_resource_data(unsigned id, size_t *size);
+char *xp_resource_fgets(char *buffer, size_t capacity, const char **cursor, size_t *left);
+FILE *xp_resource_open(unsigned id);
 const char *xp_crypto_directory(void);
 int xp_console_read_key(int fd);
 void xp_console_flush_input(int fd);

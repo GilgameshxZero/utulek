@@ -25,6 +25,8 @@ type Config struct {
 	CookieSource     string   `json:"cookie_source,omitempty"`
 	AuthRetrySeconds int      `json:"auth_retry_seconds,omitempty"`
 	HistoryMessages  int      `json:"history_messages,omitempty"`
+	CacheLimitMB     int      `json:"cache_limit_mb,omitempty"`
+	LogMaxMB         int      `json:"log_max_mb,omitempty"`
 	SyncNumbers      []string `json:"sync_numbers,omitempty"`
 }
 
@@ -123,6 +125,18 @@ func readConfig(home string) (Config, error) {
 	}
 	if c.HistoryMessages < 1 || c.HistoryMessages > 1000 {
 		return c, errors.New("history_messages must be 1..1000")
+	}
+	if c.CacheLimitMB == 0 {
+		c.CacheLimitMB = 1024
+	}
+	if c.CacheLimitMB < 1 || c.CacheLimitMB > 100000 {
+		return c, errors.New("cache_limit_mb must be 1..100000")
+	}
+	if c.LogMaxMB == 0 {
+		c.LogMaxMB = 10
+	}
+	if c.LogMaxMB < 1 || c.LogMaxMB > 1000 {
+		return c, errors.New("log_max_mb must be 1..1000")
 	}
 	if !phonePattern.MatchString(c.Number) || c.Username == "" || c.Password == "" || c.Account < 0 || c.PollSeconds < 5 || c.MaxThreads < 1 || c.MaxThreads > 1000 {
 		return c, errors.New("invalid configuration: check number, credentials, account, poll_seconds (>=5), max_threads (1..1000)")

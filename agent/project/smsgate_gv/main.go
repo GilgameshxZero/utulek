@@ -24,8 +24,10 @@ Commands:
   init [--number +15551234567]  Create private configuration; prompts for number
   auth-check                  Verify headless authentication without reading or sending messages
   login                       Open a separate Chromium window for sign-in / MFA
+  login --remote              Sign in through loopback DevTools over SSH (headless server)
   serve                       Run the HTTP API with a headless browser
   status                      Read the running service's authenticated health
+  doctor                      Check configuration, state, permissions and service health
   credentials                 Show local API credentials explicitly
   paths                       Show configuration and browser profile paths
   version                     Show version
@@ -96,7 +98,7 @@ func mainErr() error {
 		if browser == "" {
 			return errors.New("install Chromium or Google Chrome first")
 		}
-		c := Config{Listen: "0.0.0.0:8081", Username: "smsgate", Password: randomID(), Number: *number, Browser: browser, PollSeconds: 300, MaxThreads: 1000, HistoryMessages: 1000, CookieSource: defaultCookieSource(), AuthRetrySeconds: 300}
+		c := Config{Listen: "0.0.0.0:8081", Username: "smsgate", Password: randomID(), Number: *number, Browser: browser, PollSeconds: 300, MaxThreads: 1000, HistoryMessages: 1000, CacheLimitMB: 1024, LogMaxMB: 10, CookieSource: defaultCookieSource(), AuthRetrySeconds: 300}
 		if e := writeJSON(path, c); e != nil {
 			return e
 		}
@@ -109,6 +111,18 @@ func mainErr() error {
 		return e
 	}
 	switch cmd {
+	case "doctor":
+		failed := false
+		for _, check := range runDoctor(home, c) {
+			fmt.Println(check.String())
+			if check.Status == "FAIL" {
+				failed = true
+			}
+		}
+		if failed {
+			return errors.New("doctor found one or more failures")
+		}
+		return nil
 	case "credentials":
 		fmt.Printf("Server: http://%s\nUsername: %s\nPassword: %s\n", c.Listen, c.Username, c.Password)
 		return nil
@@ -170,6 +184,16 @@ func mainErr() error {
 		}
 		if cmd == "serve" {
 			return serve(ctx, home, c)
+		}
+		loginFlags := flag.NewFlagSet("login", flag.ContinueOnError)
+		remote := loginFlags.Bool("remote", false, "sign in through a loopback DevTools endpoint over SSH")
+		port := loginFlags.Int("port", 9222, "loopback DevTools port for --remote (0 picks a free port)")
+		timeout := loginFlags.Duration("timeout", 15*time.Minute, "remote login timeout")
+		if e := loginFlags.Parse(os.Args[2:]); e != nil {
+			return e
+		}
+		if *remote {
+			return remoteLogin(ctx, home, c, *port, *timeout)
 		}
 		if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
 			return errors.New("login needs a graphical desktop (DISPLAY or WAYLAND_DISPLAY); this command can be run from a terminal on your desktop")

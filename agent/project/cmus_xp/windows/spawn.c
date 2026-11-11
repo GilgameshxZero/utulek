@@ -6,6 +6,8 @@
 
 #define COMMAND_CAPACITY 32767
 
+
+
 static int append(wchar_t *line, size_t *used, wchar_t c)
 {
     if (*used >= COMMAND_CAPACITY - 1) { errno = E2BIG; return -1; }

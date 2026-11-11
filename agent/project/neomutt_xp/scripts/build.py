@@ -37,8 +37,8 @@ def main():
                      '-c', source_file, '-o', obj], build, 'xp-' + source_file.stem + '.log')
             objects.append(obj)
         resource = build / 'xp-manifest.o'
-        if not resource.exists() or resource.stat().st_mtime < max((ROOT / 'native/neomutt.rc').stat().st_mtime, (ROOT / 'native/neomutt.manifest').stat().st_mtime):
-            run([toolchain / 'bin/x86_64-w64-mingw32-windres', '-I', ROOT / 'native',
+        if not resource.exists() or resource.stat().st_mtime < max((ROOT / 'native/neomutt.rc').stat().st_mtime, (ROOT / 'native/neomutt.manifest').stat().st_mtime, (ROOT / 'runtime/mime.types').stat().st_mtime, (ROOT / 'runtime/neomutt-system.rc').stat().st_mtime):
+            run([toolchain / 'bin/x86_64-w64-mingw32-windres', '-I', ROOT / 'native', '-I', ROOT / 'runtime',
                  ROOT / 'native/neomutt.rc', '-o', resource], build, 'xp-manifest.log')
         objects.append(resource)
         dependencies = objects + [ROOT / '.obj/windows-prefix/lib' / ('lib' + name + '.a') for name in ('ncursesw','iconv','pcre2-posix','pcre2-8','ssl','crypto','lmdb','gpgme','assuan','gpg-error','sqlite3')]

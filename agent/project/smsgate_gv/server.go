@@ -10,6 +10,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +21,10 @@ import (
 type Bridge struct {
 	config        Config
 	store         *Store
+	home          string
+	webhooks      *WebhookStore
+	webhookClient *http.Client
+	attachments   chan attachmentRequest
 	jobs          chan string
 	refresh       chan bool
 	mu            sync.Mutex
@@ -151,7 +157,15 @@ func (s *Bridge) worker(ctx context.Context, home string) {
 				default:
 				}
 			}
-
+		case request := <-s.attachments:
+			if b == nil {
+				if e := connectBrowser(); e != nil {
+					request.result <- attachmentResult{err: e}
+					continue
+				}
+			}
+			data, contentType, e := b.attachment(request.sourceID)
+			request.result <- attachmentResult{data: data, contentType: contentType, err: e}
 		}
 	}
 }
@@ -170,7 +184,7 @@ func secureEqual(a, b string) bool {
 	return subtle.ConstantTimeCompare(aa[:], bb[:]) == 1
 }
 
-var bridgeCapabilities = []string{"sms", "full-history", "recent-history", "event-stream", "incremental-sync"}
+var bridgeCapabilities = []string{"sms", "full-history", "recent-history", "mms-download", "group-receive", "webhooks", "event-stream", "incremental-sync"}
 
 func (s *Bridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// No CORS support. Reject cross-origin browser requests even with credentials.
@@ -253,6 +267,91 @@ func (s *Bridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		respond(w, 200, m)
+	case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/inbox/") && strings.Contains(r.URL.Path, "/attachments/"):
+		rest := strings.TrimPrefix(r.URL.Path, "/inbox/")
+		parts := strings.SplitN(rest, "/attachments/", 2)
+		if len(parts) != 2 || parts[1] == "" {
+			apiError(w, 400, "invalid attachment path")
+			return
+		}
+		messageID, e := url.PathUnescape(parts[0])
+		if e != nil {
+			apiError(w, 400, "invalid message ID")
+			return
+		}
+		partID, e := strconv.ParseInt(parts[1], 10, 64)
+		if e != nil || partID < 1 {
+			apiError(w, 400, "invalid attachment part")
+			return
+		}
+		m, ok := s.store.get(messageID)
+		if !ok {
+			apiError(w, 404, "message not found")
+			return
+		}
+		var attachment *Attachment
+		for i := range m.Attachments {
+			if m.Attachments[i].PartID == partID {
+				attachment = &m.Attachments[i]
+				break
+			}
+		}
+		if attachment == nil {
+			apiError(w, 404, "attachment not found")
+			return
+		}
+		data, contentType, e := s.attachmentBytes(*attachment)
+		if e != nil {
+			apiError(w, 503, "attachment unavailable")
+			return
+		}
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+		w.Header().Set("Content-Disposition", `inline; filename="`+attachment.Name+`"`)
+		w.WriteHeader(200)
+		_, _ = w.Write(data)
+	case r.Method == "GET" && r.URL.Path == "/webhooks":
+		respond(w, 200, s.webhooks.list())
+	case r.Method == "POST" && r.URL.Path == "/webhooks":
+		var hook Webhook
+		r.Body = http.MaxBytesReader(w, r.Body, 8*1024)
+		if e := json.NewDecoder(r.Body).Decode(&hook); e != nil {
+			apiError(w, 400, "invalid webhook JSON")
+			return
+		}
+		if e := validWebhook(hook); e != nil {
+			apiError(w, 400, e.Error())
+			return
+		}
+		created, e := s.webhooks.put(hook)
+		if e != nil {
+			apiError(w, 409, e.Error())
+			return
+		}
+		status := 200
+		if created {
+			status = 201
+		}
+		respond(w, status, hook)
+	case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/webhooks/"):
+		id, e := url.PathUnescape(strings.TrimPrefix(r.URL.Path, "/webhooks/"))
+		if e != nil || id == "" {
+			apiError(w, 400, "invalid webhook id")
+			return
+		}
+		removed, e := s.webhooks.remove(id)
+		if e != nil {
+			apiError(w, 500, "cannot persist webhook removal")
+			return
+		}
+		if !removed {
+			apiError(w, 404, "webhook not found")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case r.Method == "POST" && r.URL.Path == "/inbox/refresh":
 		select {
 		case s.refresh <- true:
@@ -333,6 +432,9 @@ func (s *Bridge) submit(w http.ResponseWriter, r *http.Request) {
 }
 
 func serve(ctx context.Context, home string, c Config) error {
+	if e := rotateLogFile(os.Stdout, int64(c.LogMaxMB)*1024*1024); e != nil {
+		fmt.Fprintln(os.Stderr, "Warning: cannot rotate service log:", e)
+	}
 	host, _, e := net.SplitHostPort(c.Listen)
 	if e != nil {
 		return e
@@ -345,13 +447,19 @@ func serve(ctx context.Context, home string, c Config) error {
 	if e != nil {
 		return e
 	}
+	webhooks, e := openWebhooks(home)
+	if e != nil {
+		return e
+	}
 	listener, e := net.Listen("tcp", c.Listen)
 	if e != nil {
 		return e
 	}
-	s := &Bridge{authState: "checking", config: c, store: store, jobs: make(chan string, 32), refresh: make(chan bool, 1)}
+	s := &Bridge{authState: "checking", config: c, store: store, home: home, webhooks: webhooks, webhookClient: &http.Client{Timeout: 10 * time.Second}, attachments: make(chan attachmentRequest, 4), jobs: make(chan string, 32), refresh: make(chan bool, 1)}
 	workerCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	go s.deliverWebhooks(workerCtx)
+	go s.dispatch("app:started", map[string]any{"backend": "google_voice"})
 	done := make(chan struct{})
 	go func() { defer close(done); s.worker(workerCtx, home) }()
 	server := &http.Server{Handler: s, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 * 1024}

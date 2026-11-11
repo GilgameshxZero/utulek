@@ -3,7 +3,7 @@
 A native Windows port of cmus, preserving its terminal interface, commands,
 library, queue, and playback engine. Version 0.4 adds optimized decoding,
 expanded codecs, and tested audio playback from video containers.
-Current version: **0.9.0-dev**. Version 0.5 adds file-backed playlist imports and `:update` synchronization;
+Current version: **1.0.0**. Version 0.5 adds file-backed playlist imports and `:update` synchronization;
 see the [shared README](README.md) for usage and supported playlist formats.
 
 ## Run the preview
@@ -38,6 +38,41 @@ audio retains its native decoded channel layout. Windows may remix that PCM
 to the selected playback device. Track
 selection is automatic; there is no manual audio-track selector yet.
 Not every enabled codec/container has fixtures. DRM-protected files are unsupported.
+
+## Tracker modules, CDs, desktop controls and legacy tags
+
+Tracker modules (`.mod`, `.s3m`, `.xm`, `.it` and the other formats accepted by
+libmodplug) are decoded by a statically linked public-domain libmodplug
+0.8.9.0. Playback, seeking and metadata use the same input-plugin interface as
+other local files.
+
+Audio CDs use a native Windows CD-ROM input plugin. `cdda://` URLs, default
+drive detection, track ranges and CDDB-style disc IDs are supported; playback
+uses the raw CD-DA sector IOCTL. CD-TEXT and online CDDB metadata are not
+implemented yet, so only the track number is shown. The implementation is
+covered by URL/TOC/error-path checks but was not exercised with a physical disc
+in this build.
+
+Bracketed paste is enabled through the terminal's VT interface. Pasted text
+is inserted literally and does not trigger normal-mode bindings; the paste
+markers are consumed by the shared CSI handler. This was tested through a real
+ConPTY session. Populated wide-character redraws inside an existing Windows
+tmux session remain the known limitation documented below; tmux itself is not
+modified.
+
+Windows System Media Transport Controls (SMTC) publish the current title,
+artist and playback status, and handle Play, Pause, Stop, Next and Previous
+from hardware media keys and the Windows media flyout. SMTC needs a real
+console or window handle; it initializes when the player is launched normally
+in a console or terminal. Headless sessions without a window stay disabled.
+
+ID3v1/v2 and other metadata text in legacy encodings (ISO-8859-x, Windows-125x,
+KOI8, Shift_JIS, EUC-JP/KR, GBK, Big5, UTF-16 and related code pages) is
+converted to UTF-8 with a small Windows NLS-backed iconv layer. `:run`,
+`:shell`, config hooks and status hooks use native `CreateProcessW`: UTF-16
+paths, full argument quoting, exit status, and `.bat`/`.cmd` dispatch work;
+ordinary executables and batch files are supported, while POSIX shell syntax
+inside a command still requires a shell such as `sh` or Git Bash.
 FFmpeg's libraries are linked into the executable; no separate FFmpeg
 installation or codec DLLs are required.
 
@@ -186,10 +221,15 @@ client, with up to ten connected clients.
 * Device failures now report an error instead of silently spinning. The player
   attempts to reopen output; if no device is available, playback can be retried
   after reconnecting. Physical hotplug behavior remains hardware-dependent.
-* The Win32 process launcher is basic; Unix shell commands and scripts are not
-  translated. Non-UTF-8 tag conversion needs a Windows implementation.
+* The Win32 process launcher handles executables and batch files; Unix shell
+  syntax is not translated and needs an installed POSIX shell if used.
+* Audio CD metadata is limited to the track number (no CD-TEXT/CDDB lookup), and
+  physical CD playback, hardware media-key delivery and the media flyout were
+  not acoustically or manually verified in this environment.
 * Terminal behavior across hosts and mouse interactions are not exhaustively
-  covered. No additional manual testing is requested for this milestone.
+  covered. Populated wide-character partial redraws inside an existing Windows
+  tmux session still differ from direct terminals; tmux is intentionally not
+  modified. No additional manual testing is requested for this milestone.
 
 ## Build
 

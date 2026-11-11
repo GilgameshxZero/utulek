@@ -5,6 +5,9 @@
 #ifdef CMUS_NATIVE_WINDOWS
 
 void win_smtc_init(void);
+int win_smtc_available(void);
+int win_smtc_stage(void);
+long win_smtc_result(void);
 void win_smtc_free(void);
 void win_smtc_process(void);
 void win_smtc_playback_status_changed(void);

@@ -46,6 +46,7 @@ char **win_arguments(int *argc);
 extern char **win_environment;
 char *win_getenv(const char *name);
 void win_curses_pair_defaults(int pair, int foreground, int background);
+void win_vt_control(const char *text);
 FILE *win_fopen(const char *, const char *);
 int win_open(const char *, int, ...);
 int win_stat(const char *, struct stat *);

@@ -48,6 +48,12 @@ static void vt_mode(void)
         ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
 }
 
+void win_vt_control(const char *text)
+{
+    vt_mode();
+    write_control(text);
+}
+
 void PDC_gotoyx(int row, int col)
 {
     char escape[48];

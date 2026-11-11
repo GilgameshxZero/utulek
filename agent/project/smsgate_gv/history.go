@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mime"
 	"net/url"
 	"strings"
 	"sync"
@@ -113,6 +114,46 @@ func nativeBridgeID(account, nativeID string) string {
 	return "gv-" + hex.EncodeToString(sum[:])
 }
 
+func bridgeAttachments(items []VoiceAttachment) []Attachment {
+	out := make([]Attachment, 0, len(items))
+	for i, item := range items {
+		name := fmt.Sprintf("attachment-%d", i+1)
+		if extension := preferredExtension(item.ContentType); extension != "" {
+			name += extension
+		} else if extensions, e := mime.ExtensionsByType(item.ContentType); e == nil && len(extensions) > 0 {
+			name += extensions[0]
+		}
+		out = append(out, Attachment{PartID: int64(i + 1), Name: name, ContentType: item.ContentType, SourceID: item.ID})
+	}
+	return out
+}
+
+func preferredExtension(contentType string) string {
+	switch contentType {
+	case "image/jpeg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	case "image/gif":
+		return ".gif"
+	case "image/webp":
+		return ".webp"
+	case "video/mp4":
+		return ".mp4"
+	case "video/3gpp":
+		return ".3gp"
+	case "audio/mpeg":
+		return ".mp3"
+	case "audio/amr":
+		return ".amr"
+	case "audio/ogg":
+		return ".ogg"
+	case "text/plain":
+		return ".txt"
+	}
+	return ""
+}
+
 func decodeHistory(body []byte, c Config) ([]Message, error) {
 	var envelope []json.RawMessage
 	if e := json.Unmarshal(body, &envelope); e != nil || len(envelope) < 1 {
@@ -133,41 +174,74 @@ func decodeHistory(body []byte, c Config) ([]Message, error) {
 		if len(thread) < 1 || json.Unmarshal(thread[0], &threadID) != nil {
 			return nil, errors.New("invalid Google Voice thread identity")
 		}
-		if !strings.HasPrefix(threadID, "t.") {
+		if !strings.HasPrefix(threadID, "t.") && !strings.HasPrefix(threadID, "g.") {
 			continue
 		}
+		group := strings.HasPrefix(threadID, "g.")
 		number := strings.TrimPrefix(threadID, "t.")
-		if !historyPeer(number) || (len(allowed) > 0 && !allowed[number]) {
+		if !group && (!historyPeer(number) || (len(allowed) > 0 && !allowed[number])) {
 			continue
 		}
 		if selected >= c.MaxThreads {
 			break
 		}
-		selected++
 		rows, e := decodeVoiceThread(thread, c.Number)
 		if e != nil {
 			return nil, e
 		}
+		if group && len(allowed) > 0 {
+			included := false
+			for _, r := range rows {
+				for _, participant := range r.Participants {
+					if allowed[participant] {
+						included = true
+					}
+				}
+			}
+			if !included {
+				continue
+			}
+		}
+		selected++
 		for _, r := range rows {
 			m := Message{Account: c.Number, ID: nativeBridgeID(c.Number, r.ID), Source: r.ID, Created: r.Timestamp, Type: "SMS"}
 			text := r.Text
-			if len(r.AttachmentIDs) > 0 {
-				text += "\n[Media attachment: open Google Voice]"
-			}
-			if len(r.AttachmentIDs) > 0 || r.Subject != "" {
+			if group {
 				m.Type = "MMS"
+				m.GroupID = r.GroupID
+				m.Participants = append([]string(nil), r.Participants...)
+			}
+			if len(r.Attachments) > 0 || r.Subject != "" {
+				m.Type = "MMS"
+			}
+			if len(r.Attachments) > 0 {
+				m.Attachments = bridgeAttachments(r.Attachments)
+			}
+			if group {
+				m.MMS = &MediaText{Text: text, Subject: r.GroupName}
 			}
 			if r.Outgoing {
 				m.SendToken = r.ClientID
 				m.State = "Sent"
-				m.Recipients = []Recipient{{Number: number, State: "Sent"}}
 				m.Body = &Text{Text: text}
-				if m.Type == "MMS" {
+				if group {
+					for _, participant := range r.Participants {
+						if participant != c.Number {
+							m.Recipients = append(m.Recipients, Recipient{participant, "Sent"})
+						}
+					}
+				} else {
+					m.Recipients = []Recipient{{Number: number, State: "Sent"}}
+				}
+				if m.Type == "MMS" && !group {
 					m.MMS = &MediaText{Text: text, Subject: r.Subject}
 				}
 			} else {
 				m.State = "Received"
 				m.Sender = number
+				if group {
+					m.Sender = r.GroupSender
+				}
 				m.Preview = text
 				if r.Subject != "" {
 					m.Preview = "Subject: " + r.Subject + "\n" + m.Preview

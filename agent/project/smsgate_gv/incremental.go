@@ -20,7 +20,7 @@ var errSyncReset = errors.New("Google Voice sync cursor requires reset")
 
 // Bump when decoding expands or backfill limits change so older cursors trigger
 // a fresh cold snapshot instead of silently retaining a shallow import.
-const syncCursorVersion = 2
+const syncCursorVersion = 4
 
 type syncCursor struct {
 	Version int    `json:"version"`

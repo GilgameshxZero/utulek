@@ -2,7 +2,7 @@
 
 Native Linux and Windows builds share cmus's interface, playback engine and
 expanded FFmpeg decoder. See [the Windows README](README_WINDOWS.md) for codec
-coverage and platform-specific limits. Current version: **0.9.0-dev**.
+coverage and platform-specific limits. Current version: **1.0.0**.
 [Release validation and source review](RELEASE.md) describes the completed
 reliability checkpoints and the remaining requirements before distribution.
 

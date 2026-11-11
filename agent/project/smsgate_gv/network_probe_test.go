@@ -155,7 +155,7 @@ func TestLiveNetworkMessageIdentity(t *testing.T) {
 		} else {
 			incoming++
 		}
-		if len(m.AttachmentIDs) > 0 {
+		if len(m.Attachments) > 0 {
 			media++
 		}
 		byText[m.Text] = append(byText[m.Text], m.ID)

@@ -11,6 +11,20 @@
 
 static int failures;
 
+static void progress(const char *message)
+{
+	char path[32768];
+	DWORD length = GetTempPathA(sizeof(path), path);
+	if (!length)
+		return;
+	strcat(path, "cmus_spawn_progress.txt");
+	FILE *file = fopen(path, "ab");
+	if (file) {
+		fprintf(file, "%s\n", message);
+		fclose(file);
+	}
+}
+
 static void check(int condition, const char *name)
 {
 	if (!condition) {
@@ -93,6 +107,9 @@ static int run_child(const char *self, const char *output,
 
 int main(int argc, char **argv)
 {
+	char **wide_args = win_arguments(&argc);
+	if (wide_args)
+		argv = wide_args;
 	if (argc > 2 && !strcmp(argv[1], "--echo")) {
 		FILE *file = fopen(argv[2], "wb");
 		if (!file)
@@ -106,6 +123,8 @@ int main(int argc, char **argv)
 	}
 	if (argc == 3 && !strcmp(argv[1], "--exit"))
 		return atoi(argv[2]);
+	setvbuf(stdout, NULL, _IONBF, 0);
+	progress("start");
 
 	char *self = module_path();
 	char *output = temp_path(L"cmus_spawn_echo.txt");
@@ -120,6 +139,7 @@ int main(int argc, char **argv)
 	if (!self || !output || !batch || !batch_output || !shell_output)
 		return 1;
 
+	progress("before direct");
 	const char *edge[] = { "plain", "two words", "", "quote\"inside",
 		"trail\\\\", "back\\slash", "\xc3\xbcnicode \xe2\x9c\x93" };
 	check(run_child(self, output, edge, 7) == 0, "direct spawn exit status");
@@ -129,10 +149,12 @@ int main(int argc, char **argv)
 	check(contents && strstr(contents, "back\\slash\n"), "direct spawn backslash");
 	check(contents && strstr(contents, "\ntrail\\\\\n"), "direct spawn trailing backslashes");
 
+	progress("after direct");
 	char *exit_argv[] = { self, "--exit", "7", NULL };
 	rc = spawn(exit_argv, &status, 1);
 	check(rc == 0 && ((status >> 8) & 255) == 7, "nonzero exit status");
 
+	progress("after exit");
 	char *missing_argv[] = { missing, NULL };
 	errno = 0;
 	rc = spawn(missing_argv, NULL, 1);
@@ -143,11 +165,13 @@ int main(int argc, char **argv)
 		fprintf(file, "@echo off\r\n> \"%%~2\" echo %%~1\r\n");
 		fclose(file);
 	}
+	progress("after missing");
 	char *batch_argv[] = { batch, "batch value", batch_output, NULL };
 	rc = spawn(batch_argv, &status, 1);
 	contents = read_file(batch_output);
 	check(rc == 0 && contents && strstr(contents, "batch value"), "batch dispatch");
 
+	progress("after batch");
 	char command[4096];
 	snprintf(command, sizeof(command), "echo shell-value> \"%s\"", shell_output);
 	check(spawn_shell(command) == 0, "spawn_shell");
@@ -158,6 +182,7 @@ int main(int argc, char **argv)
 	DeleteFileA(batch_output);
 	DeleteFileA(batch);
 	DeleteFileA(shell_output);
+	progress("after shell");
 	printf("%s (%d failures)\n", failures ? "FAILED" : "PASS", failures);
 	return failures ? 1 : 0;
 }

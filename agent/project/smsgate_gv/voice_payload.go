@@ -4,19 +4,58 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
 // Observed Google Voice JSON+protobuf fields. Unknown message kinds and missing
 // identity/time fields are errors, never an invitation to synthesize an ID.
+type VoiceAttachment struct {
+	ID          string
+	ContentType string
+	Width       int
+	Height      int
+}
+
 type VoiceMessage struct {
-	ClientID      string   `json:"clientId,omitempty"`
-	ID            string   `json:"id"`
-	Timestamp     string   `json:"timestamp"`
-	Text          string   `json:"text"`
-	Outgoing      bool     `json:"outgoing"`
-	Subject       string   `json:"subject,omitempty"`
-	AttachmentIDs []string `json:"attachmentIds,omitempty"`
+	ClientID     string            `json:"clientId,omitempty"`
+	ID           string            `json:"id"`
+	Timestamp    string            `json:"timestamp"`
+	Text         string            `json:"text"`
+	Outgoing     bool              `json:"outgoing"`
+	Subject      string            `json:"subject,omitempty"`
+	Attachments  []VoiceAttachment `json:"attachments,omitempty"`
+	GroupID      string            `json:"groupId,omitempty"`
+	GroupName    string            `json:"groupName,omitempty"`
+	GroupSender  string            `json:"groupSender,omitempty"`
+	Participants []string          `json:"participants,omitempty"`
+}
+
+func decodeGroupMetadata(fields []json.RawMessage) (name, sender string, participants []string, ok bool) {
+	if len(fields) <= 14 || string(fields[14]) == "null" {
+		return "", "", nil, false
+	}
+	var media []json.RawMessage
+	if json.Unmarshal(fields[14], &media) != nil || len(media) < 5 {
+		return "", "", nil, false
+	}
+	_ = json.Unmarshal(media[0], &name)
+	_ = json.Unmarshal(media[4], &sender)
+	if len(media) > 5 {
+		_ = json.Unmarshal(media[5], &participants)
+	}
+	if len(participants) == 0 && len(media) > 3 {
+		var rows [][]json.RawMessage
+		if json.Unmarshal(media[3], &rows) == nil {
+			for _, row := range rows {
+				var number string
+				if len(row) > 0 && json.Unmarshal(row[0], &number) == nil && phonePattern.MatchString(number) {
+					participants = append(participants, number)
+				}
+			}
+		}
+	}
+	return name, sender, participants, name != "" || len(participants) > 0
 }
 
 func voiceThread(body []byte, threadID string) ([]json.RawMessage, error) {
@@ -41,6 +80,11 @@ func decodeVoiceThread(thread []json.RawMessage, ownNumber string) ([]VoiceMessa
 	if len(thread) < 3 {
 		return nil, errors.New("truncated Google Voice thread")
 	}
+	var threadID string
+	if json.Unmarshal(thread[0], &threadID) != nil {
+		return nil, errors.New("invalid Google Voice thread identity")
+	}
+	group := strings.HasPrefix(threadID, "g.")
 	var records [][]json.RawMessage
 	if e := json.Unmarshal(thread[2], &records); e != nil {
 		return nil, errors.New("invalid Google Voice messages")
@@ -82,13 +126,25 @@ func decodeVoiceThread(thread []json.RawMessage, ownNumber string) ([]VoiceMessa
 		if e := json.Unmarshal(fields[9], &m.Text); e != nil {
 			return nil, errors.New("invalid Google Voice text")
 		}
+		if group {
+			name, sender, participants, ok := decodeGroupMetadata(fields)
+			if !ok {
+				return nil, errors.New("invalid Google Voice group metadata")
+			}
+			m.GroupID, m.GroupName, m.GroupSender, m.Participants = threadID, name, sender, participants
+			// Google Voice emits group system records whose text is the
+			// "sender - group name" label rather than a message body.
+			if !m.Outgoing && sender != "" && name != "" && m.Text == sender+" - "+name {
+				continue
+			}
+		}
 		m.Timestamp = time.UnixMilli(timestamp).UTC().Format(time.RFC3339Nano)
 		if len(fields) > 17 && string(fields[17]) != "null" {
 			if e := json.Unmarshal(fields[17], &m.ClientID); e != nil {
 				return nil, errors.New("invalid Google Voice client correlation ID")
 			}
 		}
-		if string(fields[14]) != "null" {
+		if !group && string(fields[14]) != "null" {
 			var media []json.RawMessage
 			if e := json.Unmarshal(fields[14], &media); e != nil || len(media) < 3 {
 				return nil, errors.New("invalid Google Voice media message")
@@ -105,11 +161,26 @@ func decodeVoiceThread(thread []json.RawMessage, ownNumber string) ([]VoiceMessa
 					return nil, e
 				}
 				for _, attachment := range attachments {
-					var id string
+					var id, contentType string
 					if len(attachment) < 2 || json.Unmarshal(attachment[1], &id) != nil || id == "" {
 						return nil, errors.New("invalid Google Voice attachment ID")
 					}
-					m.AttachmentIDs = append(m.AttachmentIDs, id)
+					if json.Unmarshal(attachment[0], &contentType) != nil || !strings.Contains(contentType, "/") {
+						return nil, errors.New("invalid Google Voice attachment content type")
+					}
+					meta := VoiceAttachment{ID: id, ContentType: contentType}
+					if len(attachment) > 3 {
+						var parts [][]int
+						if json.Unmarshal(attachment[3], &parts) == nil {
+							for _, part := range parts {
+								if len(part) >= 3 && part[0] == 1 {
+									meta.Width, meta.Height = part[1], part[2]
+									break
+								}
+							}
+						}
+					}
+					m.Attachments = append(m.Attachments, meta)
 				}
 			}
 		}

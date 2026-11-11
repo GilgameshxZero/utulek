@@ -1,7 +1,7 @@
 BINDIR := $(abspath ../../.bin)
 
 REV ?= HEAD
-VERSION ?= 0.9.0-dev
+VERSION ?= 1.0.0
 
 all: main plugins man
 

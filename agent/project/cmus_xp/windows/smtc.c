@@ -21,10 +21,12 @@ static __x_ABI_CWindows_CMedia_CISystemMediaTransportControls *controls;
 static __x_ABI_CWindows_CMedia_CISystemMediaTransportControlsDisplayUpdater *updater;
 static __x_ABI_CWindows_CMedia_CIMusicDisplayProperties *music;
 static EventRegistrationToken button_token;
-static HANDLE console_window;
+static HWND console_window;
 static atomic_int pending_action;
 static int handler_registered;
 static int initialized;
+static int init_stage;
+static long init_result;
 
 enum {
 	ACTION_NONE,
@@ -99,6 +101,31 @@ handler_vtbl = {
 
 static struct button_handler handler = { &handler_vtbl, 1 };
 
+static LRESULT CALLBACK smtc_window_proc(HWND window, UINT message,
+		WPARAM wparam, LPARAM lparam)
+{
+	return DefWindowProcW(window, message, wparam, lparam);
+}
+
+static HWND smtc_window(void)
+{
+	HWND window = GetConsoleWindow();
+	WNDCLASSW class;
+	if (window)
+		return window;
+	memset(&class, 0, sizeof(class));
+	class.lpfnWndProc = smtc_window_proc;
+	class.hInstance = GetModuleHandleW(NULL);
+	class.lpszClassName = L"cmus_smtc_message_window";
+	if (!RegisterClassW(&class) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
+		return NULL;
+	HWND created = CreateWindowExW(0, class.lpszClassName, L"cmus",
+			WS_OVERLAPPEDWINDOW, 0, 0, 0, 0, NULL, NULL, class.hInstance, NULL);
+	if (created)
+		ShowWindow(created, SW_SHOWNOACTIVATE);
+	return created;
+}
+
 static HSTRING string(const char *value)
 {
 	HSTRING result = NULL;
@@ -141,25 +168,37 @@ void win_smtc_init(void)
 	if (initialized)
 		return;
 	initialized = 1;
-	if (FAILED(RoInitialize(RO_INIT_MULTITHREADED)) &&
-			FAILED(RoInitialize(RO_INIT_SINGLETHREADED)))
+	init_stage = 1;
+	init_result = RoInitialize(RO_INIT_MULTITHREADED);
+	if (FAILED(init_result)) {
+		init_result = RoInitialize(RO_INIT_SINGLETHREADED);
+		if (FAILED(init_result))
+			return;
+	}
+	init_stage = 2;
+	console_window = smtc_window();
+	if (!console_window) {
+		init_result = (long)GetLastError();
 		return;
-	console_window = GetConsoleWindow();
-	if (!console_window)
-		return;
+	}
+	init_stage = 3;
 	class_name = string("Windows.Media.SystemMediaTransportControls");
 	if (!class_name)
 		return;
 	hr = RoGetActivationFactory(class_name,
 			&IID_ISystemMediaTransportControlsInterop, (void **)&interop);
 	WindowsDeleteString(class_name);
+	init_result = hr;
 	if (FAILED(hr) || !interop)
 		return;
+	init_stage = 4;
 	hr = interop->lpVtbl->GetForWindow(interop, console_window,
 			&IID___x_ABI_CWindows_CMedia_CISystemMediaTransportControls, (void **)&controls);
 	interop->lpVtbl->Release(interop);
+	init_result = hr;
 	if (FAILED(hr) || !controls)
 		return;
+	init_stage = 5;
 	controls->lpVtbl->put_IsEnabled(controls, TRUE);
 	controls->lpVtbl->put_IsPlayEnabled(controls, TRUE);
 	controls->lpVtbl->put_IsPauseEnabled(controls, TRUE);
@@ -175,6 +214,21 @@ void win_smtc_init(void)
 				(void *)&handler, &button_token)))
 		handler_registered = 1;
 	d_print("smtc: initialized\n");
+}
+
+int win_smtc_available(void)
+{
+	return controls != NULL;
+}
+
+int win_smtc_stage(void)
+{
+	return init_stage;
+}
+
+long win_smtc_result(void)
+{
+	return init_result;
 }
 
 void win_smtc_free(void)

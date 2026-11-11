@@ -5,8 +5,9 @@ existing SMSGate terminal client. Current preview supports reading recent
 one-to-one and short-code conversation history with native message identity and UTC timestamps.
 One-to-one SMS sending and interrupted-send reconciliation are verified with the
 existing Android conversation. Full history available through Google Voice's
-initial sync is imported; attachment downloads, groups and webhooks remain
-unfinished.
+initial sync is imported, MMS media can be downloaded and served, and group
+messages are imported with participants. Attachment sending and group sending
+remain unfinished.
 
 The executable is built with Go and pure-Go SQLite: no Go, Python or Node runtime
 is needed. Installed Chromium or Chrome is required. Build with `make`.
@@ -17,6 +18,20 @@ Initialize with `init --number`, then use `auth-check` or `serve`. Valid existin
 Chromium cookies are imported without a separate bridge login. `auth-check` shows
 stages and has a 90-second overall deadline. The optional graphical `login`
 command remains available for manual authentication.
+
+For a headless server, `login --remote [--port 9222] [--timeout 15m]` starts
+headless Chromium with a loopback-only DevTools endpoint. Tunnel it from your
+workstation:
+
+```
+ssh -L 9222:127.0.0.1:9222 user@server
+```
+
+Then open `http://127.0.0.1:9222` in Chrome, select the Voice page and use
+DevTools screencast to sign in and complete MFA. The command waits until the
+configured Google Voice number is visible on the Voice settings page, then saves
+`session.json` and exits. The endpoint never listens beyond loopback, and a
+timeout or signal removes the browser process group.
 
 State defaults to `~/.local/state/smsgate_gv`; `SMSGATE_GV_HOME` overrides it.
 Configuration contains:
@@ -30,6 +45,10 @@ Configuration contains:
 * `max_threads`: maximum threads imported from a cold snapshot; default 1000.
 * `history_messages`: maximum messages imported per thread from a cold snapshot;
   default 1000.
+* `cache_limit_mb`: disk budget for downloaded media; oldest cached files are
+  removed first, default 1024.
+* `log_max_mb`: truncate a redirected service log at startup when it exceeds
+  this size, default 10.
 * `sync_numbers`: optional list of international peer numbers or short codes; omit
   to include all supported one-to-one and short-code threads.
 
@@ -81,16 +100,34 @@ Native IDs are scoped by own GV number. Imports preserve UTC millisecond times,
 direction, text, subjects and known client-assigned IDs. Unchanged imports skip
 journal writes. Local `/inbox` and `/messages` support pagination and RFC3339
 `from` filters. An empty initial journal returns 503 until synchronization is
-complete. Numeric short codes retain their original sender identity. Group and
-unsupported thread IDs are skipped; historical server-side deletions are not mirrored into the retained local message journal.
-MMS text is readable, with explicit open-GV media placeholders; attachment
-sending/downloading is not implemented.
+complete. Numeric short codes retain their original sender identity. Group threads are
+imported with their group ID, name and participant list; per-sender identity is
+preserved and group system/label records are skipped. Sending to a group and
+historical server-side deletions are not implemented.
+MMS text is readable. Media is downloaded lazily from Google Voice and cached
+under `media/` in the state directory; `/inbox/{id}/attachments/{partId}` serves
+the original bytes. Attachment sending is not implemented.
 
 Authenticated `/events` emits changed message records as a local SSE stream.
 Subscriptions start with a reset indication so reconnecting clients reconcile
 against the local journal. Slow consumers disconnect instead of silently losing
 updates, and the client reconnects with backoff. This does not trigger a full GV
 page reload or transfer media bytes.
+
+## Webhooks
+
+Authenticated clients can register `POST /webhooks` with
+`{"id":"...","url":"https://...","event":"sms:received"}`, list with
+`GET /webhooks`, and remove with `DELETE /webhooks/{id}`. Supported events are
+`sms:received`, `mms:received`, `sms:sent`, `sms:delivered`, `sms:failed`,
+`sms:cancelled` and `app:started`. Registrations persist in `webhooks.json`.
+
+Delivery posts `{"id","event","payload"}` JSON to the registered URL with a
+10-second timeout and up to three attempts. Payloads include the message ID,
+timestamp, sender, text/body, subject and transaction ID where available.
+Current bridge events cover received messages, sent/failed messages and
+`app:started`; delivered/cancelled are accepted for registration but are not
+emitted yet.
 
 The updated native SMSGate client recognizes the bridge's event-stream capability
 on configured connections and consumes native message records directly, avoiding a
@@ -122,6 +159,18 @@ SMSGate client: API details, local filters/pagination, exact cached text/directi
 timestamps, repeated refresh, process restart and the actual terminal conversation
 view. It did not send messages or change the normal phone client configuration.
 An actual reboot has not been tested; startup is manual.
+
+## Operations
+
+`smsgate_gv doctor` is a read-only check of the state directory, permissions,
+saved session, message journal, cursor, Chromium path, webhooks, media cache,
+log size, disk space and the running service. It prints `OK`, `WARN` or `FAIL`
+and exits nonzero on failures.
+
+The service writes only a startup line and browser diagnostics are discarded.
+If launched with shell redirection, `serve` truncates `serve.log` at startup when
+it exceeds `log_max_mb` (default 10 MiB). A crash or `SIGKILL` is safe: the next
+start removes stale `browser-*` profiles and the message journal remains readable.
 
 Google Voice's private response schema may change; unknown kinds or absent
 identity/timestamp fields fail explicitly instead of inventing message identities.

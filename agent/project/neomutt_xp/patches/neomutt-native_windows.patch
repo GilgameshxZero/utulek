@@ -55,7 +55,7 @@
  }
  
  ###############################################################################
-+# Native Windows platform implementations supplied by neomutt_xp.
++# Native Windows platform implementations supplied by neomutt-xp.
 +if {[string match *mingw* [get-define host]]} {
 +  define HAVE_STRSEP 1
 +  define HAVE_STRCASESTR 1
@@ -650,7 +650,25 @@
    }
 --- a/gui/curs_lib.c
 +++ b/gui/curs_lib.c
-@@ -194,19 +194,28 @@
+@@ -100,10 +100,17 @@
+  */
+ void mutt_need_hard_redraw(void)
+ {
++#ifdef _WIN32
++  /* ConPTY doesn't reliably process the raw alternate-screen sequence written
++   * behind ncurses' back: the following refresh can emit a blank screen.
++   * Leave and resume curses normally instead, which repaints the whole screen. */
++  mutt_endwin();
++#else
+   // Forcibly switch to the alternate screen.
+   // Using encryption can leave ncurses confused about which mode it's in.
+   fputs("\033[?1049h", stdout);
+   fflush(stdout);
++#endif
+   keypad(stdscr, true);
+   clearok(stdscr, true);
+   window_redraw(NULL);
+@@ -194,19 +201,28 @@
      fputs(_("Press any key to continue..."), stdout);
    fflush(stdout);
  
@@ -1206,7 +1224,50 @@
             ((c_maildir_trash || e->trash) && (e->deleted != e->trash)))
 --- a/main.c
 +++ b/main.c
-@@ -772,7 +772,15 @@
+@@ -566,6 +566,34 @@
+    * requested not to via "-n".  */
+   if (!skip_sys_rc)
+   {
++#ifdef _WIN32
++    FILE *defaults = xp_resource_open(3);
++    if (!defaults)
++    {
++      mutt_error(_("Unable to read embedded system configuration"));
++      need_pause = true;
++    }
++    else
++    {
++      char *line = NULL;
++      size_t capacity = 0;
++      int number = 0;
++      while ((line = mutt_file_read_line(line, &capacity, defaults, &number, MUTT_RL_CONT)))
++      {
++        if (!*line)
++          continue;
++        enum CommandResult result = parse_rc_line(line, err);
++        if ((result == MUTT_CMD_ERROR) || (result == MUTT_CMD_WARNING))
++        {
++          mutt_error("embedded system configuration:%d: %s", number, buf_string(err));
++          need_pause = true;
++          break;
++        }
++      }
++      FREE(&line);
++      mutt_file_fclose(&defaults);
++    }
++#else
+     do
+     {
+       if (mutt_set_xdg_path(XDG_CONFIG_DIRS, buf))
+@@ -594,6 +622,7 @@
+         need_pause = true; // TEST11: neomutt (error in /etc/neomuttrc)
+       }
+     }
++#endif
+   }
+ 
+   /* Read the user's initialization file.  */
+@@ -772,7 +801,15 @@
   */
  static void init_locale(void)
  {
@@ -1222,7 +1283,7 @@
  
  #ifdef ENABLE_NLS
    const char *domdir = mutt_str_getenv("TEXTDOMAINDIR");
-@@ -800,7 +808,11 @@
+@@ -800,7 +837,11 @@
   */
  static bool get_user_info(struct ConfigSet *cs)
  {
@@ -1234,7 +1295,7 @@
  
    /* Get some information about the user */
    struct passwd *pw = getpwuid(getuid());
-@@ -1077,6 +1089,10 @@
+@@ -1077,6 +1118,10 @@
   */
  int main(int argc, char *argv[], char *envp[])
  {
@@ -1245,7 +1306,7 @@
    struct Email *e = NULL;
    SendFlags sendflags = SEND_NO_FLAGS;
    int rc = 1;
-@@ -1107,6 +1123,10 @@
+@@ -1107,6 +1152,10 @@
    NeoMutt->env = envlist_init(envp);
    mutt_str_replace(&NeoMutt->username, mutt_str_getenv("USER"));
    mutt_str_replace(&NeoMutt->home_dir, mutt_str_getenv("HOME"));
@@ -1778,6 +1839,16 @@
  #ifdef HAVE_GETRANDOM
    ssize_t rc;
    ssize_t count = 0;
+--- a/ncrypt/config.c
++++ b/ncrypt/config.c
+@@ -257,6 +257,7 @@
+   { "f", "file-message",   ED_PGP_CMD, ED_PGC_FILE_MESSAGE,   NULL },
+   { "p", "need-pass",      ED_PGP_CMD, ED_PGC_NEED_PASS,      NULL },
+   { "r", "key-ids",        ED_PGP_CMD, ED_PGC_KEY_IDS,        NULL },
++  { "R", "recipients",     ED_PGP_CMD, ED_PGC_KEY_IDS_RECIPIENTS, NULL },
+   { "s", "file-signature", ED_PGP_CMD, ED_PGC_FILE_SIGNATURE, NULL },
+   { NULL, NULL, 0, -1, NULL }
+   // clang-format on
 --- a/ncrypt/crypt.c
 +++ b/ncrypt/crypt.c
 @@ -105,12 +105,17 @@
@@ -1822,31 +1893,93 @@
    gpgme_set_locale(NULL, LC_CTYPE, setlocale(LC_CTYPE, NULL));
  #ifdef ENABLE_NLS
    gpgme_set_locale(NULL, LC_MESSAGES, setlocale(LC_MESSAGES, NULL));
+--- a/ncrypt/expando_command.c
++++ b/ncrypt/expando_command.c
+@@ -70,6 +70,36 @@
+ }
+ 
+ /**
++ * pgp_command_key_ids_recipients - PGP Command: repeated -r options for key IDs
++ */
++static void pgp_command_key_ids_recipients(const struct ExpandoNode *node, void *data,
++                                           MuttFormatFlags flags, struct Buffer *buf)
++{
++  const char *s = ((const struct PgpCommandContext *) data)->ids;
++  if (!s)
++    return;
++
++  bool first = true;
++  while (*s)
++  {
++    while (*s == ' ')
++      s++;
++    if (!*s)
++      break;
++    const char *end = strchr(s, ' ');
++    if (!first)
++      buf_addch(buf, ' ');
++    buf_addstr(buf, "-r ");
++    if (end)
++      buf_addstr_n(buf, s, end - s);
++    else
++      buf_addstr(buf, s);
++    first = false;
++    s = end ? end : s + strlen(s);
++  }
++}
++
++/**
+  * pgp_command_need_pass - PGP Command: PGPPASSFD=0 if passphrase is needed - Implements ::get_string_t - @ingroup expando_get_string_api
+  */
+ static void pgp_command_need_pass(const struct ExpandoNode *node, void *data,
+@@ -103,6 +133,7 @@
+   { ED_PGP_CMD, ED_PGC_FILE_MESSAGE,   pgp_command_file_message,   NULL },
+   { ED_PGP_CMD, ED_PGC_FILE_SIGNATURE, pgp_command_file_signature, NULL },
+   { ED_PGP_CMD, ED_PGC_KEY_IDS,        pgp_command_key_ids,        NULL },
++  { ED_PGP_CMD, ED_PGC_KEY_IDS_RECIPIENTS, pgp_command_key_ids_recipients, NULL },
+   { ED_PGP_CMD, ED_PGC_NEED_PASS,      pgp_command_need_pass,      NULL },
+   { ED_PGP_CMD, ED_PGC_SIGN_AS,        pgp_command_sign_as,        NULL },
+   { -1, -1, NULL, NULL },
+--- a/ncrypt/pgp.h
++++ b/ncrypt/pgp.h
+@@ -58,6 +58,7 @@
+   ED_PGC_FILE_MESSAGE = 1,     ///< PgpCommandContext.fname
+   ED_PGC_FILE_SIGNATURE,       ///< PgpCommandContext.sig_fname
+   ED_PGC_KEY_IDS,              ///< PgpCommandContext.ids
++  ED_PGC_KEY_IDS_RECIPIENTS,   ///< PgpCommandContext.ids as repeated -r options
+   ED_PGC_NEED_PASS,            ///< PgpCommandContext.need_passphrase
+   ED_PGC_SIGN_AS,              ///< PgpCommandContext.signas
+ };
 --- a/send/sendlib.c
 +++ b/send/sendlib.c
-@@ -86,6 +86,10 @@
- 
-   int szf = mutt_str_len(path);
+@@ -111,12 +111,27 @@
+         goto bye; /* shouldn't happen */
+     }
  
 +#ifdef _WIN32
-+  const char *runtime_types = xp_runtime_path("neomutt/mime.types");
-+#endif
-+
-   for (int count = 0; count < 4; count++)
-   {
-     /* can't use strtok() because we use it in an inner loop below, so use
-@@ -95,7 +99,11 @@
-       /* last file with last entry to match wins type/xtype */
-       case 0:
-         /* check default unix mimetypes location first */
-+#ifdef _WIN32
-+        mutt_str_copy(buf, runtime_types ? runtime_types : "/etc/mime.types", sizeof(buf));
++    size_t remaining = 0;
++    const char *embedded = count == 0 ? xp_resource_data(2, &remaining) : NULL;
++    fp = count == 0 ? NULL : mutt_file_fopen(buf, "r");
 +#else
-         mutt_str_copy(buf, "/etc/mime.types", sizeof(buf));
+     fp = mutt_file_fopen(buf, "r");
 +#endif
-         break;
-       case 1:
-         mutt_str_copy(buf, SYSCONFDIR "/mime.types", sizeof(buf));
++#ifdef _WIN32
++    if (fp || embedded)
++#else
+     if (fp)
++#endif
+     {
+       found_mimetypes = true;
+ 
++#ifdef _WIN32
++      while (embedded ? xp_resource_fgets(buf, sizeof(buf) - 1, &embedded, &remaining) :
++                        fgets(buf, sizeof(buf) - 1, fp))
++#else
+       while (fgets(buf, sizeof(buf) - 1, fp))
++#endif
+       {
+         /* weed out any comments */
+         p = strchr(buf, '#');
 --- a/send/sendmail.c
 +++ b/send/sendmail.c
 @@ -30,6 +30,9 @@

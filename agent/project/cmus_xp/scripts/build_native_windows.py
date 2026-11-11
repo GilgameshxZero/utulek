@@ -91,9 +91,12 @@ int win_resource(const char *name, const char **data, size_t *size) {
               '-I' + str(pdc), '-I' + str(ROOT), '-I' + str(out), '-I' + str(audio / 'include'),
               '-I' + str(http / 'include'), '-DCURL_STATICLIB']
     modplug = ROOT / '.obj/deps/modplug'
+    modplug_source = modplug / 'libmodplug-0.8.9.0'
+    if not modplug_source.is_dir():
+        modplug_source = modplug
     native = ['-DCMUS_NATIVE_WINDOWS', '-DHAVE_CONFIG', '-DHAVE_STRDUP', '-DMODPLUG_STATIC',
               '-I' + str(modplug / 'include'),
-              '-DVERSION="0.9.0-dev"', '-DDEFAULT_PORT=3000', '-D_CRT_SECURE_NO_WARNINGS',
+              '-DVERSION="1.0.0"', '-DDEFAULT_PORT=3000', '-D_CRT_SECURE_NO_WARNINGS',
               '-I' + str(ROOT / 'windows/include'), '-include', str(ROOT / 'windows/compat.h')]
     jobs = []
     for path in [ROOT / (s + '.c') for s in SOURCES] + [ROOT / 'ip/wav.c', ROOT / 'ip/ffmpeg.c', ROOT / 'ip/stream.c', ROOT / 'ip/cue.c',
@@ -145,7 +148,7 @@ int win_resource(const char *name, const char **data, size_t *size) {
                     '-lavutil', '-lwinpthread', '-lwinmm', '-ladvapi32', '-luser32',
                     '-L' + str(http / 'lib'), '-lcurl', '-lcrypt32', '-liphlpapi',
                     '-lbcrypt', '-lole32', '-lsecur32', '-lws2_32', '-lnormaliz', '-lshell32',
-                    '-L' + str(modplug / 'libmodplug-0.8.9.0/build_windows'), '-lmodplug',
+                    '-L' + str(modplug_source / 'build_windows'), '-lmodplug',
                     '-lruntimeobject', '-lwindowsapp', '-lkernel32', '-luuid',
                     '-lc++', '-lc++abi', '-lunwind'], check=True)
     remote_exe = ROOT / '.bin/cmus-remote.exe'

@@ -1,2 +1,5 @@
 /* UTF-8 argv and environment require Windows 10 1903 or newer. */
 1 24 "neomutt.manifest"
+
+2 RCDATA "mime.types"
+3 RCDATA "neomutt-system.rc"

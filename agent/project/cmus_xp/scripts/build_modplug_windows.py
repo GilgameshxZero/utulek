@@ -7,13 +7,14 @@ import hashlib
 import os
 from pathlib import Path
 import shutil
+import tempfile
 import subprocess
 import sys
 import tarfile
 import urllib.request
 
 ROOT = Path(__file__).resolve().parent.parent
-DEPS = ROOT / '.obj/deps/modplug'
+DEPS = ROOT / '.obj/deps'
 VERSION = '0.8.9.0'
 URL = ('https://downloads.sourceforge.net/project/modplug-xmms/libmodplug/'
        f'{VERSION}/libmodplug-{VERSION}.tar.gz')
@@ -41,7 +42,10 @@ def main():
         sys.exit('LLVM-MinGW compiler not found: ' + str(cxx))
     DEPS.mkdir(parents=True, exist_ok=True)
     archive = DEPS / f'libmodplug-{VERSION}.tar.gz'
-    source = DEPS / f'libmodplug-{VERSION}'
+    source = DEPS / 'modplug'
+    fallback = DEPS / f'modplug/libmodplug-{VERSION}'
+    if (fallback / 'src/modplug.h').is_file() and not (source / 'src/modplug.h').is_file():
+        source = fallback
     if not archive.is_file():
         print('downloading', URL)
         urllib.request.urlretrieve(URL, archive)
@@ -49,8 +53,15 @@ def main():
     if digest != SHA256:
         sys.exit(f'libmodplug archive checksum mismatch: {digest}')
     if not (source / 'src/modplug.h').is_file():
-        with tarfile.open(archive) as tar:
-            tar.extractall(DEPS)
+        with tempfile.TemporaryDirectory(prefix='modplug_', dir=DEPS) as temp:
+            with tarfile.open(archive) as tar:
+                tar.extractall(temp)
+            children = list(Path(temp).iterdir())
+            if len(children) != 1 or not children[0].is_dir():
+                sys.exit('unexpected libmodplug archive layout')
+            if source.exists():
+                shutil.rmtree(source)
+            children[0].rename(source)
     build = source / 'build_windows'
     obj = build / 'obj'
     include = build / 'include'

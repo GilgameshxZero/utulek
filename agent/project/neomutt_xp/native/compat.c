@@ -35,24 +35,24 @@ void xp_platform_init(void)
   SetConsoleCP(CP_UTF8); SetConsoleOutputCP(CP_UTF8);
   SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 }
-const char *xp_runtime_path(const char *relative)
-{
-  static char result[65536];
-  wchar_t path[32768];
-  DWORD size = GetModuleFileNameW(NULL, path, 32768);
-  if (!size || size >= 32768) return NULL;
-  wchar_t *last = wcsrchr(path, L'\\');
-  if (!last) return NULL;
-  int available = (int)(32768 - (last + 1 - path));
-  if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, relative, -1, last + 1, available)) return NULL;
-  if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) return NULL;
-  return WideCharToMultiByte(CP_UTF8, 0, path, -1, result, sizeof(result), NULL, NULL) ? result : NULL;
-}
-
 const char *xp_crypto_directory(void)
 {
   const char *override = getenv("NEOMUTT_XP_CRYPTO_DIR");
-  return override && *override ? override : xp_runtime_path("neomutt/gnupg/bin");
+  if (override && *override) return override;
+  /* Reuse the user's installed GPG. Search only explicit PATH entries, rather
+   * than letting SearchPath implicitly prefer an unrelated working directory. */
+  wchar_t paths[32768], executable[32768];
+  DWORD length = GetEnvironmentVariableW(L"PATH", paths, 32768);
+  if (!length || length >= 32768) return NULL;
+  length = SearchPathW(paths, L"gpg.exe", NULL, 32768, executable, NULL);
+  if (!length || length >= 32768) return NULL;
+  wchar_t *last = wcsrchr(executable, L'\\');
+  if (!last) last = wcsrchr(executable, L'/');
+  if (!last) return NULL;
+  *last = 0;
+  static char directory[65536];
+  return WideCharToMultiByte(CP_UTF8, 0, executable, -1, directory,
+                             sizeof(directory), NULL, NULL) ? directory : NULL;
 }
 
 static struct passwd User;

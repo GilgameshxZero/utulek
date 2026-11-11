@@ -2201,6 +2201,23 @@ static void u_getch(void)
         handle_key(ch);
         return;
     }
+    /* PDCurses delivers function-key and paste sequences as separate wide
+     * characters. Route ESC through the shared CSI/escape handling so
+     * bracketed-paste markers are recognised as they are on Unix terminals. */
+    if (ch == 0x1b) {
+        wint_t next;
+        int got;
+        cbreak();
+        got = get_wch(&next);
+        halfdelay(5);
+        if (got != ERR) {
+            if (next == '[')
+                handle_csi();
+            else if (next != 0)
+                handle_escape((int)next);
+            return;
+        }
+    }
     /* Windows input events carry UTF-16, rather than UTF-8 bytes. */
     static unsigned int high_surrogate;
     if (ch >= 0xd800 && ch <= 0xdbff) { high_surrogate = ch; return; }
@@ -2587,7 +2604,9 @@ static void init_all(void)
 
 	init_curses();
 
-#ifndef CMUS_NATIVE_WINDOWS
+#ifdef CMUS_NATIVE_WINDOWS
+    win_vt_control("\033[?2004h");
+#else
     // enable bracketed paste (will be ignored if not supported)
     printf("\033[?2004h");
     fflush(stdout);
@@ -2611,7 +2630,9 @@ static void exit_all(void)
 {
 	endwin();
 
-#ifndef CMUS_NATIVE_WINDOWS
+#ifdef CMUS_NATIVE_WINDOWS
+    win_vt_control("\033[?2004l");
+#else
     // disable bracketed paste
     printf("\033[?2004l");
     fflush(stdout);
