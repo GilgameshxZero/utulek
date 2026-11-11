@@ -1,0 +1,2052 @@
+--- a/Makefile.autosetup
++++ b/Makefile.autosetup
+@@ -942,7 +942,7 @@
+ 		$(LIBDEBUG) $(LIBCLI) $(LIBMUTT)
+ 
+ # neomutt
+-$(NEOMUTT): $(GENERATED) $(NEOMUTTOBJS) $(MUTTLIBS)
++$(NEOMUTT): $(GENERATED) $(NEOMUTTOBJS) $(MUTTLIBS) $(XP_PLATFORM_OBJECTS)
+ 	$(CC) -o $@ $(NEOMUTTOBJS) $(MUTTLIBS) $(LDFLAGS) $(LIBS)
+ 
+ # clean
+--- a/auto.def
++++ b/auto.def
+@@ -428,7 +428,7 @@
+   cc-check-function-in-lib nanosleep rt
+ 
+   cc-with {-includes sys/stat.h} {
+-    cc-check-members "struct stat.st_atim.tv_nsec"
++    cc-check-members "struct stat.st_atim.tv_nsec" "struct stat.st_mtim.tv_nsec" "struct stat.st_ctim.tv_nsec"
+   }
+ 
+   cc-with {-includes time.h} {
+@@ -723,7 +723,7 @@
+ 
+ if {[get-define want-ssl]} {
+   # OpenSSL
+-  if {[pkgconf false openssl]} {
++  if {![string match *mingw* [get-define host]] && [pkgconf false openssl]} {
+     # cool - we do not make pkg-config mandatory for OpenSSL because BSDs still
+     # ship OpenSSL in the base system. Those aren't available through
+     # pkg-config.
+@@ -791,7 +791,11 @@
+ ###############################################################################
+ # PCRE2
+ if {[get-define want-pcre2]} {
+-  pkgconf true libpcre2-8
++  if {[string match *mingw* [get-define host]]} {
++    cc-check-function-in-lib pcre2_compile_8 pcre2-8
++  } else {
++    pkgconf true libpcre2-8
++  }
+   define-feature pcre2
+ } elseif {[cc-check-functions pcre2_regcomp]} {
+   # See https://bugs.exim.org/show_bug.cgi?id=2707 and
+@@ -886,7 +890,7 @@
+ ###############################################################################
+ # Header cache - LMDB
+ if {[get-define want-lmdb]} {
+-  if {[pkgconf false lmdb]} {
++  if {![string match *mingw* [get-define host]] && [pkgconf false lmdb]} {
+     define-feature lmdb
+   } elseif {![check-inc-and-lib lmdb [opt-val with-lmdb $prefix] \
+                                 lmdb.h mdb_env_create lmdb]} {
+@@ -1180,6 +1184,17 @@
+ }
+ 
+ ###############################################################################
++# Native Windows platform implementations supplied by neomutt_xp.
++if {[string match *mingw* [get-define host]]} {
++  define HAVE_STRSEP 1
++  define HAVE_STRCASESTR 1
++  define HAVE_GETADDRINFO 1
++  define HAVE_QSORT_S 0
++  # Native xp_stat preserves all three Windows FILETIME fractions.
++  define HAVE_STRUCT_STAT_ST_ATIM_TV_NSEC 1
++  define HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC 1
++  define HAVE_STRUCT_STAT_ST_CTIM_TV_NSEC 1
++}
+ # Definitions that are going to be substituted in config.h
+ set auto_rep {
+   _*
+--- a/autosetup/pkg-config.tcl
++++ b/autosetup/pkg-config.tcl
+@@ -78,7 +78,9 @@
+ 			# but it doesn't seem to work that way in practice
+ 			set env(PKG_CONFIG_PATH) ""
+ 			# Do we need to try /usr/local as well or instead?
+-			set env(PKG_CONFIG_LIBDIR) $sysroot/usr/lib/pkgconfig:$sysroot/usr/share/pkgconfig
++			if {![info exists env(PKG_CONFIG_LIBDIR)] || $env(PKG_CONFIG_LIBDIR) eq ""} {
++                set env(PKG_CONFIG_LIBDIR) $sysroot/usr/lib/pkgconfig:$sysroot/usr/share/pkgconfig
++            }
+ 			set env(PKG_CONFIG_SYSROOT_DIR) $sysroot
+ 		}
+ 	}
+--- a/browser/complete.c
++++ b/browser/complete.c
+@@ -69,7 +69,7 @@
+   /* see if the path has changed from the last time */
+   if ((!wdata->tempbuf && !wdata->state->lastchar) ||
+       (wdata->tempbuf && (wdata->templen == wdata->state->lastchar) &&
+-       (wmemcmp(wdata->tempbuf, wdata->state->wbuf, wdata->state->lastchar) == 0)))
++       (memcmp(wdata->tempbuf, wdata->state->wbuf, wdata->state->lastchar * sizeof(mutt_wchar_t)) == 0)))
+   {
+     SelectFileFlags flags = MUTT_SEL_NO_FLAGS;
+     if (wdata->hclass == HC_MAILBOX)
+@@ -94,9 +94,9 @@
+   if (mutt_complete(wdata->cd, wdata->buffer) == 0)
+   {
+     wdata->templen = wdata->state->lastchar;
+-    MUTT_MEM_REALLOC(&wdata->tempbuf, wdata->templen, wchar_t);
++    MUTT_MEM_REALLOC(&wdata->tempbuf, wdata->templen, mutt_wchar_t);
+     if (wdata->tempbuf)
+-      wmemcpy(wdata->tempbuf, wdata->state->wbuf, wdata->templen);
++      memcpy(wdata->tempbuf, wdata->state->wbuf, wdata->templen * sizeof(mutt_wchar_t));
+   }
+   else
+   {
+@@ -122,7 +122,7 @@
+   }
+   buf_mb_wcstombs(wdata->buffer, wdata->state->wbuf + i, wdata->state->curpos - i);
+   if (wdata->tempbuf && (wdata->templen == (wdata->state->lastchar - i)) &&
+-      (wmemcmp(wdata->tempbuf, wdata->state->wbuf + i, wdata->state->lastchar - i) == 0))
++      (memcmp(wdata->tempbuf, wdata->state->wbuf + i, (wdata->state->lastchar - i) * sizeof(mutt_wchar_t)) == 0))
+   {
+     dlg_browser(wdata->buffer, MUTT_SEL_NO_FLAGS, NULL, NULL, NULL);
+     if (!buf_is_empty(wdata->buffer))
+@@ -133,9 +133,9 @@
+   if (mutt_complete(wdata->cd, wdata->buffer) == 0)
+   {
+     wdata->templen = wdata->state->lastchar - i;
+-    MUTT_MEM_REALLOC(&wdata->tempbuf, wdata->templen, wchar_t);
++    MUTT_MEM_REALLOC(&wdata->tempbuf, wdata->templen, mutt_wchar_t);
+     if (wdata->tempbuf)
+-      wmemcpy(wdata->tempbuf, wdata->state->wbuf + i, wdata->templen);
++      memcpy(wdata->tempbuf, wdata->state->wbuf + i, wdata->templen * sizeof(mutt_wchar_t));
+   }
+   else
+   {
+--- a/commands.c
++++ b/commands.c
+@@ -223,15 +223,19 @@
+   struct Buffer *token = NULL, *linebuf = NULL;
+   char *line = NULL;
+   char *currentline = NULL;
+-  char rcfile[PATH_MAX + 1] = { 0 };
++  const size_t rcfile_capacity = MAX((size_t) PATH_MAX + 1, mutt_str_len(rcfile_path) + 1);
++  char *rcfile = MUTT_MEM_CALLOC(rcfile_capacity, char);
+   size_t linelen = 0;
+   pid_t pid;
+ 
+-  mutt_str_copy(rcfile, rcfile_path, sizeof(rcfile));
++  mutt_str_copy(rcfile, rcfile_path, rcfile_capacity);
+ 
+   size_t rcfilelen = mutt_str_len(rcfile);
+   if (rcfilelen == 0)
++  {
++    FREE(&rcfile);
+     return -1;
++  }
+ 
+   bool ispipe = rcfile[rcfilelen - 1] == '|';
+ 
+@@ -241,6 +245,7 @@
+     if (!mutt_path_to_absolute(rcfile, np ? NONULL(np->data) : ""))
+     {
+       mutt_error(_("Error: Can't build path of '%s'"), rcfile_path);
++      FREE(&rcfile);
+       return -1;
+     }
+ 
+@@ -254,6 +259,7 @@
+     if (np)
+     {
+       mutt_error(_("Error: Cyclic sourcing of configuration file '%s'"), rcfile);
++      FREE(&rcfile);
+       return -1;
+     }
+ 
+@@ -266,6 +272,7 @@
+   if (!fp)
+   {
+     buf_printf(err, "%s: %s", rcfile, strerror(errno));
++    FREE(&rcfile);
+     return -1;
+   }
+ 
+@@ -358,6 +365,7 @@
+ 
+   buf_pool_release(&token);
+   buf_pool_release(&linebuf);
++  FREE(&rcfile);
+   return rc;
+ }
+ 
+--- a/conn/connaccount.c
++++ b/conn/connaccount.c
+@@ -213,6 +213,11 @@
+     return NULL;
+   }
+ 
++#ifdef _WIN32
++  /* External credential helpers may need the console for GPG pinentry. */
++  if (OptGui)
++    mutt_endwin();
++#endif
+   FILE *fp = NULL;
+   pid_t pid = filter_create(cmd, NULL, &fp, NULL, NeoMutt->env);
+   if (pid < 0)
+@@ -224,11 +229,18 @@
+   size_t token_size = 0;
+   char *token = mutt_file_read_line(NULL, &token_size, fp, NULL, MUTT_RL_NO_FLAGS);
+   mutt_file_fclose(&fp);
+-  filter_wait(pid);
++  int command_status = filter_wait(pid);
+ 
+   /* The refresh cmd in some cases will invoke gpg to decrypt a token */
+   if (OptGui)
+     mutt_need_hard_redraw();
++
++  if (command_status != 0)
++  {
++    FREE(&token);
++    mutt_error(_("OAUTH refresh command failed"));
++    return NULL;
++  }
+ 
+   if (!token || (*token == '\0'))
+   {
+--- a/conn/connection.h
++++ b/conn/connection.h
+@@ -50,7 +50,11 @@
+   unsigned int ssf;           ///< Security strength factor, in bits (see notes)
+   char inbuf[1024];           ///< Buffer for incoming traffic
+   int bufpos;                 ///< Current position in the buffer
++#ifdef _WIN32
++  intptr_t fd;
++#else
+   int fd;                     ///< Socket file descriptor
++#endif
+   int available;              ///< Amount of data waiting to be read
+   void *sockdata;             ///< Backend-specific socket data
+ 
+--- a/conn/openssl.c
++++ b/conn/openssl.c
+@@ -30,6 +30,9 @@
+  */
+ 
+ #include "config.h"
++#ifdef _WIN32
++#include "tls_io.h"
++#endif
+ #include <errno.h>
+ #include <openssl/asn1.h>
+ #include <openssl/bio.h>
+@@ -1251,7 +1254,11 @@
+   const bool c_ssl_use_system_certs = cs_subset_bool(NeoMutt->sub, "ssl_use_system_certs");
+   if (c_ssl_use_system_certs)
+   {
++#ifdef _WIN32
++    if (!xp_tls_system_certs(sockdata(conn)->sctx))
++#else
+     if (!SSL_CTX_set_default_verify_paths(sockdata(conn)->sctx))
++#endif
+     {
+       mutt_debug(LL_DEBUG1, "Error setting default verify paths\n");
+       goto free_ctx;
+@@ -1276,7 +1283,13 @@
+   }
+ 
+   sockdata(conn)->ssl = SSL_new(sockdata(conn)->sctx);
++#ifdef _WIN32
++  if (!xp_tls_set_socket(sockdata(conn)->ssl, conn->fd,
++                        cs_subset_number(NeoMutt->sub, "socket_timeout"), &SigInt))
++    goto free_ssl;
++#else
+   SSL_set_fd(sockdata(conn)->ssl, conn->fd);
++#endif
+ 
+   if (ssl_negotiate(conn, sockdata(conn)))
+     goto free_ssl;
+--- a/conn/raw.c
++++ b/conn/raw.c
+@@ -57,6 +57,23 @@
+ #include <stdbool.h>
+ #endif
+ 
++#ifdef _WIN32
++#include "xp_socket.h"
++int raw_socket_open(struct Connection *conn)
++{
++  conn->fd = xp_socket_open(conn->account.host, conn->account.port,
++      cs_subset_number(NeoMutt->sub, "socket_timeout"),
++      cs_subset_bool(NeoMutt->sub, "use_ipv6"), &SigInt);
++  return conn->fd == -1 ? -1 : 0;
++}
++int raw_socket_read(struct Connection *conn, char *buf, size_t count)
++{ return xp_socket_read(conn->fd, buf, count, cs_subset_number(NeoMutt->sub, "socket_timeout"), &SigInt); }
++int raw_socket_write(struct Connection *conn, const char *buf, size_t count)
++{ return xp_socket_write(conn->fd, buf, count, cs_subset_number(NeoMutt->sub, "socket_timeout"), &SigInt); }
++int raw_socket_poll(struct Connection *conn, time_t seconds)
++{ return xp_socket_poll(conn->fd, seconds < 0 ? -1 : seconds > INT_MAX / 1000 ? INT_MAX : (int) seconds * 1000, 0, &SigInt); }
++int raw_socket_close(struct Connection *conn) { return xp_socket_close(conn->fd); }
++#else
+ /**
+  * socket_connect - Set up to connect to a socket fd
+  * @param fd File descriptor to connect with
+@@ -394,3 +411,5 @@
+ {
+   return close(conn->fd);
+ }
++
++#endif
+--- a/conn/tunnel.c
++++ b/conn/tunnel.c
+@@ -57,6 +57,26 @@
+  */
+ static int tunnel_socket_open(struct Connection *conn)
+ {
++#ifdef _WIN32
++  FILE *input = NULL, *output = NULL;
++  const char *const c_tunnel = cs_subset_string(NeoMutt->sub, "tunnel");
++  pid_t pid = filter_create(c_tunnel, &input, &output, NULL, NeoMutt->env);
++  if (pid < 0) return -1;
++  struct TunnelSockData *tunnel = MUTT_MEM_CALLOC(1, struct TunnelSockData);
++  tunnel->fd_read = dup(fileno(output));
++  tunnel->fd_write = dup(fileno(input));
++  fclose(output); fclose(input);
++  if (tunnel->fd_read < 0 || tunnel->fd_write < 0)
++  {
++    if (tunnel->fd_read >= 0) close(tunnel->fd_read);
++    if (tunnel->fd_write >= 0) close(tunnel->fd_write);
++    filter_wait(pid);
++    FREE(&tunnel);
++    return -1;
++  }
++  tunnel->pid = pid;
++  conn->sockdata = tunnel;
++#else
+   int pin[2], pout[2];
+ 
+   struct TunnelSockData *tunnel = MUTT_MEM_MALLOC(1, struct TunnelSockData);
+@@ -129,6 +149,7 @@
+   tunnel->fd_write = pout[1];
+   tunnel->pid = pid;
+ 
++#endif
+   conn->fd = 42; /* stupid hack */
+ 
+   /* Note we are using ssf as a boolean in this case.  See the notes in
+--- a/editor/enter.c
++++ b/editor/enter.c
+@@ -35,7 +35,7 @@
+ #include "state.h"
+ 
+ /// combining mark / non-spacing character
+-#define COMB_CHAR(wc) (IsWPrint(wc) && (wcwidth(wc) == 0))
++#define COMB_CHAR(wc) (mutt_mb_iswprint(wc) && (mutt_mb_prompt_width(wc) == 0))
+ 
+ /**
+  * editor_backspace - Delete the char in front of the cursor
+@@ -53,7 +53,7 @@
+     i--;
+   if (i > 0)
+     i--;
+-  wmemmove(es->wbuf + i, es->wbuf + es->curpos, es->lastchar - es->curpos);
++  memmove(es->wbuf + i, es->wbuf + es->curpos, (es->lastchar - es->curpos) * sizeof(mutt_wchar_t));
+   es->lastchar -= es->curpos - i;
+   es->curpos = i;
+ 
+@@ -90,9 +90,9 @@
+   if (!es || (es->curpos == 0))
+     return FR_ERROR;
+ 
+-  while (es->curpos && iswspace(es->wbuf[es->curpos - 1]))
++  while (es->curpos && mutt_mb_iswspace(es->wbuf[es->curpos - 1]))
+     es->curpos--;
+-  while (es->curpos && !iswspace(es->wbuf[es->curpos - 1]))
++  while (es->curpos && !mutt_mb_iswspace(es->wbuf[es->curpos - 1]))
+     es->curpos--;
+ 
+   return FR_SUCCESS;
+@@ -125,19 +125,19 @@
+   if (!es || (es->curpos == es->lastchar))
+     return FR_ERROR;
+ 
+-  while ((es->curpos < es->lastchar) && iswspace(es->wbuf[es->curpos]))
+-  {
+-    es->curpos++;
+-  }
+-  while ((es->curpos < es->lastchar) && !iswspace(es->wbuf[es->curpos]))
++  while ((es->curpos < es->lastchar) && mutt_mb_iswspace(es->wbuf[es->curpos]))
++  {
++    es->curpos++;
++  }
++  while ((es->curpos < es->lastchar) && !mutt_mb_iswspace(es->wbuf[es->curpos]))
+   {
+     if (ec == EC_DOWNCASE)
+     {
+-      es->wbuf[es->curpos] = towlower(es->wbuf[es->curpos]);
++      es->wbuf[es->curpos] = mutt_mb_towlower(es->wbuf[es->curpos]);
+     }
+     else
+     {
+-      es->wbuf[es->curpos] = towupper(es->wbuf[es->curpos]);
++      es->wbuf[es->curpos] = mutt_mb_towupper(es->wbuf[es->curpos]);
+       if (ec == EC_CAPITALIZE)
+         ec = EC_DOWNCASE;
+     }
+@@ -162,7 +162,7 @@
+     i++;
+   while ((i < es->lastchar) && COMB_CHAR(es->wbuf[i]))
+     i++;
+-  wmemmove(es->wbuf + es->curpos, es->wbuf + i, es->lastchar - i);
++  memmove(es->wbuf + es->curpos, es->wbuf + i, (es->lastchar - i) * sizeof(mutt_wchar_t));
+   es->lastchar -= i - es->curpos;
+ 
+   return FR_SUCCESS;
+@@ -214,11 +214,11 @@
+   if (!es || (es->curpos == es->lastchar))
+     return FR_ERROR;
+ 
+-  while ((es->curpos < es->lastchar) && iswspace(es->wbuf[es->curpos]))
+-  {
+-    es->curpos++;
+-  }
+-  while ((es->curpos < es->lastchar) && !iswspace(es->wbuf[es->curpos]))
++  while ((es->curpos < es->lastchar) && mutt_mb_iswspace(es->wbuf[es->curpos]))
++  {
++    es->curpos++;
++  }
++  while ((es->curpos < es->lastchar) && !mutt_mb_iswspace(es->wbuf[es->curpos]))
+   {
+     es->curpos++;
+   }
+@@ -254,7 +254,7 @@
+ 
+   /* first skip over whitespace */
+   size_t i;
+-  for (i = es->curpos; (i < es->lastchar) && iswspace(es->wbuf[i]); i++)
++  for (i = es->curpos; (i < es->lastchar) && mutt_mb_iswspace(es->wbuf[i]); i++)
+   {
+     // do nothing
+   }
+@@ -263,10 +263,10 @@
+   if (i < es->lastchar)
+   {
+     /* if the current character is alphanumeric.. */
+-    if (iswalnum(es->wbuf[i]))
++    if (mutt_mb_iswalnum(es->wbuf[i]))
+     {
+       /* skip over the rest of the word consistent of only alphanumerics */
+-      for (; (i < es->lastchar) && iswalnum(es->wbuf[i]); i++)
++      for (; (i < es->lastchar) && mutt_mb_iswalnum(es->wbuf[i]); i++)
+         ; // do nothing
+     }
+     else
+@@ -275,7 +275,7 @@
+     }
+   }
+ 
+-  wmemmove(es->wbuf + es->curpos, es->wbuf + i, es->lastchar - i);
++  memmove(es->wbuf + es->curpos, es->wbuf + i, (es->lastchar - i) * sizeof(mutt_wchar_t));
+   es->lastchar += es->curpos - i;
+   return FR_SUCCESS;
+ }
+@@ -293,7 +293,7 @@
+ 
+   size_t len = es->lastchar - es->curpos;
+ 
+-  wmemmove(es->wbuf, es->wbuf + es->curpos, len);
++  memmove(es->wbuf, es->wbuf + es->curpos, (len) * sizeof(mutt_wchar_t));
+ 
+   es->lastchar = len;
+   es->curpos = 0;
+@@ -330,13 +330,13 @@
+     return FR_ERROR;
+ 
+   size_t i = es->curpos;
+-  while (i && iswspace(es->wbuf[i - 1]))
++  while (i && mutt_mb_iswspace(es->wbuf[i - 1]))
+     i--;
+   if (i > 0)
+   {
+-    if (iswalnum(es->wbuf[i - 1]))
+-    {
+-      for (--i; (i > 0) && iswalnum(es->wbuf[i - 1]); i--)
++    if (mutt_mb_iswalnum(es->wbuf[i - 1]))
++    {
++      for (--i; (i > 0) && mutt_mb_iswalnum(es->wbuf[i - 1]); i--)
+         ; // do nothing
+     }
+     else
+@@ -344,7 +344,7 @@
+       i--;
+     }
+   }
+-  wmemmove(es->wbuf + i, es->wbuf + es->curpos, es->lastchar - es->curpos);
++  memmove(es->wbuf + i, es->wbuf + es->curpos, (es->lastchar - es->curpos) * sizeof(mutt_wchar_t));
+   es->lastchar += i - es->curpos;
+   es->curpos = i;
+ 
+@@ -367,7 +367,7 @@
+   else if (es->curpos < es->lastchar)
+     es->curpos++;
+ 
+-  wchar_t wc = es->wbuf[es->curpos - 2];
++  mutt_wchar_t wc = es->wbuf[es->curpos - 2];
+   es->wbuf[es->curpos - 2] = es->wbuf[es->curpos - 1];
+   es->wbuf[es->curpos - 1] = wc;
+ 
+--- a/editor/functions.c
++++ b/editor/functions.c
+@@ -133,12 +133,12 @@
+ {
+   /* Save the suffix */
+   size_t savelen = es->lastchar - es->curpos;
+-  wchar_t *savebuf = NULL;
++  mutt_wchar_t *savebuf = NULL;
+ 
+   if (savelen)
+   {
+-    savebuf = MUTT_MEM_CALLOC(savelen, wchar_t);
+-    wmemcpy(savebuf, es->wbuf + es->curpos, savelen);
++    savebuf = MUTT_MEM_CALLOC(savelen, mutt_wchar_t);
++    memcpy(savebuf, es->wbuf + es->curpos, (savelen) * sizeof(mutt_wchar_t));
+   }
+ 
+   /* Convert to wide characters */
+@@ -150,11 +150,11 @@
+     if (es->curpos + savelen > es->wbuflen)
+     {
+       es->wbuflen = es->curpos + savelen;
+-      MUTT_MEM_REALLOC(&es->wbuf, es->wbuflen, wchar_t);
++      MUTT_MEM_REALLOC(&es->wbuf, es->wbuflen, mutt_wchar_t);
+     }
+ 
+     /* Restore suffix */
+-    wmemcpy(es->wbuf + es->curpos, savebuf, savelen);
++    memcpy(es->wbuf + es->curpos, savebuf, (savelen) * sizeof(mutt_wchar_t));
+     FREE(&savebuf);
+   }
+ 
+--- a/editor/state.c
++++ b/editor/state.c
+@@ -60,9 +60,9 @@
+     return;
+ 
+   num = ROUND_UP(num + 4, 128);
+-  MUTT_MEM_REALLOC(&es->wbuf, num, wchar_t);
++  MUTT_MEM_REALLOC(&es->wbuf, num, mutt_wchar_t);
+ 
+-  wmemset(es->wbuf + es->wbuflen, 0, num - es->wbuflen);
++  memset(es->wbuf + es->wbuflen, 0, (num - es->wbuflen) * sizeof(mutt_wchar_t));
+ 
+   es->wbuflen = num;
+ }
+--- a/editor/state.h
++++ b/editor/state.h
+@@ -24,13 +24,14 @@
+ #define MUTT_EDITOR_STATE_H
+ 
+ #include <stddef.h>
++#include "mutt/mbyte.h"
+ 
+ /**
+  * struct EnterState - Keep our place when entering a string
+  */
+ struct EnterState
+ {
+-  wchar_t *wbuf;   ///< Buffer for the string being entered
++  mutt_wchar_t *wbuf;   ///< Buffer for the string being entered
+   size_t wbuflen;  ///< Length of buffer
+   size_t lastchar; ///< Position of the last character
+   size_t curpos;   ///< Position of the cursor
+--- a/editor/wdata.h
++++ b/editor/wdata.h
+@@ -26,6 +26,7 @@
+ #include "config.h"
+ #include <stdbool.h>
+ #include <wchar.h>
++#include "mutt/mbyte.h"
+ #include "mutt.h"
+ #include "history/lib.h"
+ 
+@@ -57,7 +58,7 @@
+   enum EnterRedrawFlags redraw;   ///< What needs redrawing? See #EnterRedrawFlags
+   bool pass;                      ///< Password mode, conceal characters
+   bool first;                     ///< First time through, no input yet
+-  wchar_t *tempbuf;               ///< Buffer used by completion
++  mutt_wchar_t *tempbuf;               ///< Buffer used by completion
+   size_t templen;                 ///< Length of complete buffer
+   mbstate_t *mbstate;             ///< Multi-byte state
+   int tabs;                       ///< Number of times the user has hit tab
+--- a/editor/window.c
++++ b/editor/window.c
+@@ -67,10 +67,14 @@
+  * @retval OK  Success
+  * @retval ERR Failure
+  */
+-static int my_addwch(struct MuttWindow *win, wchar_t wc)
+-{
++static int my_addwch(struct MuttWindow *win, mutt_wchar_t wc)
++{
++#ifdef _WIN32
++  if (wc > 0xffff)
++    return mutt_window_printf(win, "\\u%08x", (unsigned int) wc);
++#endif
+   int n = wcwidth(wc);
+-  if (IsWPrint(wc) && (n > 0))
++  if (mutt_mb_iswprint(wc) && (n > 0))
+     return mutt_addwch(win, wc);
+   if (!(wc & ~0x7f))
+     return mutt_window_printf(win, "^%c", ((int) wc + 0x40) & 0x7f);
+@@ -91,7 +95,7 @@
+     return true;
+ 
+   wdata->tabs = 0;
+-  wchar_t wc = 0;
++  mutt_wchar_t wc = 0;
+ 
+   /* quietly ignore all other function keys */
+   if (ch & ~0xff)
+@@ -100,7 +104,7 @@
+   /* gather the bytes into a wide character */
+   {
+     char c = ch;
+-    size_t k = mbrtowc(&wc, &c, 1, wdata->mbstate);
++    size_t k = mutt_mb_decode(&wc, &c, 1, wdata->mbstate);
+     if (k == ICONV_BUF_TOO_SMALL)
+     {
+       return false;
+@@ -115,7 +119,7 @@
+   if (wdata->first && (wdata->flags & MUTT_COMP_CLEAR))
+   {
+     wdata->first = false;
+-    if (IsWPrint(wc)) /* why? */
++    if (mutt_mb_iswprint(wc)) /* why? */
+     {
+       wdata->state->curpos = 0;
+       wdata->state->lastchar = 0;
+@@ -144,16 +148,16 @@
+     }
+     return true;
+   }
+-  else if (wc && ((wc < ' ') || IsWPrint(wc))) /* why? */
++  else if (wc && ((wc < ' ') || mutt_mb_iswprint(wc))) /* why? */
+   {
+     if (wdata->state->lastchar >= wdata->state->wbuflen)
+     {
+       wdata->state->wbuflen = wdata->state->lastchar + 20;
+-      MUTT_MEM_REALLOC(&wdata->state->wbuf, wdata->state->wbuflen, wchar_t);
++      MUTT_MEM_REALLOC(&wdata->state->wbuf, wdata->state->wbuflen, mutt_wchar_t);
+     }
+     memmove(wdata->state->wbuf + wdata->state->curpos + 1,
+             wdata->state->wbuf + wdata->state->curpos,
+-            (wdata->state->lastchar - wdata->state->curpos) * sizeof(wchar_t));
++            (wdata->state->lastchar - wdata->state->curpos) * sizeof(mutt_wchar_t));
+     wdata->state->wbuf[wdata->state->curpos++] = wc;
+     wdata->state->lastchar++;
+   }
+--- a/gui/curs_lib.c
++++ b/gui/curs_lib.c
+@@ -194,19 +194,28 @@
+     fputs(_("Press any key to continue..."), stdout);
+   fflush(stdout);
+ 
++#ifdef _WIN32
++  int ch = xp_console_read_key(fd);
++#else
+   char ch = '\0';
+   // Wait for a character.  This might timeout, so loop.
+   while (read(fd, &ch, 1) == 0)
+     ; // do nothing
++#endif
+ 
+   // Change the tty settings to be non-blocking
+   term.c_cc[VMIN] = 0;  // Returning with zero characters is acceptable
+   term.c_cc[VTIME] = 0; // Don't wait
+   tcsetattr(fd, TCSANOW, &term);
+ 
++#ifdef _WIN32
++  /* CRT console reads have no VMIN=0 equivalent and would block here. */
++  xp_console_flush_input(fd);
++#else
+   char buf[64] = { 0 };
+   while (read(fd, buf, sizeof(buf)) > 0)
+     ; // Mop up any remaining chars
++#endif
+ 
+   tcsetattr(fd, TCSANOW, &old); // Restore the previous tty settings
+   close(fd);
+--- a/hcache/hcachever.sh
++++ b/hcache/hcachever.sh
+@@ -21,6 +21,14 @@
+   esac
+ 
+   STRUCT=$(cleanstruct "$1")
++
++  # Ignore platform headers before collecting a body. Some system structures
++  # close with a typedef rather than }; and can otherwise consume the entire
++  # preprocessed stream, with quadratic shell-string growth.
++  case " $STRUCTURES " in
++    *" $STRUCT "*) ;;
++    *) return ;;
++  esac
+ 
+   while read -r line; do
+     if test $inbody -eq 0; then
+--- a/imap/command.c
++++ b/imap/command.c
+@@ -198,7 +198,10 @@
+   if (!mdata)
+     return;
+ 
+-  bool was_selected = (adata->state >= IMAP_SELECTED);
++  bool was_selected = (adata->state >= IMAP_SELECTED) || (adata->mailbox->opened > 0);
++
++  if (!adata->recovering && was_selected)
++    imap_save_pending_flags(adata->mailbox);
+ 
+   imap_close_connection(adata);
+   if (!adata->recovering)
+@@ -218,7 +221,7 @@
+     mutt_debug(LL_DEBUG1, "Attempting to reconnect to %s (attempt %d)\n",
+                adata->conn ? adata->conn->account.host : "NULL", adata->retry_count + 1);
+ 
+-    if (imap_login(adata))
++    if (imap_login(adata) == 0)
+     {
+       mutt_message(_("Reconnected to %s"), adata->conn->account.host);
+       adata->retry_count = 0; // Reset on success
+@@ -229,12 +232,15 @@
+       }
+       else if (was_selected)
+       {
+-        mutt_error(_("Reconnected to %s but failed to reopen mailbox"),
++        adata->status = IMAP_FATAL;
++        /* Keep the reopen failure's specific diagnostic visible. */
++        mutt_debug(LL_DEBUG1, "Reconnected to %s but failed to reopen mailbox\n",
+                    adata->conn->account.host);
+       }
+     }
+     else
+     {
++      adata->status = IMAP_FATAL;
+       adata->retry_count++;
+       mutt_debug(LL_DEBUG1, "Reconnection failed (attempt %d/%d)\n",
+                  adata->retry_count, IMAP_MAX_RETRIES);
+@@ -614,11 +620,9 @@
+     imap_set_flags(adata->mailbox, e, flags, &server_changes);
+     if (server_changes)
+     {
+-      /* If server flags could conflict with NeoMutt's flags, reopen the mailbox. */
+-      if (e->changed)
+-        mdata->reopen |= IMAP_EXPUNGE_PENDING;
+-      else
+-        mdata->check_status |= IMAP_FLAGS_PENDING;
++      /* imap_set_flags merges server changes with pending local per-flag
++       * deltas. Reopening would discard those pending local changes. */
++      mdata->check_status |= IMAP_FLAGS_PENDING;
+     }
+   }
+ }
+--- a/imap/imap.c
++++ b/imap/imap.c
+@@ -45,6 +45,7 @@
+ #include <stdbool.h>
+ #include <stdint.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ #include <string.h>
+ #include <time.h>
+ #include "private.h"
+@@ -60,6 +61,7 @@
+ #include "parse/lib.h"
+ #include "progress/lib.h"
+ #include "question/lib.h"
++#include "protos.h"
+ #include "adata.h"
+ #include "auth.h"
+ #include "commands.h"
+@@ -1575,11 +1577,17 @@
+   if (!adata || !mdata)
+     return MX_STATUS_ERROR;
+ 
++  if ((adata->state < IMAP_SELECTED) && (adata->status == IMAP_FATAL))
++    imap_cmd_finish(adata);
++
+   if (adata->state < IMAP_SELECTED)
+   {
+     mutt_debug(LL_DEBUG2, "no mailbox selected\n");
+     return -1;
+   }
++
++  /* Preserve intent before STORE/EXPUNGE can advance the cached baseline. */
++  imap_save_pending_flags(m);
+ 
+   /* Mark sync in progress to prevent expunge/newmail processing mid-sync.
+    * Do NOT set IMAP_REOPEN_ALLOW here — it makes timeouts destructive
+@@ -1775,9 +1783,16 @@
+   if (expunge && close)
+   {
+     adata->closing = true;
+-    imap_exec(adata, "CLOSE", IMAP_CMD_NO_FLAGS);
++    if (imap_exec(adata, "CLOSE", IMAP_CMD_NO_FLAGS) != IMAP_EXEC_SUCCESS)
++    {
++      adata->closing = false;
++      return MX_STATUS_ERROR;
++    }
+     adata->state = IMAP_AUTHENTICATED;
+   }
++
++  ARRAY_FREE(&mdata->pending_flags);
++  mdata->pending_uidvalidity = 0;
+ 
+   const bool c_message_cache_clean = cs_subset_bool(NeoMutt->sub, "message_cache_clean");
+   if (c_message_cache_clean)
+@@ -1971,7 +1986,7 @@
+     imap_exec(adata, NULL, IMAP_CMD_NO_FLAGS);
+ 
+     /* select the mailbox that used to be open before disconnect */
+-    if (adata->mailbox)
++    if (adata->mailbox && !adata->recovering)
+     {
+       imap_mbox_select(adata->mailbox);
+     }
+@@ -2073,10 +2088,14 @@
+     }
+     else
+     {
++      char *number = pc;
+       pc = imap_next_word(pc);
+       if (mutt_istr_startswith(pc, "EXISTS"))
+       {
+-        count = mdata->new_mail_count;
++        unsigned int exists = 0;
++        if (!mutt_str_atoui(number, &exists) || (exists > INT_MAX))
++          return -1;
++        count = (int) exists;
+         mdata->new_mail_count = 0;
+       }
+     }
+@@ -2133,6 +2152,94 @@
+   return 0;
+ }
+ 
++enum ImapPendingFlagBits
++{
++  IPF_READ = 1U << 0,
++  IPF_OLD = 1U << 1,
++  IPF_FLAGGED = 1U << 2,
++  IPF_REPLIED = 1U << 3,
++  IPF_DELETED = 1U << 4,
++};
++
++static int pending_flags_compare(const void *a, const void *b)
++{
++  const struct ImapPendingFlags *left = a;
++  const struct ImapPendingFlags *right = b;
++  return (left->uid > right->uid) - (left->uid < right->uid);
++}
++
++/** Save only local per-flag deltas before a reconnect can invalidate headers. */
++void imap_save_pending_flags(struct Mailbox *m)
++{
++  struct ImapMboxData *mdata = imap_mdata_get(m);
++  if (!mdata || !mdata->uidvalidity || !m->changed)
++    return;
++  if (ARRAY_EMPTY(&mdata->pending_flags))
++    mdata->pending_uidvalidity = mdata->uidvalidity;
++  if (mdata->pending_uidvalidity != mdata->uidvalidity)
++    return;
++
++  const size_t previous_count = ARRAY_SIZE(&mdata->pending_flags);
++  for (int i = 0; i < m->msg_count; i++)
++  {
++    struct Email *e = m->emails[i];
++    if (!e || !e->changed)
++      continue;
++    struct ImapEmailData *edata = imap_edata_get(e);
++    if (!edata)
++      continue;
++    struct ImapPendingFlags pending = { .uid = edata->uid, .purge = e->purge };
++    pending.mask = ((e->read != edata->read) ? IPF_READ : 0) |
++                   ((e->old != edata->old) ? IPF_OLD : 0) |
++                   ((e->flagged != edata->flagged) ? IPF_FLAGGED : 0) |
++                   ((e->replied != edata->replied) ? IPF_REPLIED : 0) |
++                   ((e->deleted != edata->deleted) ? IPF_DELETED : 0);
++    pending.values = (e->read ? IPF_READ : 0) | (e->old ? IPF_OLD : 0) |
++                     (e->flagged ? IPF_FLAGGED : 0) | (e->replied ? IPF_REPLIED : 0) |
++                     (e->deleted ? IPF_DELETED : 0);
++    struct ImapPendingFlags *existing = previous_count ?
++        bsearch(&pending, mdata->pending_flags.entries, previous_count,
++                sizeof(pending), pending_flags_compare) : NULL;
++    if (existing)
++      *existing = pending;
++    else if (pending.mask)
++      ARRAY_ADD(&mdata->pending_flags, pending);
++  }
++  if (ARRAY_SIZE(&mdata->pending_flags) > 1)
++    qsort(mdata->pending_flags.entries, ARRAY_SIZE(&mdata->pending_flags),
++          sizeof(struct ImapPendingFlags), pending_flags_compare);
++}
++
++/** Replay deltas against fresh server state; never match by sequence number. */
++static void imap_restore_pending_flags(struct Mailbox *m)
++{
++  struct ImapMboxData *mdata = imap_mdata_get(m);
++  if (!mdata || (mdata->pending_uidvalidity != mdata->uidvalidity))
++    return;
++  struct ImapPendingFlags *pending = NULL;
++  ARRAY_FOREACH(pending, &mdata->pending_flags)
++  {
++    struct Email *e = mutt_hash_int_find(mdata->uid_hash, pending->uid);
++    if (!e)
++      continue;
++    if (pending->mask & IPF_READ)
++      mutt_set_flag(m, e, MUTT_READ, (pending->values & IPF_READ) != 0, true);
++    if (pending->mask & IPF_OLD)
++      mutt_set_flag(m, e, MUTT_OLD, (pending->values & IPF_OLD) != 0, true);
++    if (pending->mask & IPF_FLAGGED)
++      mutt_set_flag(m, e, MUTT_FLAG, (pending->values & IPF_FLAGGED) != 0, true);
++    if (pending->mask & IPF_REPLIED)
++      mutt_set_flag(m, e, MUTT_REPLIED, (pending->values & IPF_REPLIED) != 0, true);
++    if (pending->mask & IPF_DELETED)
++    {
++      mutt_set_flag(m, e, MUTT_DELETE, (pending->values & IPF_DELETED) != 0, true);
++      e->purge = pending->purge;
++    }
++  }
++  ARRAY_FREE(&mdata->pending_flags);
++  mdata->pending_uidvalidity = 0;
++}
++
+ /**
+  * imap_reopen_mailbox - Re-SELECT the current mailbox after reconnecting
+  * @param adata Imap Account data (must be in IMAP_AUTHENTICATED state)
+@@ -2159,6 +2266,28 @@
+   for (int i = 0; i < m->msg_count; i++)
+   {
+     struct Email *e = m->emails[i];
++    if (e && (e->env->changed || e->attach_del))
++    {
++      mutt_error(_("Unsaved message edits prevent automatic IMAP reopen"));
++      return -1;
++    }
++  }
++
++  int count = 0;
++  const uint32_t old_uidvalidity = mdata->uidvalidity;
++  if (imap_select_and_poll(m, &count) < 0)
++    goto fail;
++  if (!ARRAY_EMPTY(&mdata->pending_flags) &&
++      (mdata->pending_uidvalidity != mdata->uidvalidity))
++  {
++    mdata->uidvalidity = old_uidvalidity;
++    mutt_error(_("IMAP mailbox identity changed; unsaved flags were not applied"));
++    goto fail;
++  }
++
++  for (int i = 0; i < m->msg_count; i++)
++  {
++    struct Email *e = m->emails[i];
+     if (!e)
+       continue;
+     imap_edata_free((void **) &e->edata);
+@@ -2178,17 +2307,17 @@
+   mdata->reopen = IMAP_OPEN_NO_FLAGS;
+   mdata->check_status = IMAP_OPEN_NO_FLAGS;
+ 
+-  int count = 0;
+-  if (imap_select_and_poll(m, &count) < 0)
+-    goto fail;
+-
+   mx_alloc_memory(m, count);
+ 
+   if ((count > 0) && (imap_read_headers(m, 1, count, true) < 0))
+     goto fail;
+ 
++  imap_restore_pending_flags(m);
++
+   mutt_debug(LL_DEBUG1, "Reopened mailbox %s with %d messages\n", mdata->name, m->msg_count);
+-  mailbox_changed(m, NT_MAILBOX_UPDATE);
++  /* This is a rebuilt index, not a completed sync: UPDATE clears changed
++   * flags and drops pending deletions in the mailbox view. */
++  mailbox_changed(m, NT_MAILBOX_INVALID);
+   mailbox_changed(m, NT_MAILBOX_RESORT);
+   return 0;
+ 
+--- a/imap/mdata.c
++++ b/imap/mdata.c
+@@ -46,6 +46,7 @@
+ 
+   imap_mdata_cache_reset(mdata);
+   mutt_list_free(&mdata->flags);
++  ARRAY_FREE(&mdata->pending_flags);
+   FREE(&mdata->name);
+   FREE(&mdata->real_name);
+   FREE(&mdata->munge_name);
+--- a/imap/mdata.h
++++ b/imap/mdata.h
+@@ -31,6 +31,15 @@
+ struct Mailbox;
+ struct ImapAccountData;
+ 
++/** Pending local flag deltas, identified independently of message sequence numbers. */
++struct ImapPendingFlags
++{
++  unsigned int uid;
++  unsigned int mask;
++  unsigned int values;
++  bool purge;
++};
++
+ /**
+  * struct ImapMboxData - IMAP-specific Mailbox data - @extends Mailbox
+  *
+@@ -62,6 +71,8 @@
+ 
+   struct HeaderCache *hcache; ///< Email header cache
+   struct timespec mtime;      ///< Time Mailbox was last changed
++  uint32_t pending_uidvalidity; ///< Identity of messages with pending flag deltas
++  ARRAY_HEAD(ImapPendingFlagsArray, struct ImapPendingFlags) pending_flags;
+ };
+ 
+ void                 imap_mdata_free(void **ptr);
+--- a/imap/message.c
++++ b/imap/message.c
+@@ -657,22 +657,16 @@
+                              bool *server_changes, enum MessageType flag_name,
+                              bool old_hd_flag, bool new_hd_flag, bool h_flag)
+ {
+-  /* If there are local_changes, we only want to note if the server
+-   * flags have changed, so we can set a reopen flag in
+-   * cmd_parse_fetch().  We don't want to count a local modification
+-   * to the header flag as a "change".  */
+-  if ((old_hd_flag == new_hd_flag) && (local_changes != 0))
+-    return;
+-
+-  if (new_hd_flag == h_flag)
++  /* Preserve a local change to this flag, while accepting independent
++   * server changes to other flags on the same message. */
++  if (((local_changes != 0) && (old_hd_flag != h_flag)) ||
++      (new_hd_flag == h_flag))
+     return;
+ 
+   if (server_changes)
+     *server_changes = true;
+ 
+-  /* Local changes have priority */
+-  if (local_changes == 0)
+-    mutt_set_flag(m, e, flag_name, new_hd_flag, true);
++  mutt_set_flag(m, e, flag_name, new_hd_flag, true);
+ }
+ 
+ #ifdef USE_HCACHE
+@@ -1956,6 +1950,7 @@
+   int local_changes = e->changed;
+ 
+   struct ImapEmailData *edata = e->edata;
++  old_edata = *edata;
+   newh.edata = edata;
+ 
+   mutt_debug(LL_DEBUG2, "parsing FLAGS\n");
+--- a/imap/private.h
++++ b/imap/private.h
+@@ -191,6 +191,7 @@
+ bool imap_has_flag(struct ListHead *flag_list, const char *flag);
+ int imap_adata_find(const char *path, struct ImapAccountData **adata, struct ImapMboxData **mdata);
+ int imap_reopen_mailbox(struct ImapAccountData *adata);
++void imap_save_pending_flags(struct Mailbox *m);
+ 
+ /* auth.c */
+ int imap_authenticate(struct ImapAccountData *adata);
+--- a/imap/util.c
++++ b/imap/util.c
+@@ -1019,6 +1019,18 @@
+  */
+ int imap_wait_keep_alive(pid_t pid)
+ {
++#ifdef _WIN32
++  int status = 0;
++  ULONGLONG last = GetTickCount64();
++  const short interval = cs_subset_number(NeoMutt->sub, "imap_keep_alive");
++  while (waitpid(pid, &status, WNOHANG) == 0)
++  {
++    Sleep(50);
++    if (interval > 0 && GetTickCount64() - last >= (ULONGLONG) interval * 1000)
++    { imap_keep_alive(); last = GetTickCount64(); }
++  }
++  return status;
++#else
+   struct sigaction oldalrm = { 0 };
+   struct sigaction act = { 0 };
+   sigset_t oldmask = { 0 };
+@@ -1058,6 +1070,7 @@
+   cs_subset_str_native_set(NeoMutt->sub, "imap_passive", c_imap_passive, NULL);
+ 
+   return rc;
++#endif
+ }
+ 
+ /**
+--- a/key/extended.c
++++ b/key/extended.c
+@@ -123,7 +123,7 @@
+       if (keyname)
+       {
+         const char *s = mutt_tigetstr((char *) keyname);
+-        if (s && ((long) (s) != -1))
++        if (s && (s != (const char *) -1))
+         {
+           int code = key_defined(s);
+           if (code > 0)
+--- a/key/get.c
++++ b/key/get.c
+@@ -251,6 +251,11 @@
+     {
+       // do nothing
+     }
++#ifdef _WIN32
++    if (ch != ERR) mutt_unget_ch(ch);
++    notify_send(NeoMutt->notify_resize, NT_RESIZE, 0, NULL);
++    return event_repaint;
++#endif
+   }
+ 
+   if (ch == ERR)
+--- a/maildir/mailbox.c
++++ b/maildir/mailbox.c
+@@ -572,9 +572,9 @@
+   }
+ 
+   /* determine which subdirectories need to be scanned */
+-  if (mutt_file_stat_timespec_compare(&st_new, MUTT_STAT_MTIME, &mdata->mtime) > 0)
++  if (mutt_file_stat_timespec_compare(&st_new, MUTT_STAT_MTIME, &mdata->mtime) != 0)
+     changed = MMC_NEW_DIR;
+-  if (mutt_file_stat_timespec_compare(&st_cur, MUTT_STAT_MTIME, &mdata->mtime_cur) > 0)
++  if (mutt_file_stat_timespec_compare(&st_cur, MUTT_STAT_MTIME, &mdata->mtime_cur) != 0)
+     changed |= MMC_CUR_DIR;
+ 
+   if (changed == MMC_NO_DIRS)
+@@ -637,16 +637,34 @@
+     {
+       /* message already exists, merge flags */
+ 
+-      /* check to see if the message has moved to a different
+-       * subdirectory.  If so, update the associated filename.  */
++      /* Merge against the last filename observed. Preserve each local flag
++       * delta while accepting external changes to other flags. A pending
++       * local change must remain dirty until its rename succeeds. */
++      bool pending = e->changed;
++      if (pending)
++      {
++        const char delimiter = *cc_maildir_field_delimiter();
++        const char *flags = strrchr(e->path, delimiter);
++        flags = (flags && mutt_str_startswith(flags + 1, "2,")) ? flags + 3 : "";
++        if (e->flagged != (strchr(flags, 'F') != NULL))
++          md->email->flagged = e->flagged;
++        if (e->replied != (strchr(flags, 'R') != NULL))
++          md->email->replied = e->replied;
++        if (e->read != (strchr(flags, 'S') != NULL))
++          md->email->read = e->read;
++        if (e->old != mutt_strn_equal(e->path, "cur/", 4))
++          md->email->old = e->old;
++      }
++      if (maildir_update_flags(m, e, md->email))
++        flags_changed = true;
++      e->changed = pending;
++      struct MaildirEmailData *old_edata = maildir_edata_get(e);
++      struct MaildirEmailData *new_edata = maildir_edata_get(md->email);
++      if (old_edata && new_edata)
++        mutt_str_replace(&old_edata->custom_flags, new_edata->custom_flags);
++
+       if (!mutt_str_equal(e->path, md->email->path))
+         mutt_str_replace(&e->path, md->email->path);
+-
+-      /* if the user hasn't modified the flags on this message, update
+-       * the flags we just detected.  */
+-      if (!e->changed)
+-        if (maildir_update_flags(m, e, md->email))
+-          flags_changed = true;
+ 
+       if (e->deleted == e->trash)
+       {
+--- a/maildir/message.c
++++ b/maildir/message.c
+@@ -278,7 +278,13 @@
+     struct stat st = { 0 };
+     if (stat(buf_string(oldpath), &st) == -1)
+     {
+-      mutt_debug(LL_DEBUG1, "File already removed (just continuing)\n");
++      /* A concurrent flag rename can invalidate this path after the mailbox
++       * scan. Do not report success and discard the unsaved local changes. */
++      if (errno == ENOENT)
++        mutt_error(_("Message changed during synchronization; retry saving the mailbox"));
++      else
++        mutt_perror("stat");
++      rc = -1;
+       goto cleanup;
+     }
+ 
+@@ -318,8 +324,12 @@
+   {
+     char path[PATH_MAX] = { 0 };
+     snprintf(path, sizeof(path), "%s/%s", mailbox_path(m), e->path);
++    if ((unlink(path) != 0) && (errno != ENOENT))
++    {
++      mutt_perror("unlink");
++      return false;
++    }
+     maildir_hcache_delete(hc, e);
+-    unlink(path);
+   }
+   else if (e->changed || e->attach_del ||
+            ((c_maildir_trash || e->trash) && (e->deleted != e->trash)))
+--- a/main.c
++++ b/main.c
+@@ -772,7 +772,15 @@
+  */
+ static void init_locale(void)
+ {
++#ifdef _WIN32
++  setlocale(LC_ALL, ".UTF8");
++  _set_fmode(_O_BINARY);
++  _setmode(_fileno(stdin), _O_BINARY);
++  if (!_isatty(_fileno(stdout))) _setmode(_fileno(stdout), _O_BINARY);
++  if (!_isatty(_fileno(stderr))) _setmode(_fileno(stderr), _O_BINARY);
++#else
+   setlocale(LC_ALL, "");
++#endif
+ 
+ #ifdef ENABLE_NLS
+   const char *domdir = mutt_str_getenv("TEXTDOMAINDIR");
+@@ -800,7 +808,11 @@
+  */
+ static bool get_user_info(struct ConfigSet *cs)
+ {
++#ifdef _WIN32
++  const char *shell = mutt_str_getenv("COMSPEC");
++#else
+   const char *shell = mutt_str_getenv("SHELL");
++#endif
+ 
+   /* Get some information about the user */
+   struct passwd *pw = getpwuid(getuid());
+@@ -1077,6 +1089,10 @@
+  */
+ int main(int argc, char *argv[], char *envp[])
+ {
++#ifdef _WIN32
++  xp_platform_init();
++  envp = environ;
++#endif
+   struct Email *e = NULL;
+   SendFlags sendflags = SEND_NO_FLAGS;
+   int rc = 1;
+@@ -1107,6 +1123,10 @@
+   NeoMutt->env = envlist_init(envp);
+   mutt_str_replace(&NeoMutt->username, mutt_str_getenv("USER"));
+   mutt_str_replace(&NeoMutt->home_dir, mutt_str_getenv("HOME"));
++#ifdef _WIN32
++  if (NeoMutt->home_dir)
++    for (char *p = NeoMutt->home_dir; *p; p++) if (*p == '\\') *p = '/';
++#endif
+ 
+   init_config(cs);
+ 
+--- a/mutt/date.c
++++ b/mutt/date.c
+@@ -981,9 +981,13 @@
+  */
+ void mutt_date_sleep_ms(size_t ms)
+ {
++#ifdef _WIN32
++  Sleep((DWORD) ms);
++#else
+   const struct timespec sleep = {
+     .tv_sec = ms / 1000,
+     .tv_nsec = (ms % 1000) * 1000000UL,
+   };
+   nanosleep(&sleep, NULL);
+-}
++#endif
++}
+--- a/mutt/file.c
++++ b/mutt/file.c
+@@ -36,6 +36,9 @@
+  */
+ 
+ #include "config.h"
++#ifdef _WIN32
++#include "xp_process.h"
++#endif
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <limits.h>
+@@ -49,6 +52,7 @@
+ #include <utime.h>
+ #include <wchar.h>
+ #include "file.h"
++#include "exit.h"
+ #include "buffer.h"
+ #include "charset.h"
+ #include "ctype2.h"
+@@ -812,6 +816,18 @@
+   if (!buf || !filename)
+     return;
+ 
++#ifdef _WIN32
++  const char *posix_shell = getenv("NEOMUTT_XP_SHELL");
++  if (!posix_shell || !*posix_shell)
++  {
++    char *quoted = xp_quote_cmd_argument(filename, add_outer);
++    if (!quoted)
++      mutt_exit(1);
++    buf_strcpy(buf, quoted);
++    free(quoted);
++    return;
++  }
++#endif
+   buf_reset(buf);
+   if (add_outer)
+     buf_addch(buf, '\'');
+@@ -877,6 +893,9 @@
+   {
+     if (*p != '/')
+       continue;
++#ifdef _WIN32
++    if (p == tmp_path + 2 && tmp_path[1] == ':') continue;
++#endif
+ 
+     /* Temporarily truncate the path */
+     *p = '\0';
+--- a/mutt/filter.c
++++ b/mutt/filter.c
+@@ -33,6 +33,9 @@
+ #include <sys/wait.h>
+ #include <unistd.h>
+ #include "filter.h"
++#ifdef _WIN32
++#include "xp_process.h"
++#endif
+ #include "signal2.h"
+ 
+ /**
+@@ -62,6 +65,9 @@
+ pid_t filter_create_fd(const char *cmd, FILE **fp_in, FILE **fp_out, FILE **fp_err,
+                        int fdin, int fdout, int fderr, char **envlist)
+ {
++#ifdef _WIN32
++  return xp_filter_create(cmd, fp_in, fp_out, fp_err, fdin, fdout, fderr, envlist);
++#else
+   int pin[2], pout[2], perr[2], pid;
+ 
+   if (fp_in)
+@@ -195,6 +201,7 @@
+   }
+ 
+   return pid;
++#endif
+ }
+ 
+ /**
+--- a/mutt/mbyte.c
++++ b/mutt/mbyte.c
+@@ -195,8 +195,13 @@
+  * @param wc Character to examine
+  * @retval num Width in screen columns
+  */
+-int mutt_mb_wcwidth(wchar_t wc)
+-{
++int mutt_mb_wcwidth(mutt_wchar_t wc)
++{
++#ifdef _WIN32
++  /* The Windows curses ABI cannot render a scalar outside the BMP.  Match
++   * the prompt's existing escaped-character display, without changing data. */
++  if (wc > 0xffff) return 10;
++#endif
+   int n = wcwidth(wc);
+   if (IsWPrint(wc) && (n > 0))
+     return n;
+@@ -213,7 +218,7 @@
+  * @param n Length of string in characters
+  * @retval num Width in screen columns
+  */
+-int mutt_mb_wcswidth(const wchar_t *s, size_t n)
++int mutt_mb_wcswidth(const mutt_wchar_t *s, size_t n)
+ {
+   if (!s)
+     return 0;
+@@ -234,12 +239,12 @@
+  * Given a string and a width, determine how many characters from the
+  * beginning of the string should be skipped so that the string fits.
+  */
+-size_t mutt_mb_width_ceiling(const wchar_t *s, size_t n, int w1)
++size_t mutt_mb_width_ceiling(const mutt_wchar_t *s, size_t n, int w1)
+ {
+   if (!s)
+     return 0;
+ 
+-  const wchar_t *s0 = s;
++  const mutt_wchar_t *s0 = s;
+   int w = 0;
+   for (; n; s++, n--)
+     if ((w += mutt_mb_wcwidth(*s)) > w1)
+@@ -253,7 +258,7 @@
+  * @param wstr Source wide string to convert
+  * @param wlen Length of the wide string
+  */
+-void buf_mb_wcstombs(struct Buffer *dest, const wchar_t *wstr, size_t wlen)
++void buf_mb_wcstombs(struct Buffer *dest, const mutt_wchar_t *wstr, size_t wlen)
+ {
+   if (!dest || !wstr)
+     return;
+@@ -269,7 +274,7 @@
+ 
+   for (; (wlen > 0) && (buflen >= MB_LEN_MAX); buf += k, buflen -= k, wstr++, wlen--)
+   {
+-    k = wcrtomb(buf, *wstr, &mbstate);
++    k = mutt_mb_encode(buf, *wstr, &mbstate);
+     if (k == ICONV_ILLEGAL_SEQ)
+       break;
+     if (*wstr == L'\0')
+@@ -288,28 +293,28 @@
+  * @param[in]  buf      String to convert
+  * @retval num First character after the result
+  */
+-size_t mutt_mb_mbstowcs(wchar_t **pwbuf, size_t *pwbuflen, size_t i, const char *buf)
++size_t mutt_mb_mbstowcs(mutt_wchar_t **pwbuf, size_t *pwbuflen, size_t i, const char *buf)
+ {
+   if (!pwbuf || !pwbuflen || !buf)
+     return 0;
+ 
+-  wchar_t wc = 0;
++  mutt_wchar_t wc = 0;
+   mbstate_t mbstate = { 0 };
+   size_t k;
+-  wchar_t *wbuf = *pwbuf;
++  mutt_wchar_t *wbuf = *pwbuf;
+   size_t wbuflen = *pwbuflen;
+ 
+   while (*buf != '\0')
+   {
+     memset(&mbstate, 0, sizeof(mbstate));
+-    for (; (k = mbrtowc(&wc, buf, MB_LEN_MAX, &mbstate)) &&
++    for (; (k = mutt_mb_decode(&wc, buf, MB_LEN_MAX, &mbstate)) &&
+            (k != ICONV_ILLEGAL_SEQ) && (k != ICONV_BUF_TOO_SMALL);
+          buf += k)
+     {
+       if (i >= wbuflen)
+       {
+         wbuflen = i + 20;
+-        MUTT_MEM_REALLOC(&wbuf, wbuflen, wchar_t);
++        MUTT_MEM_REALLOC(&wbuf, wbuflen, mutt_wchar_t);
+       }
+       wbuf[i++] = wc;
+     }
+@@ -318,7 +323,7 @@
+       if (i >= wbuflen)
+       {
+         wbuflen = i + 20;
+-        MUTT_MEM_REALLOC(&wbuf, wbuflen, wchar_t);
++        MUTT_MEM_REALLOC(&wbuf, wbuflen, mutt_wchar_t);
+       }
+       wbuf[i++] = ReplacementChar;
+       buf++;
+@@ -337,8 +342,11 @@
+  *
+  * @note The name is very confusing.
+  */
+-bool mutt_mb_is_shell_char(wchar_t ch)
+-{
++bool mutt_mb_is_shell_char(mutt_wchar_t ch)
++{
++  /* Shell delimiters are ASCII; do not truncate a Unicode scalar to wchar_t. */
++  if (ch > 0x7f)
++    return false;
+   static const wchar_t shell_chars[] = L"<>&()$?*;{}| "; /* ! not included because it can be part of a pathname in NeoMutt */
+   return wcschr(shell_chars, ch);
+ }
+@@ -382,28 +390,28 @@
+  *
+  * @note This list isn't complete.
+  */
+-bool mutt_mb_is_display_corrupting_utf8(wchar_t wc)
+-{
+-  if ((wc == (wchar_t) 0x00ad) || /* soft hyphen */
+-      (wc == (wchar_t) 0x200e) || /* left-to-right mark */
+-      (wc == (wchar_t) 0x200f) || /* right-to-left mark */
+-      (wc == (wchar_t) 0xfeff))   /* zero width no-break space */
++bool mutt_mb_is_display_corrupting_utf8(mutt_wchar_t wc)
++{
++  if ((wc == (mutt_wchar_t) 0x00ad) || /* soft hyphen */
++      (wc == (mutt_wchar_t) 0x200e) || /* left-to-right mark */
++      (wc == (mutt_wchar_t) 0x200f) || /* right-to-left mark */
++      (wc == (mutt_wchar_t) 0xfeff))   /* zero width no-break space */
+   {
+     return true;
+   }
+ 
+   /* left-to-right isolate, right-to-left isolate, first strong isolate,
+    * pop directional isolate */
+-  if ((wc >= (wchar_t) 0x2066) && (wc <= (wchar_t) 0x2069))
++  if ((wc >= (mutt_wchar_t) 0x2066) && (wc <= (mutt_wchar_t) 0x2069))
+     return true;
+ 
+   /* left-to-right embedding, right-to-left embedding, pop directional formatting,
+    * left-to-right override, right-to-left override */
+-  if ((wc >= (wchar_t) 0x202a) && (wc <= (wchar_t) 0x202e))
++  if ((wc >= (mutt_wchar_t) 0x202a) && (wc <= (mutt_wchar_t) 0x202e))
+     return true;
+ 
+   /* arabic letter mark */
+-  if (wc == (wchar_t) 0x061c)
++  if (wc == (mutt_wchar_t) 0x061c)
+     return true;
+ 
+   return false;
+@@ -425,7 +433,7 @@
+   if (!s || !*s)
+     return -1;
+ 
+-  wchar_t wc = 0;
++  mutt_wchar_t wc = 0;
+   size_t k, k2;
+   char scratch[MB_LEN_MAX + 1];
+   char *p = *s;
+@@ -433,7 +441,7 @@
+   mbstate_t mbstate2 = { 0 };
+ 
+   struct Buffer *buf = buf_pool_get();
+-  for (; (k = mbrtowc(&wc, p, MB_LEN_MAX, &mbstate1)); p += k)
++  for (; (k = mutt_mb_decode(&wc, p, MB_LEN_MAX, &mbstate1)); p += k)
+   {
+     if ((k == ICONV_ILLEGAL_SEQ) || (k == ICONV_BUF_TOO_SMALL))
+     {
+@@ -445,11 +453,17 @@
+     {
+       continue;
+     }
+-    if (!IsWPrint(wc))
++    if (!mutt_mb_iswprint(wc))
+       wc = '?';
+     else if (CharsetIsUtf8 && mutt_mb_is_display_corrupting_utf8(wc))
+       continue;
+-    k2 = wcrtomb(scratch, wc, &mbstate2);
++    k2 = mutt_mb_encode(scratch, wc, &mbstate2);
++    if (k2 == ICONV_ILLEGAL_SEQ)
++    {
++      memset(&mbstate2, 0, sizeof(mbstate2));
++      scratch[0] = '?';
++      k2 = 1;
++    }
+     scratch[k2] = '\0';
+     buf_addstr(buf, scratch);
+   }
+--- a/mutt/mbyte.h
++++ b/mutt/mbyte.h
+@@ -27,7 +27,20 @@
+ #include <ctype.h>
+ #include <stdbool.h>
+ #include <stddef.h>
++#include <wchar.h>
+ #include <wctype.h> // IWYU pragma: keep
++
++/* Prompt storage uses Unicode scalars, independently of the system wchar ABI. */
++#ifdef _WIN32
++#include <uchar.h>
++typedef char32_t mutt_wchar_t;
++#define mutt_mb_decode mbrtoc32
++#define mutt_mb_encode c32rtomb
++#else
++typedef wchar_t mutt_wchar_t;
++#define mutt_mb_decode mbrtowc
++#define mutt_mb_encode wcrtomb
++#endif
+ 
+ struct Buffer;
+ 
+@@ -40,19 +53,63 @@
+ #define IsPrint(ch) (isprint((unsigned char) (ch)) || (OptLocales ? 0 : ((unsigned char) (ch) >= 0xa0)))
+ #define IsWPrint(wc) (iswprint(wc) || (OptLocales ? 0 : (wc >= 0xa0)))
+ #endif
++/* Windows classification functions accept only UTF-16 code units.  Never
++ * truncate a scalar into an unrelated BMP character during editing. */
++static inline int mutt_mb_prompt_width(mutt_wchar_t wc)
++{
++#ifdef _WIN32
++  if (wc > 0xffff) return -1;
++#endif
++  return wcwidth(wc);
++}
++static inline int mutt_mb_iswprint(mutt_wchar_t wc)
++{
++#ifdef _WIN32
++  if (wc > 0xffff) return wc <= 0x10ffff;
++#endif
++  return IsWPrint(wc);
++}
++static inline int mutt_mb_iswspace(mutt_wchar_t wc)
++{
++#ifdef _WIN32
++  if (wc > 0xffff) return 0;
++#endif
++  return iswspace(wc);
++}
++static inline int mutt_mb_iswalnum(mutt_wchar_t wc)
++{
++#ifdef _WIN32
++  if (wc > 0xffff) return 0;
++#endif
++  return iswalnum(wc);
++}
++static inline mutt_wchar_t mutt_mb_towlower(mutt_wchar_t wc)
++{
++#ifdef _WIN32
++  if (wc > 0xffff) return wc;
++#endif
++  return towlower(wc);
++}
++static inline mutt_wchar_t mutt_mb_towupper(mutt_wchar_t wc)
++{
++#ifdef _WIN32
++  if (wc > 0xffff) return wc;
++#endif
++  return towupper(wc);
++}
+ #define IsBOM(wc) (wc == L'\xfeff')
+ 
+ int    mutt_mb_charlen(const char *s, int *width);
+ int    mutt_mb_filter_unprintable(char **s);
+ bool   mutt_mb_get_initials(const char *name, char *buf, size_t buflen);
+-bool   mutt_mb_is_display_corrupting_utf8(wchar_t wc);
++bool   mutt_mb_is_display_corrupting_utf8(mutt_wchar_t wc);
+ bool   mutt_mb_is_lower(const char *s);
+-bool   mutt_mb_is_shell_char(wchar_t ch);
+-size_t mutt_mb_mbstowcs(wchar_t **pwbuf, size_t *pwbuflen, size_t i, const char *buf);
+-void   buf_mb_wcstombs(struct Buffer *dest, const wchar_t *wstr, size_t wlen);
+-int    mutt_mb_wcswidth(const wchar_t *s, size_t n);
+-int    mutt_mb_wcwidth(wchar_t wc);
++bool   mutt_mb_is_shell_char(mutt_wchar_t ch);
++size_t mutt_mb_mbstowcs(mutt_wchar_t **pwbuf, size_t *pwbuflen, size_t i, const char *buf);
++void   buf_mb_wcstombs(struct Buffer *dest, const mutt_wchar_t *wstr, size_t wlen);
++int    mutt_mb_wcswidth(const mutt_wchar_t *s, size_t n);
++int    mutt_mb_wcwidth(mutt_wchar_t wc);
+ int    mutt_mb_width(const char *str, int col, bool indent);
+-size_t mutt_mb_width_ceiling(const wchar_t *s, size_t n, int w1);
++size_t mutt_mb_width_ceiling(const mutt_wchar_t *s, size_t n, int w1);
+ 
+ #endif /* MUTT_MUTT_MBYTE_H */
+--- a/mutt/notify.c
++++ b/mutt/notify.c
+@@ -117,7 +117,7 @@
+  * @note If Observers call `notify_observer_remove()`, then we garbage-collect
+  *       any dead list entries after we've finished.
+  */
+-static bool send(struct Notify *source, struct Notify *current,
++static bool notify_send_internal(struct Notify *source, struct Notify *current,
+                  enum NotifyType event_type, int event_subtype, void *event_data)
+ {
+   if (!source || !current)
+@@ -144,7 +144,7 @@
+   }
+ 
+   if (current->parent)
+-    return send(source, current->parent, event_type, event_subtype, event_data);
++    return notify_send_internal(source, current->parent, event_type, event_subtype, event_data);
+ 
+   // Garbage collection time
+   struct ObserverNode *tmp = NULL;
+@@ -168,13 +168,13 @@
+  * @param event_data    Private data associated with the event
+  * @retval true Successfully sent
+  *
+- * See send() for more details.
++ * See notify_send_internal() for more details.
+  */
+ bool notify_send(struct Notify *notify, enum NotifyType event_type,
+                  int event_subtype, void *event_data)
+ {
+   mutt_debug(LL_NOTIFY, "sending: %s/%d\n", NotifyTypeNames[event_type], event_subtype);
+-  return send(notify, notify, event_type, event_subtype, event_data);
++  return notify_send_internal(notify, notify, event_type, event_subtype, event_data);
+ }
+ 
+ /**
+@@ -224,7 +224,7 @@
+  * @retval true Successful
+  *
+  * @note This function frees the Observer, but doesn't free the ObserverNode.
+- *       If `send()` is present higher up the call stack,
++ *       If `notify_send_internal()` is present higher up the call stack,
+  *       removing multiple entries from the list will cause it to crash.
+  */
+ bool notify_observer_remove(struct Notify *notify, const observer_t callback,
+--- a/mutt/path.c
++++ b/mutt/path.c
+@@ -108,6 +108,9 @@
+  */
+ bool mutt_path_tidy_dotdot(char *buf)
+ {
++#ifdef _WIN32
++  if (buf && strlen(buf) > 2 && buf[1] == ':' && buf[2] == '/') buf += 2;
++#endif
+   if (!buf || (buf[0] != '/'))
+     return false;
+ 
+@@ -168,6 +171,19 @@
+  */
+ bool mutt_path_tidy(struct Buffer *path, bool is_dir)
+ {
++#ifdef _WIN32
++  if (!buf_is_empty(path))
++  {
++    for (char *p = path->data; *p; p++) if (*p == '\\') *p = '/';
++    if (strlen(path->data) > 2 && path->data[1] == ':' && path->data[2] == '/')
++    {
++      mutt_path_tidy_slash(path->data + 2, is_dir);
++      mutt_path_tidy_dotdot(path->data);
++      buf_fix_dptr(path);
++      return true;
++    }
++  }
++#endif
+   if (buf_is_empty(path) || (buf_at(path, 0) != '/'))
+     return false;
+ 
+@@ -254,7 +270,11 @@
+   {
+     mutt_path_tilde(path, homedir);
+   }
+-  else if (buf_at(path, 0) != '/')
++  else if (buf_at(path, 0) != '/'
++#ifdef _WIN32
++           && !(buf_len(path) > 2 && buf_at(path, 1) == ':' && (buf_at(path, 2) == '/' || buf_at(path, 2) == '\\'))
++#endif
++          )
+   {
+     char cwd[PATH_MAX] = { 0 };
+     if (!getcwd(cwd, sizeof(cwd)))
+@@ -285,6 +305,10 @@
+     return NULL;
+ 
+   const char *p = strrchr(path, '/');
++#ifdef _WIN32
++  const char *backslash = strrchr(path, '\\');
++  if (backslash && (!p || backslash > p)) p = backslash;
++#endif
+   if (p)
+   {
+     if (p[1] == '\0')
+@@ -335,6 +359,11 @@
+   if (!path || !reference)
+     return false;
+ 
++#ifdef _WIN32
++  for (char *p = path; *p; p++) if (*p == '\\') *p = '/';
++  if (((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) &&
++      path[1] == ':' && path[2] == '/') return true;
++#endif
+   /* if path is already absolute, don't do anything */
+   if ((strlen(path) > 1) && (path[0] == '/'))
+   {
+--- a/mutt/random.c
++++ b/mutt/random.c
+@@ -27,6 +27,10 @@
+  */
+ 
+ #include "config.h"
++#ifdef _WIN32
++#include <windows.h>
++#include <bcrypt.h>
++#endif
+ #include <errno.h>
+ #include <stddef.h>
+ #include <stdint.h>
+@@ -63,6 +67,12 @@
+     return -1;
+   }
+ 
++#ifdef _WIN32
++  if (BCryptGenRandom(NULL, buf, (ULONG) buflen, BCRYPT_USE_SYSTEM_PREFERRED_RNG) == 0)
++    return 0;
++  errno = EIO;
++  return -1;
++#endif
+ #ifdef HAVE_GETRANDOM
+   ssize_t rc;
+   ssize_t count = 0;
+--- a/ncrypt/crypt.c
++++ b/ncrypt/crypt.c
+@@ -105,12 +105,17 @@
+ }
+ 
+ #ifndef DEBUG
++#ifndef _WIN32
+ #include <sys/resource.h>
++#endif
+ /**
+  * disable_coredumps - Prevent coredumps if neomutt were to crash
+  */
+ static void disable_coredumps(void)
+ {
++#ifdef _WIN32
++  SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
++#else
+   struct rlimit rl = { 0, 0 };
+   static bool done = false;
+ 
+@@ -119,6 +124,7 @@
+     setrlimit(RLIMIT_CORE, &rl);
+     done = true;
+   }
++#endif
+ }
+ #endif
+ 
+--- a/ncrypt/crypt_gpgme.c
++++ b/ncrypt/crypt_gpgme.c
+@@ -3827,7 +3827,13 @@
+   if (has_run)
+     return;
+ 
++#ifdef _WIN32
++  const char *crypto_directory = xp_crypto_directory();
++  if (crypto_directory)
++    gpgme_set_global_flag("w32-inst-dir", crypto_directory);
++#endif
+   gpgme_check_version(NULL);
++
+   gpgme_set_locale(NULL, LC_CTYPE, setlocale(LC_CTYPE, NULL));
+ #ifdef ENABLE_NLS
+   gpgme_set_locale(NULL, LC_MESSAGES, setlocale(LC_MESSAGES, NULL));
+--- a/send/sendlib.c
++++ b/send/sendlib.c
+@@ -86,6 +86,10 @@
+ 
+   int szf = mutt_str_len(path);
+ 
++#ifdef _WIN32
++  const char *runtime_types = xp_runtime_path("neomutt/mime.types");
++#endif
++
+   for (int count = 0; count < 4; count++)
+   {
+     /* can't use strtok() because we use it in an inner loop below, so use
+@@ -95,7 +99,11 @@
+       /* last file with last entry to match wins type/xtype */
+       case 0:
+         /* check default unix mimetypes location first */
++#ifdef _WIN32
++        mutt_str_copy(buf, runtime_types ? runtime_types : "/etc/mime.types", sizeof(buf));
++#else
+         mutt_str_copy(buf, "/etc/mime.types", sizeof(buf));
++#endif
+         break;
+       case 1:
+         mutt_str_copy(buf, SYSCONFDIR "/mime.types", sizeof(buf));
+--- a/send/sendmail.c
++++ b/send/sendmail.c
+@@ -30,6 +30,9 @@
+  */
+ 
+ #include "config.h"
++#ifdef _WIN32
++#include "xp_process.h"
++#endif
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <limits.h>
+@@ -58,10 +61,11 @@
+ #endif
+ 
+ /* For execvp environment setting in send_msg() */
+-#ifndef __USE_GNU
++#if !defined(__USE_GNU) && !defined(_WIN32)
+ extern char **environ;
+ #endif
+ 
++#ifndef _WIN32
+ static volatile sig_atomic_t SigAlrm; ///< true after SIGALRM is received
+ 
+ /**
+@@ -72,6 +76,7 @@
+ {
+   SigAlrm = 1;
+ }
++#endif
+ 
+ /**
+  * send_msg - Invoke sendmail in a subshell
+@@ -89,6 +94,39 @@
+ static int send_msg(const char *path, struct StringArray *args, const char *msg,
+                     char **tempfile, int wait_time)
+ {
++#ifdef _WIN32
++  int input = open(msg, O_RDONLY);
++  if (input < 0) return S_ERR;
++  int output = -1;
++  if (tempfile)
++  {
++    if (wait_time >= 0)
++    {
++      struct Buffer *name = buf_pool_get();
++      buf_mktemp(name);
++      *tempfile = buf_strdup(name);
++      buf_pool_release(&name);
++      output = open(*tempfile, O_WRONLY | O_CREAT | O_EXCL, 0600);
++    }
++    else output = open("NUL", O_WRONLY);
++    if (output < 0) { close(input); FREE(tempfile); return S_ERR; }
++  }
++  pid_t child = xp_spawn_arguments(path, args->entries, input, output, output, NeoMutt->env);
++  close(input);
++  if (output >= 0) close(output);
++  if (child < 0)
++  {
++    if (tempfile && *tempfile) { unlink(*tempfile); FREE(tempfile); }
++    return S_ERR;
++  }
++  unlink(msg);
++  if (wait_time < 0) { xp_detach_process(child); return EX_OK; }
++  int status = 0;
++  int waited = xp_waitpid_timeout(child, &status, wait_time > 0 ? wait_time * 1000 : -1);
++  if (waited == 0) { xp_detach_process(child); return S_BKG; }
++  if (waited < 0) { xp_detach_process(child); return S_ERR; }
++  return WIFEXITED(status) ? WEXITSTATUS(status) : S_ERR;
++#else
+   sigset_t set;
+   int st;
+ 
+@@ -247,6 +285,7 @@
+   mutt_sig_unblock_system(true);
+ 
+   return st;
++#endif
+ }
+ 
+ /**
+--- a/send/smtp.c
++++ b/send/smtp.c
+@@ -67,6 +67,7 @@
+ #define SMTP_ERR_READ -2
+ #define SMTP_ERR_WRITE -3
+ #define SMTP_ERR_CODE -4
++#define SMTP_ERR_UNCERTAIN -5
+ 
+ #define SMTP_PORT 25
+ #define SMTPS_PORT 465
+@@ -304,11 +305,16 @@
+   }
+   mutt_file_fclose(&fp);
+ 
++  /* Once the terminator may have reached the server, a lost response cannot
++   * distinguish rejection from acceptance.  Do not encourage a blind retry. */
++  rc = SMTP_ERR_UNCERTAIN;
+   /* terminate the message body */
+   if (mutt_socket_send(adata->conn, ".\r\n") == -1)
+     goto done;
+ 
+   rc = smtp_get_resp(adata);
++  if ((rc == SMTP_ERR_READ) || (rc == SMTP_ERR_CODE))
++    rc = SMTP_ERR_UNCERTAIN;
+ 
+ done:
+   progress_free(&progress);
+@@ -733,7 +739,7 @@
+ {
+   /* If they did not explicitly request or configure oauth then fail quietly */
+   const char *const c_smtp_oauth_refresh_command = cs_subset_string(NeoMutt->sub, "smtp_oauth_refresh_command");
+-  if (!method && !c_smtp_oauth_refresh_command)
++  if (!c_smtp_oauth_refresh_command || !*c_smtp_oauth_refresh_command)
+     return SMTP_AUTH_UNAVAIL;
+ 
+   const char *authtype = xoauth2 ? "XOAUTH2" : "OAUTHBEARER";
+@@ -850,9 +856,9 @@
+     goto error;
+   }
+ 
+-  /* Read the 334 VXNlcm5hbWU6 challenge ("Username:" base64-encoded) */
++  /* LOGIN challenge text varies by server; only the 334 status is fixed. */
+   int rc = mutt_socket_readln_d(buf, sizeof(buf), adata->conn, MUTT_SOCK_LOG_FULL);
+-  if ((rc < 0) || !mutt_str_equal(buf, "334 VXNlcm5hbWU6"))
++  if ((rc < 0) || (!mutt_str_startswith(buf, "334") || (buf[3] && buf[3] != ' ')))
+   {
+     goto error;
+   }
+@@ -866,9 +872,9 @@
+     goto error;
+   }
+ 
+-  /* Read the 334 UGFzc3dvcmQ6 challenge ("Password:" base64-encoded) */
++  /* Accept the password challenge independently of its display text. */
+   rc = mutt_socket_readln_d(buf, sizeof(buf), adata->conn, MUTT_SOCK_LOG_FULL);
+-  if ((rc < 0) || !mutt_str_equal(buf, "334 UGFzc3dvcmQ6"))
++  if ((rc < 0) || (!mutt_str_startswith(buf, "334") || (buf[3] && buf[3] != ' ')))
+   {
+     goto error;
+   }
+@@ -935,6 +941,21 @@
+   return false;
+ }
+ 
++/* Match whole EHLO mechanism names, as the SASL backends do. */
++static bool smtp_auth_offered(const char *offered, const char *method)
++{
++  if (!offered || !method) return false;
++  while (*offered)
++  {
++    offered += strspn(offered, " \t");
++    size_t length = strcspn(offered, " \t");
++    if (length == strlen(method) && mutt_istrn_equal(offered, method, length))
++      return true;
++    offered += length;
++  }
++  return false;
++}
++
+ /**
+  * smtp_authenticate - Authenticate to an SMTP server
+  * @param adata SMTP Account data
+@@ -983,6 +1004,8 @@
+     for (size_t i = 0; i < countof(SmtpAuthenticators); i++)
+     {
+       const struct SmtpAuth *auth = &SmtpAuthenticators[i];
++      if (auth->method && !smtp_auth_offered(adata->auth_mechs, auth->method))
++        continue;
+       mutt_debug(LL_DEBUG2, "Trying method %s\n", auth->method ? auth->method : "<variable>");
+       r = auth->authenticate(adata, auth->method);
+       if (r == SMTP_AUTH_SUCCESS)
+@@ -1192,7 +1215,9 @@
+   FREE(&adata.conn);
+   FREE(&adata.auth_mechs);
+ 
+-  if (rc == SMTP_ERR_READ)
++  if (rc == SMTP_ERR_UNCERTAIN)
++    mutt_error(_("SMTP delivery status is unknown; the server may have accepted the message"));
++  else if (rc == SMTP_ERR_READ)
+     mutt_error(_("SMTP session failed: read error"));
+   else if (rc == SMTP_ERR_WRITE)
+     mutt_error(_("SMTP session failed: write error"));
+--- a/system.c
++++ b/system.c
+@@ -51,6 +51,11 @@
+  */
+ int mutt_system(const char *cmd)
+ {
++#ifdef _WIN32
++  if (!cmd || !*cmd) return 0;
++  pid_t child = filter_create(cmd, NULL, NULL, NULL, NeoMutt->env);
++  return child < 0 ? -1 : filter_wait(child);
++#else
+   int rc = -1;
+   struct sigaction act = { 0 };
+   struct sigaction oldtstp = { 0 };
+@@ -98,4 +103,5 @@
+   rc = (pid != -1) ? (WIFEXITED(rc) ? WEXITSTATUS(rc) : -1) : -1;
+ 
+   return rc;
++#endif
+ }

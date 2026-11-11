@@ -15,7 +15,7 @@ The canonical project is `project/smsgatec/`; see `project/smsgatec/README.md`. 
 
 ## Connection and authorization
 
-Read ignored context/projects/smsgate/smsgate-local_api.md for the saved gateway endpoint and credentials, or the user's private standard configuration. Never copy credentials into tracked files, user-facing commands, diagnostic output, or executable source. The phone's Local Server must be running and reachable directly or through the private network/VPN.
+Read ignored context/projects/smsgatec/smsgate-local_api.md for the saved gateway endpoint and credentials, or the user's private standard configuration. Never copy credentials into tracked files, user-facing commands, diagnostic output, or executable source. The phone's Local Server must be running and reachable directly or through the private network/VPN.
 
 Establish recipient (including country code) and content from the current conversation. Stored credentials are not authorization for future messages. If a contact has multiple numbers and the intended one is unclear, ask before sending. Follow actual approval-review requirements for private content.
 
@@ -63,7 +63,7 @@ Build optimized releases with `make all windows` in `project/smsgatec/native`; c
 
 ## Windows and end-to-end verification
 
-Use the actual Windows host and private test numbers recorded in ignored `context/projects/smsgate/sms-windows_port.md`; cross-compilation alone is insufficient. Build `make test-windows`, copy the temporary test executable under `monochrome/app/`, and run it over SSH. Also run the installed `monochrome/bin/smsgatec.bat --version` and `--check`, plus the established PTY demo comparison when terminal behavior changes. Keep prior live-send journals; select a fresh `SMS_LIVE_JOURNAL` and `SMS_LIVE_CACHE` for an explicitly authorized new run.
+Use the actual Windows host and private test numbers recorded in ignored `context/projects/smsgatec/sms-windows_port.md`; cross-compilation alone is insufficient. Build `make test-windows`, copy the temporary test executable under `monochrome/app/`, and run it over SSH. Also run the installed `monochrome/bin/smsgatec.bat --version` and `--check`, plus the established PTY demo comparison when terminal behavior changes. Keep prior live-send journals; select a fresh `SMS_LIVE_JOURNAL` and `SMS_LIVE_CACHE` for an explicitly authorized new run.
 
 For browser-side receipt/reply checks, use `workflow/google_voice-workflow.md` and the saved headless Chromium/keyring method. Wait for the exact recipient conversation heading to load. A composer can appear before that conversation finishes loading. Receipt text may occur both in the sidebar preview and the conversation: scope to the conversation or select its actual message bubble. After sending, wait and reload to verify persistence before closing the temporary browser; an optimistic bubble alone is insufficient. Confirm arrivals through SMSGate as well. Use SMSGate's supported whole-second RFC3339 timestamps (or exactly three fractional digits) in date filters; arbitrary nanosecond precision is rejected. Invalid date filters on the logs endpoint can silently return all logs, so avoid them.
 
@@ -73,7 +73,7 @@ Accounts: y in the list opens the account picker; Enter selects, Esc cancels. On
 
 ## Google Voice bridge deployment
 
-The user runs `smsgate-gv` manually. Install its binary under `monochrome/app/`;
+The user runs `smsgate_gv` manually. Install its binary under `monochrome/app/`;
 do not create or enable a systemd service. Temporary verification runs must stop
 before finishing. Bridge history includes international numbers and numeric short
 codes, preserving sender identity. Decoder-version changes invalidate older sync

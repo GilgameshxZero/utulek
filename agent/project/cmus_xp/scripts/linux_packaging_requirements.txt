@@ -1,0 +1,3 @@
+staticx==0.14.2
+patchelf==0.19.3.0
+pyelftools==0.33

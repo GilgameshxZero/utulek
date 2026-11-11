@@ -1,0 +1,17 @@
+[
+  {
+    "archive": "source.tar.gz",
+    "url": "https://codeload.github.com/arndawg/tmux-windows/tar.gz/refs/tags/v3.6a-win32.7",
+    "sha256": "2faa2d67d2e3ab0cfd76e2bf9734d91d9f2110b819d7bc825e9e05647e2a6963"
+  },
+  {
+    "archive": "libevent-2.1.12-stable.tar.gz",
+    "url": "https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/libevent-2.1.12-stable.tar.gz",
+    "sha256": "92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb"
+  },
+  {
+    "archive": "cmake-3.31.8-windows-x86_64.zip",
+    "url": "https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-windows-x86_64.zip",
+    "sha256": "81aa9964dbabd71fe02e7ec50472fd3ad56138c49944515ece9001efbff8d719"
+  }
+]

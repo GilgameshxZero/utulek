@@ -12,7 +12,7 @@ The user's installation convention (updated November 1, 2026):
 * Put all project-local intermediates (including build artifacts, downloaded build dependencies, caches, and test reports) in `.obj/`, and finished binaries in `.bin/`. Ignore both directories per project. Build and clean targets must follow this convention; `make clean` removes both. Installed copies still follow the app/bin convention below.
 * Keep a project-specific `.gitignore` in every source project covering its binaries, intermediates, build directories, caches, and generated test output. Only source and supporting build scripts, documentation, licenses, and assets belong in Git.
 * Build outputs and private configuration remain ignored; never force-add generated binaries or credentials to the public repository. Do not create Git commits.
-* When Windows support is part of the task, run the compiled Windows regression executable on an actual Windows machine and check the installed batch launcher with arguments. Cross-compilation alone is not a Windows runtime check. The private Windows test host and established procedure are recorded in ignored `context/projects/smsgate/sms-windows_port.md`.
+* When Windows support is part of the task, run the compiled Windows regression executable on an actual Windows machine and check the installed batch launcher with arguments. Cross-compilation alone is not a Windows runtime check. The private Windows test host and established procedure are recorded in ignored `context/projects/smsgatec/sms-windows_port.md`.
 
 ## Syncthing scope
 

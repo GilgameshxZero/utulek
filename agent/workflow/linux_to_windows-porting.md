@@ -13,6 +13,8 @@ Maintain this workflow as ports reveal reusable lessons. Keep project-specific s
 
 * Prefer reusable cross-compilation infrastructure where suitable. Record the chosen toolchain, dependencies, and platform build entry points in the project documentation and its single context file.
 * Keep finished binaries in the project's ignored `.bin/` and intermediates, build caches, comparison environments, fixtures and generated test reports in `.obj/`. Track source, reproducible build scripts, dependency pins/hashes, and required license notices.
+* On Windows test hosts, stage intermediate executables, harnesses, fixtures, archives and reports under a project-specific directory in the user's `.obj/` (for example, `C:/Users/0/.obj/neomutt_xp/`), never directly in the home directory. Retain necessary results in the local project's ignored artifacts before removing remote staging files. Clean up task-owned remote intermediates when finished; preserve installed applications, user data and unrelated files.
+* Remove the entire task-owned staging directory when work is finished, including downloaded tools and harness files; do not merely remove selected temporary files. Keep only the concise verification evidence needed for the handoff. If the user requests cleanup of an entire shared `.obj/`, establish whether the scope includes local build caches or other projects before deleting those.
 * Follow project_binaries-workflow.md for app binaries and launchers. Sandbox permissions still apply to installation destinations.
 * Do not create Git commits or publish/upload artifacts without authorization.
 * Do not place files on the Windows host unless explicitly authorized. Existing SSH access does not imply upload permission.

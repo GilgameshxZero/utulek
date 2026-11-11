@@ -52,7 +52,7 @@ The source module is `native/`. Its Makefile builds the Linux binary. A Windows 
 
 ### Google Voice bridge event streams
 
-The native client source now detects an authenticated `smsgate-gv` event-stream
+The native client source now detects an authenticated `smsgate_gv` event-stream
 capability on gateway URLs. In push mode it consumes changed API message
 records over `/events` directly, reconnects with backoff, and reconciles the
 bridge's local journal on connection reset. Phone gateways continue using their

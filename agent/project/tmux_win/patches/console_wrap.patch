@@ -1,0 +1,10 @@
+--- a/win32/win32-tty.c
++++ b/win32/win32-tty.c
+@@ -43,6 +43,7 @@
+ 
+ 	/* Output: enable VT processing and disable auto newlines. */
+ 	out_mode = ENABLE_PROCESSED_OUTPUT |
++	    ENABLE_WRAP_AT_EOL_OUTPUT |
+ 	    ENABLE_VIRTUAL_TERMINAL_PROCESSING |
+ 	    DISABLE_NEWLINE_AUTO_RETURN;
+ 
