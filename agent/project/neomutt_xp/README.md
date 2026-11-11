@@ -220,6 +220,13 @@ The calendar helper's direct-send path emits a primary calendar REPLY. Stock-com
 private staging and standard compose operations; no calendar-specific NeoMutt
 command is included.
 
+Google Calendar's email RSVP ingestion is asynchronous: a submitted reply can
+take minutes (occasionally much longer) to change the organizer-visible guest
+state. Verification must poll for the calendar notification or the guest summary
+instead of treating a short delay as a failed submission. Disposable live tests
+on 2026-11-11 produced tentative, declined and accepted states from the installed
+single-file Windows build.
+
 The pinned native tmux-win 3.6a-win32.7 release disables console line wrapping
 while advertising automatic margins. Its output can leave old NeoMutt rows and
 colors on screen. `../tmux_win/patches/console_wrap.patch` restores the required

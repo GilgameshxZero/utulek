@@ -211,3 +211,84 @@ func phoneFieldPositions(fields []json.RawMessage) []string {
 	}
 	return out
 }
+
+func TestLiveGroupOutgoingShape(t *testing.T) {
+	if os.Getenv("GV_LIVE_GROUP_OUTGOING") != "1" {
+		t.Skip("explicit opt-in; read only")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	home := os.Getenv("SMSGATE_GV_HOME")
+	c, e := readConfig(home)
+	if e != nil {
+		t.Fatal(e)
+	}
+	b, e := startBrowser(ctx, home, c)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer b.close()
+	if _, e = b.readNetworkHistory(); e != nil {
+		t.Fatal(e)
+	}
+	body, e := b.voiceEndpoint(coldSyncPath, coldSyncRequest(c))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var envelope []json.RawMessage
+	_ = json.Unmarshal(body, &envelope)
+	var views [][]json.RawMessage
+	_ = json.Unmarshal(envelope[0], &views)
+	for _, view := range views {
+		var kind int
+		if len(view) > 0 {
+			_ = json.Unmarshal(view[0], &kind)
+		}
+		if kind != 2 || len(view) < 3 {
+			continue
+		}
+		var threads [][]json.RawMessage
+		_ = json.Unmarshal(view[2], &threads)
+		for _, thread := range threads {
+			var id string
+			_ = json.Unmarshal(thread[0], &id)
+			if !strings.HasPrefix(id, "g.") {
+				continue
+			}
+			var records [][]json.RawMessage
+			_ = json.Unmarshal(thread[2], &records)
+			seen := 0
+			for _, record := range records {
+				var k int
+				_ = json.Unmarshal(record[4], &k)
+				if k != 11 {
+					continue
+				}
+				var ts int64
+				_ = json.Unmarshal(record[1], &ts)
+				t.Logf("outgoing ts=%d fields=%v", ts, fieldTypes(record))
+				var media []json.RawMessage
+				if len(record) > 14 && json.Unmarshal(record[14], &media) == nil {
+					parts := []string{}
+					for i, part := range media {
+						var value any
+						_ = json.Unmarshal(part, &value)
+						switch x := value.(type) {
+						case string:
+							parts = append(parts, fmt.Sprintf("%d:string:%d", i, len(x)))
+						case []any:
+							parts = append(parts, fmt.Sprintf("%d:array:%d", i, len(x)))
+						default:
+							parts = append(parts, fmt.Sprintf("%d:%T", i, x))
+						}
+					}
+					t.Logf("media=%v", parts)
+				}
+				seen++
+				if seen >= 5 {
+					return
+				}
+			}
+		}
+	}
+}

@@ -31,15 +31,16 @@ type VoiceMessage struct {
 	Participants []string          `json:"participants,omitempty"`
 }
 
-func decodeGroupMetadata(fields []json.RawMessage) (name, sender string, participants []string, ok bool) {
+func decodeGroupMetadata(fields []json.RawMessage) (name, sender, body string, participants []string, attachments []VoiceAttachment, ok bool) {
 	if len(fields) <= 14 || string(fields[14]) == "null" {
-		return "", "", nil, false
+		return "", "", "", nil, nil, false
 	}
 	var media []json.RawMessage
 	if json.Unmarshal(fields[14], &media) != nil || len(media) < 5 {
-		return "", "", nil, false
+		return "", "", "", nil, nil, false
 	}
 	_ = json.Unmarshal(media[0], &name)
+	_ = json.Unmarshal(media[1], &body)
 	_ = json.Unmarshal(media[4], &sender)
 	if len(media) > 5 {
 		_ = json.Unmarshal(media[5], &participants)
@@ -55,7 +56,41 @@ func decodeGroupMetadata(fields []json.RawMessage) (name, sender string, partici
 			}
 		}
 	}
-	return name, sender, participants, name != "" || len(participants) > 0
+	if len(media) > 2 && string(media[2]) != "null" {
+		attachments, _ = parseVoiceAttachments(media[2])
+	}
+	return name, sender, body, participants, attachments, name != "" || len(participants) > 0
+}
+
+func parseVoiceAttachments(raw json.RawMessage) ([]VoiceAttachment, error) {
+	var attachments [][]json.RawMessage
+	if json.Unmarshal(raw, &attachments) != nil {
+		return nil, errors.New("invalid Google Voice attachments")
+	}
+	out := []VoiceAttachment{}
+	for _, attachment := range attachments {
+		var id, contentType string
+		if len(attachment) < 2 || json.Unmarshal(attachment[1], &id) != nil || id == "" {
+			return nil, errors.New("invalid Google Voice attachment ID")
+		}
+		if json.Unmarshal(attachment[0], &contentType) != nil || !strings.Contains(contentType, "/") {
+			return nil, errors.New("invalid Google Voice attachment content type")
+		}
+		meta := VoiceAttachment{ID: id, ContentType: contentType}
+		if len(attachment) > 3 {
+			var parts [][]int
+			if json.Unmarshal(attachment[3], &parts) == nil {
+				for _, part := range parts {
+					if len(part) >= 3 && part[0] == 1 {
+						meta.Width, meta.Height = part[1], part[2]
+						break
+					}
+				}
+			}
+		}
+		out = append(out, meta)
+	}
+	return out, nil
 }
 
 func voiceThread(body []byte, threadID string) ([]json.RawMessage, error) {
@@ -127,11 +162,15 @@ func decodeVoiceThread(thread []json.RawMessage, ownNumber string) ([]VoiceMessa
 			return nil, errors.New("invalid Google Voice text")
 		}
 		if group {
-			name, sender, participants, ok := decodeGroupMetadata(fields)
+			name, sender, body, participants, attachments, ok := decodeGroupMetadata(fields)
 			if !ok {
 				return nil, errors.New("invalid Google Voice group metadata")
 			}
 			m.GroupID, m.GroupName, m.GroupSender, m.Participants = threadID, name, sender, participants
+			m.Attachments = attachments
+			if m.Text == "" {
+				m.Text = body
+			}
 			// Google Voice emits group system records whose text is the
 			// "sender - group name" label rather than a message body.
 			if !m.Outgoing && sender != "" && name != "" && m.Text == sender+" - "+name {
@@ -155,34 +194,7 @@ func decodeVoiceThread(thread []json.RawMessage, ownNumber string) ([]VoiceMessa
 			if e := json.Unmarshal(media[1], &m.Subject); e != nil {
 				return nil, e
 			}
-			if string(media[2]) != "null" {
-				var attachments [][]json.RawMessage
-				if e := json.Unmarshal(media[2], &attachments); e != nil {
-					return nil, e
-				}
-				for _, attachment := range attachments {
-					var id, contentType string
-					if len(attachment) < 2 || json.Unmarshal(attachment[1], &id) != nil || id == "" {
-						return nil, errors.New("invalid Google Voice attachment ID")
-					}
-					if json.Unmarshal(attachment[0], &contentType) != nil || !strings.Contains(contentType, "/") {
-						return nil, errors.New("invalid Google Voice attachment content type")
-					}
-					meta := VoiceAttachment{ID: id, ContentType: contentType}
-					if len(attachment) > 3 {
-						var parts [][]int
-						if json.Unmarshal(attachment[3], &parts) == nil {
-							for _, part := range parts {
-								if len(part) >= 3 && part[0] == 1 {
-									meta.Width, meta.Height = part[1], part[2]
-									break
-								}
-							}
-						}
-					}
-					m.Attachments = append(m.Attachments, meta)
-				}
-			}
+			m.Attachments, _ = parseVoiceAttachments(media[2])
 		}
 		result = append(result, m)
 	}

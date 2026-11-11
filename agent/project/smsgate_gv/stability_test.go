@@ -111,7 +111,7 @@ func TestHealthReportsImplementedCapabilities(t *testing.T) {
 		t.Fatalf("unexpected health body: %+v", body)
 	}
 	for _, capability := range body.Capabilities {
-		if capability == "groups" {
+		if capability == "group-send" || capability == "mms-send" {
 			t.Fatalf("unimplemented capability advertised: %s", capability)
 		}
 	}

@@ -6,8 +6,8 @@ one-to-one and short-code conversation history with native message identity and 
 One-to-one SMS sending and interrupted-send reconciliation are verified with the
 existing Android conversation. Full history available through Google Voice's
 initial sync is imported, MMS media can be downloaded and served, and group
-messages are imported with participants. MMS sending with attachments is supported;
-group sending remains unfinished.
+messages are imported with participants. MMS sending with attachments and group
+text sending are supported; group MMS attachments use a small Playwright helper.
 
 The executable is built with Go and pure-Go SQLite: no Go, Python or Node runtime
 is needed. Installed Chromium or Chrome is required. Build with `make`.
@@ -102,8 +102,12 @@ journal writes. Local `/inbox` and `/messages` support pagination and RFC3339
 `from` filters. An empty initial journal returns 503 until synchronization is
 complete. Numeric short codes retain their original sender identity. Group threads are
 imported with their group ID, name and participant list; per-sender identity is
-preserved and group system/label records are skipped. Sending to a group and
-historical server-side deletions are not implemented.
+preserved and group system/label records are skipped. Group text replies are sent
+through the normal Google Voice composer with 2–10 recipients. Group MMS
+attachments are accepted and sent through `scripts/group_mms.py`, which requires
+`python3` and the `playwright` Python package (installed in the user site here).
+The helper returns the Google Voice thread/source so the sent message merges with
+its imported copy. Historical server-side deletions are not mirrored.
 MMS text is readable. Media is downloaded lazily from Google Voice and cached
 under `media/` in the state directory; `/inbox/{id}/attachments/{partId}` serves
 the original bytes. Outgoing MMS accepts image, video or audio attachments

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/chromedp/cdproto/fetch"
+	cdpinput "github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 )
@@ -73,8 +74,11 @@ func sendToken(account, id string) string {
 // Only replace the app-generated correlation ID. Its freshly generated
 // authentication/abuse-protection fields remain unchanged and are never logged.
 func prepareSendPayload(body []byte, m Message) ([]byte, error) {
-	if m.Body == nil || len(m.Recipients) != 1 {
+	if m.Body == nil || len(m.Recipients) == 0 {
 		return nil, errors.New("invalid send envelope")
+	}
+	if len(m.Recipients) > 1 || m.GroupID != "" {
+		return prepareGroupSendPayload(body, m)
 	}
 	var fields []json.RawMessage
 	if e := json.Unmarshal(body, &fields); e != nil || len(fields) < 9 {
@@ -92,13 +96,70 @@ func prepareSendPayload(body []byte, m Message) ([]byte, error) {
 	return json.Marshal(fields)
 }
 
+func normalizedDigits(value string) string {
+	out := ""
+	for _, r := range value {
+		if r >= '0' && r <= '9' {
+			out += string(r)
+		}
+	}
+	if len(out) == 11 && strings.HasPrefix(out, "1") {
+		out = out[1:]
+	}
+	return out
+}
+
+func prepareGroupSendPayload(body []byte, m Message) ([]byte, error) {
+	var fields []json.RawMessage
+	if e := json.Unmarshal(body, &fields); e != nil || len(fields) < 9 {
+		return nil, errors.New("unrecognized Google Voice group send request")
+	}
+	var text string
+	if json.Unmarshal(fields[4], &text) != nil || text != m.Body.Text {
+		return nil, errors.New("Google Voice group send text mismatch")
+	}
+	var recipients []string
+	if string(fields[6]) != "null" {
+		if json.Unmarshal(fields[6], &recipients) != nil || len(recipients) == 0 {
+			return nil, errors.New("invalid Google Voice group recipients")
+		}
+		seen := map[string]int{}
+		for _, number := range recipients {
+			seen[normalizedDigits(number)]++
+		}
+		for _, recipient := range m.Recipients {
+			key := normalizedDigits(recipient.Number)
+			seen[key]--
+			if seen[key] < 0 {
+				return nil, errors.New("Google Voice group recipient mismatch")
+			}
+		}
+	} else if string(fields[5]) == "null" {
+		return nil, errors.New("Google Voice group send lacks a thread or recipients")
+	}
+	token, e := strconv.ParseUint(m.SendToken, 10, 48)
+	if e != nil || token == 0 {
+		return nil, errors.New("invalid send correlation token")
+	}
+	fields[8], _ = json.Marshal([]uint64{token})
+	return json.Marshal(fields)
+}
+
 func (b *Browser) send(store *Store, m Message) (result Message) {
 	result = m
-	if m.Body == nil || len(m.Recipients) != 1 || m.Account != b.config.Number {
+	if m.Body == nil || len(m.Recipients) < 1 || len(m.Recipients) > 10 || m.Account != b.config.Number {
 		setState(&result, "Failed", "invalid send account or recipient")
 		return
 	}
-	if e := b.openRecipient(m.Recipients[0].Number); e != nil {
+	if len(m.Recipients) > 1 && len(m.Attachments) > 0 {
+		return b.sendGroupMMS(m, store)
+	}
+	if len(m.Recipients) > 1 {
+		if e := b.openNewRecipients(m.Recipients); e != nil {
+			setState(&result, "Failed", "cannot select group recipients; no send attempted")
+			return
+		}
+	} else if e := b.openRecipient(m.Recipients[0].Number); e != nil {
 		setState(&result, "Failed", "cannot verify selected recipient; no send attempted")
 		return
 	}
@@ -184,7 +245,11 @@ func (b *Browser) send(store *Store, m Message) (result Message) {
 	}
 	// From here every unknown outcome stays uncertain; never click or POST again.
 	setState(&result, "Uncertain", "send outcome unconfirmed; reconciliation only, never automatic resend")
-	js = `(()=>{if(!(` + recipientReadyJS(m.Recipients[0].Number) + `))return false;const e=document.querySelector('` + composerSelector + `');const b=document.querySelector('gv-message-entry button[aria-label^="Send message"]');if(!e||e.value!==` + literal(m.Body.Text) + `||!b||b.disabled)return false;b.click();return true})()`
+	readyCheck := recipientReadyJS(m.Recipients[0].Number)
+	if len(m.Recipients) > 1 {
+		readyCheck = recipientsReadyJS(m.Recipients)
+	}
+	js = `(()=>{if(!(` + readyCheck + `))return false;const e=document.querySelector('` + composerSelector + `');const b=document.querySelector('gv-message-entry button[aria-label^="Send message"]');if(!e||e.value!==` + literal(m.Body.Text) + `||!b||b.disabled)return false;b.click();return true})()`
 	if e := b.run(chromedp.Evaluate(js, &ready)); e != nil {
 		return
 	}
@@ -274,7 +339,14 @@ func (b *Browser) send(store *Store, m Message) (result Message) {
 	}
 	var fields []json.RawMessage
 	var source, thread string
-	if json.Unmarshal(response, &fields) != nil || len(fields) < 4 || json.Unmarshal(fields[1], &thread) != nil || thread != "t."+m.Recipients[0].Number || json.Unmarshal(fields[2], &source) != nil || source == "" {
+	if json.Unmarshal(response, &fields) != nil || len(fields) < 4 || json.Unmarshal(fields[1], &thread) != nil || json.Unmarshal(fields[2], &source) != nil || source == "" {
+		return
+	}
+	groupSend := len(m.Recipients) > 1 || m.GroupID != ""
+	if !groupSend && thread != "t."+m.Recipients[0].Number {
+		return
+	}
+	if groupSend && thread != "" && !strings.HasPrefix(thread, "g.") && !strings.HasPrefix(thread, "t.") {
 		return
 	}
 	result.Source = source
@@ -283,6 +355,14 @@ func (b *Browser) send(store *Store, m Message) (result Message) {
 		return
 	}
 	for _, row := range rows {
+		if groupSend {
+			if row.Source == source && row.Account == m.Account && (row.GroupID != "" || len(row.Recipients) > 1) {
+				result.Created = row.Created
+				setState(&result, "Sent", "")
+				return
+			}
+			continue
+		}
 		if row.Source == source && row.Account == m.Account && row.Body != nil && row.Body.Text == m.Body.Text && len(row.Recipients) == 1 && row.Recipients[0].Number == m.Recipients[0].Number && row.SendToken == result.SendToken {
 			result.Created = row.Created
 			setState(&result, "Sent", "")
@@ -331,11 +411,7 @@ func (b *Browser) attach(files []string) error {
 		return e
 	}
 	if multiple {
-		if e := b.run(chromedp.SetUploadFiles(`input[type=file]`, files, chromedp.ByQuery)); e != nil {
-			return e
-		}
-		var ready bool
-		return b.run(chromedp.Poll(`(()=>{const b=document.querySelector('gv-message-entry button[aria-label="Send message with an attachment"]');return !!b&&!b.disabled})()`, &ready, chromedp.WithPollingTimeout(45*time.Second)))
+		return b.run(chromedp.SetUploadFiles(`input[type=file]`, files, chromedp.ByQuery))
 	}
 	for _, file := range files {
 		if e := b.run(chromedp.SetUploadFiles(`input[type=file]`, []string{file}, chromedp.ByQuery)); e != nil {
@@ -347,4 +423,43 @@ func (b *Browser) attach(files []string) error {
 		}
 	}
 	return nil
+}
+
+func (b *Browser) openNewRecipients(recipients []Recipient) error {
+	if len(recipients) < 2 {
+		return errors.New("group send requires at least two recipients")
+	}
+	if e := b.run(chromedp.Click(`[aria-label="Send new message"]`, chromedp.ByQuery)); e != nil {
+		return e
+	}
+	time.Sleep(time.Second)
+	for _, recipient := range recipients {
+		var rect struct {
+			X     float64 `json:"x"`
+			Y     float64 `json:"y"`
+			W     float64 `json:"w"`
+			H     float64 `json:"h"`
+			Found bool    `json:"found"`
+		}
+		if e := b.run(chromedp.Evaluate(`(() => { const r=document.querySelector('input.mat-mdc-chip-input')?.getBoundingClientRect(); return r?{x:r.x,y:r.y,w:r.width,h:r.height,found:true}:{found:false}; })()`, &rect)); e != nil || !rect.Found {
+			return errors.New("recipient input unavailable")
+		}
+		if e := b.run(chromedp.MouseClickXY(rect.X+rect.W/2, rect.Y+rect.H/2)); e != nil {
+			return e
+		}
+		if e := b.run(chromedp.ActionFunc(func(ctx context.Context) error { return cdpinput.InsertText(recipient.Number).Do(ctx) })); e != nil {
+			return e
+		}
+		optionJS := `(()=>{const allowed=` + literal(recipientDigits(recipient.Number)) + `;const options=[...document.querySelectorAll('[role="option"],.send-to-button')].filter(e=>allowed.includes((e.querySelector('.send-to-label')?.innerText||e.getAttribute('aria-label')||e.innerText||'').replace(/\D/g,'')));if(options.length!==1)return false;options[0].click();return true})()`
+		var selected bool
+		if e := b.run(chromedp.Poll(optionJS, &selected, chromedp.WithPollingTimeout(15*time.Second))); e != nil {
+			return e
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return nil
+}
+
+func recipientsReadyJS(recipients []Recipient) string {
+	return `(()=>{const chips=[...document.querySelectorAll('mat-chip,mat-chip-row,md-chip,.recipient-chip')];return chips.length>=` + strconv.Itoa(len(recipients)) + `&&!!document.querySelector('` + composerSelector + `')})()`
 }

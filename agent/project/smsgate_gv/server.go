@@ -185,7 +185,7 @@ func secureEqual(a, b string) bool {
 	return subtle.ConstantTimeCompare(aa[:], bb[:]) == 1
 }
 
-var bridgeCapabilities = []string{"sms", "full-history", "recent-history", "mms-download", "group-receive", "webhooks", "event-stream", "incremental-sync"}
+var bridgeCapabilities = []string{"sms", "full-history", "recent-history", "mms-download", "groups", "webhooks", "event-stream", "incremental-sync"}
 
 func (s *Bridge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// No CORS support. Reject cross-origin browser requests even with credentials.
@@ -410,9 +410,15 @@ func (s *Bridge) submit(w http.ResponseWriter, r *http.Request) {
 			text = mms.Subject
 		}
 	}
-	if len(text) > 8000 || len(body.Numbers) != 1 || !phonePattern.MatchString(body.Numbers[0]) || len(body.ID) > 128 || strings.ContainsAny(body.ID, "/\\\x00") {
-		apiError(w, 400, "requires textMessage.text (0..8000 bytes) and one international phoneNumbers entry; optional id up to 128 characters")
+	if len(text) > 8000 || len(body.Numbers) < 1 || len(body.Numbers) > 10 || len(body.ID) > 128 || strings.ContainsAny(body.ID, "/\\\x00") {
+		apiError(w, 400, "requires textMessage.text (0..8000 bytes) and 1..10 international phoneNumbers entries; optional id up to 128 characters")
 		return
+	}
+	for _, number := range body.Numbers {
+		if !phonePattern.MatchString(number) {
+			apiError(w, 400, "phoneNumbers must contain international numbers")
+			return
+		}
 	}
 	if strings.TrimSpace(text) == "" && !(mmsPresent && len(mms.Attachments) > 0) {
 		apiError(w, 400, "text is required without MMS attachments")
@@ -421,7 +427,11 @@ func (s *Bridge) submit(w http.ResponseWriter, r *http.Request) {
 	if body.ID == "" {
 		body.ID = randomID()
 	}
-	m := Message{Submitted: true, Account: s.config.Number, ID: body.ID, Created: now(), State: "Pending", Body: &Text{Text: text}, Type: "SMS", Recipients: []Recipient{{body.Numbers[0], "Pending"}}}
+	recipients := make([]Recipient, 0, len(body.Numbers))
+	for _, number := range body.Numbers {
+		recipients = append(recipients, Recipient{number, "Pending"})
+	}
+	m := Message{Submitted: true, Account: s.config.Number, ID: body.ID, Created: now(), State: "Pending", Body: &Text{Text: text}, Type: "SMS", Recipients: recipients}
 	if mmsPresent {
 		if len(mms.Attachments) > 10 {
 			apiError(w, 400, "at most 10 attachments are supported")
@@ -458,7 +468,7 @@ func (s *Bridge) submit(w http.ResponseWriter, r *http.Request) {
 	}
 	// Duplicate IDs are reconciled even when signed out, and never enqueued twice.
 	if old, ok := s.store.get(m.ID); ok {
-		if old.Account != m.Account || old.Body == nil || old.Body.Text != m.Body.Text || len(old.Recipients) != 1 || old.Recipients[0].Number != m.Recipients[0].Number || len(old.Attachments) != len(m.Attachments) {
+		if old.Account != m.Account || old.Body == nil || old.Body.Text != m.Body.Text || !sameRecipients(old.Recipients, m.Recipients) || len(old.Attachments) != len(m.Attachments) {
 			apiError(w, 409, "message ID already exists with different content")
 			return
 		}
@@ -539,4 +549,21 @@ func serve(ctx context.Context, home string, c Config) error {
 		return nil
 	}
 	return e
+}
+
+func sameRecipients(a, b []Recipient) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	seen := map[string]int{}
+	for _, r := range a {
+		seen[r.Number]++
+	}
+	for _, r := range b {
+		seen[r.Number]--
+		if seen[r.Number] < 0 {
+			return false
+		}
+	}
+	return true
 }
