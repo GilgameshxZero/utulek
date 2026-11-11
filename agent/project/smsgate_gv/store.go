@@ -28,6 +28,7 @@ type Attachment struct {
 	ContentType string `json:"contentType"`
 	Size        int64  `json:"size"`
 	SourceID    string `json:"sourceId,omitempty"`
+	Inline      []byte `json:"-"`
 }
 type Message struct {
 	Account      string       `json:"googleVoiceNumber,omitempty"`
@@ -215,6 +216,9 @@ func cloneMessage(m Message) Message {
 		m.MMS = &media
 	}
 	m.Attachments = append([]Attachment(nil), m.Attachments...)
+	for i := range m.Attachments {
+		m.Attachments[i].Inline = append([]byte(nil), m.Attachments[i].Inline...)
+	}
 	m.Participants = append([]string(nil), m.Participants...)
 	return m
 }

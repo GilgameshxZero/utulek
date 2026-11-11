@@ -33,13 +33,15 @@ sources. `scripts/build_deps.py` builds native ncurses, libiconv and PCRE2;
 toolchain preparation; `TOOLCHAIN` can select an existing LLVM-MinGW installation.
 `scripts/build_crypto.py` builds pinned static libgpg-error, libassuan, GPGME
 and SQLite for both platforms. The platform Makefile targets prepare and build
-these dependencies too. The current installed release still uses its existing
-sibling `app/neomutt/` GPGME engines and runtime data. Single-executable packaging
-is unfinished: embedded defaults/MIME checks pass, but replacing the native GPGME
-engines with Git's PATH GPG fails decryption. Do not remove the installed runtime
-until that compatibility issue is resolved. No additional GPG directory is needed
-or installed. Calendar/OAuth scripts remain in `module/email`; Linux uses stock
-NeoMutt unchanged.
+these dependencies too. Windows links all libraries statically and embeds its
+system defaults and MIME table in `neomutt.exe`, so no sibling runtime directory
+is needed: a single executable is enough. OpenPGP uses the standard
+external-command backend with the `gpg` already on `PATH` (`crypt_use_gpgme` is
+unset in the embedded defaults); a local `%R` expando expands one `-r` option per
+recipient, replacing the external `pgpewrap` helper for encryption. GPGME stays
+linked but is not the default crypto backend on Windows. Calendar/OAuth scripts
+and the GPG installation remain external in `module/email` and `PATH`; Linux uses
+stock NeoMutt unchanged.
 
 Build outputs stay in `.obj/`, finished executables in `.bin/{linux,windows}/`.
 
@@ -84,7 +86,7 @@ The Windows baseline opts credential/token GPG pipes into loopback pinentry;
 the shared configuration defaults that option to empty on Linux. Synthetic
 console tests include decrypting an expired token, a mocked provider refresh,
 re-encryption, and verification with the original password. This does not change
-global GPG settings or replace GPGME's message-crypto pinentry.
+global GPG settings or the message-crypto backend's pinentry.
 
 Windows reverse-video cells preserve terminal default colors rather than
 swapping fixed palette entries. Default-colored bold text keeps the theme's
@@ -193,8 +195,9 @@ QUIT. Recording follows acknowledged submission.
 `tests/check_smtp.py` covers isolated authentication/TLS and archive consistency,
 including Unicode calendar/image attachments. The Windows and Linux SMTP outcome
 UI checks exercise compose/send, retained draft content, no automatic resend and
-archive counts. Native GPGME and classic GPG reader checks use disposable keyrings
-and genuinely encrypted messages.
+archive counts. Classic GPG reader, sign and encrypt checks use a disposable
+keyring and genuinely encrypted messages (GPGME remains available but is not the
+Windows default).
 
 Maildir rescans retain subsecond timestamps on both platforms and detect timestamp
 changes in either direction. Concurrent flag changes are merged against the last

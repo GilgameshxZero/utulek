@@ -20,6 +20,7 @@ type Browser struct {
 	config          Config
 	base            string
 	profile         string
+	home            string
 	historyRequest  *historyRequest
 	historyPostBody string
 	cursor          string
@@ -45,7 +46,7 @@ func launchBrowser(parent context.Context, home string, c Config, prepare func(s
 	opts := []chromedp.ExecAllocatorOption{chromedp.ExecPath(c.Browser), chromedp.UserDataDir(profile), chromedp.Headless, chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck, chromedp.Flag("disable-dev-shm-usage", true)}
 	ac, ca := chromedp.NewExecAllocator(parent, opts...)
 	bc, cb := chromedp.NewContext(ac, chromedp.WithLogf(func(string, ...any) {}), chromedp.WithErrorf(func(string, ...any) {}))
-	b := &Browser{ctx: bc, cancel: cb, allocCancel: ca, config: c, base: fmt.Sprintf("https://voice.google.com/u/%d/", c.Account), profile: profile}
+	b := &Browser{ctx: bc, cancel: cb, allocCancel: ca, config: c, base: fmt.Sprintf("https://voice.google.com/u/%d/", c.Account), profile: profile, home: home}
 	// Initialize on the long-lived context: cancelling a startup child context
 	// would otherwise terminate Chromium after the first action.
 	if e = chromedp.Run(b.ctx, chromedp.Navigate("about:blank")); e != nil {

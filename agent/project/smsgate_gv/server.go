@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -372,7 +373,16 @@ func (s *Bridge) submit(w http.ResponseWriter, r *http.Request) {
 		Numbers  []string        `json:"phoneNumbers"`
 		Delivery bool            `json:"withDeliveryReport"`
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
+	var mms struct {
+		Text        string `json:"text"`
+		Subject     string `json:"subject"`
+		Attachments []struct {
+			ContentType string `json:"contentType"`
+			Name        string `json:"name"`
+			Data        []byte `json:"data"`
+		} `json:"attachments"`
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 32*1024*1024)
 	d := json.NewDecoder(r.Body)
 	if e := d.Decode(&body); e != nil {
 		apiError(w, 400, "invalid JSON or request too large")
@@ -382,21 +392,73 @@ func (s *Bridge) submit(w http.ResponseWriter, r *http.Request) {
 		apiError(w, 400, "expected one JSON object")
 		return
 	}
-	if len(body.MMS) > 0 {
-		apiError(w, 422, "MMS sending is not supported by this bridge")
+	mmsPresent := len(body.MMS) > 0
+	if mmsPresent {
+		if json.Unmarshal(body.MMS, &mms) != nil {
+			apiError(w, 400, "invalid mmsMessage")
+			return
+		}
+	}
+	text := ""
+	if body.Body != nil {
+		text = body.Body.Text
+	}
+	if mmsPresent {
+		if mms.Text != "" {
+			text = mms.Text
+		} else if mms.Subject != "" {
+			text = mms.Subject
+		}
+	}
+	if len(text) > 8000 || len(body.Numbers) != 1 || !phonePattern.MatchString(body.Numbers[0]) || len(body.ID) > 128 || strings.ContainsAny(body.ID, "/\\\x00") {
+		apiError(w, 400, "requires textMessage.text (0..8000 bytes) and one international phoneNumbers entry; optional id up to 128 characters")
 		return
 	}
-	if body.Body == nil || strings.TrimSpace(body.Body.Text) == "" || len(body.Body.Text) > 8000 || len(body.Numbers) != 1 || !phonePattern.MatchString(body.Numbers[0]) || len(body.ID) > 128 || strings.ContainsAny(body.ID, "/\\\x00") {
-		apiError(w, 400, "requires textMessage.text (1..8000 bytes) and one international phoneNumbers entry; optional id up to 128 characters")
+	if strings.TrimSpace(text) == "" && !(mmsPresent && len(mms.Attachments) > 0) {
+		apiError(w, 400, "text is required without MMS attachments")
 		return
 	}
 	if body.ID == "" {
 		body.ID = randomID()
 	}
-	m := Message{Submitted: true, Account: s.config.Number, ID: body.ID, Created: now(), State: "Pending", Body: body.Body, Type: "SMS", Recipients: []Recipient{{body.Numbers[0], "Pending"}}}
+	m := Message{Submitted: true, Account: s.config.Number, ID: body.ID, Created: now(), State: "Pending", Body: &Text{Text: text}, Type: "SMS", Recipients: []Recipient{{body.Numbers[0], "Pending"}}}
+	if mmsPresent {
+		if len(mms.Attachments) > 10 {
+			apiError(w, 400, "at most 10 attachments are supported")
+			return
+		}
+		total := 0
+		for i, attachment := range mms.Attachments {
+			if len(attachment.Data) == 0 || len(attachment.Data) > 20*1024*1024 {
+				apiError(w, 400, "each attachment must be 1..20 MiB")
+				return
+			}
+			total += len(attachment.Data)
+			if total > 25*1024*1024 {
+				apiError(w, 400, "attachments exceed the 25 MiB request limit")
+				return
+			}
+			contentType := strings.ToLower(strings.TrimSpace(attachment.ContentType))
+			if !strings.HasPrefix(contentType, "image/") && !strings.HasPrefix(contentType, "video/") && !strings.HasPrefix(contentType, "audio/") {
+				apiError(w, 400, "attachments must be image, video or audio")
+				return
+			}
+			name := filepath.Base(strings.ReplaceAll(attachment.Name, "\\", "_"))
+			if name == "" || name == "." || name == "/" {
+				name = fmt.Sprintf("attachment-%d", i+1)
+			}
+			if len(name) > 255 {
+				apiError(w, 400, "attachment name is too long")
+				return
+			}
+			m.Attachments = append(m.Attachments, Attachment{PartID: int64(i + 1), Name: name, ContentType: contentType, Size: int64(len(attachment.Data)), Inline: append([]byte(nil), attachment.Data...)})
+		}
+		m.Type = "MMS"
+		m.MMS = &MediaText{Text: text, Subject: mms.Subject}
+	}
 	// Duplicate IDs are reconciled even when signed out, and never enqueued twice.
 	if old, ok := s.store.get(m.ID); ok {
-		if old.Account != m.Account || old.Body == nil || old.Body.Text != m.Body.Text || len(old.Recipients) != 1 || old.Recipients[0].Number != m.Recipients[0].Number {
+		if old.Account != m.Account || old.Body == nil || old.Body.Text != m.Body.Text || len(old.Recipients) != 1 || old.Recipients[0].Number != m.Recipients[0].Number || len(old.Attachments) != len(m.Attachments) {
 			apiError(w, 409, "message ID already exists with different content")
 			return
 		}

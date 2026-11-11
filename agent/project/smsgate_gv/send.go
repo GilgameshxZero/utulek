@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,7 +21,7 @@ import (
 )
 
 const sendPath = "/voice/v1/voiceclient/api2thread/sendsms"
-const composerSelector = `gv-message-entry textarea[placeholder="Type a message"]`
+const composerSelector = `gv-message-entry textarea`
 
 func recipientDigits(number string) []string {
 	values := []string{strings.TrimPrefix(number, "+")}
@@ -99,13 +102,29 @@ func (b *Browser) send(store *Store, m Message) (result Message) {
 		setState(&result, "Failed", "cannot verify selected recipient; no send attempted")
 		return
 	}
+	if len(m.Attachments) > 0 {
+		files, cleanup, e := writeOutboxFiles(b.home, m)
+		if e != nil {
+			setState(&result, "Failed", "cannot prepare attachments; no send attempted")
+			return
+		}
+		defer cleanup()
+		if e = b.attach(files); e != nil {
+			setState(&result, "Failed", "cannot attach media; no send attempted")
+			return
+		}
+	}
 	var ready bool
 	js := `(()=>{const e=document.querySelector('` + composerSelector + `');if(!e||e.value!=='')return false;Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(e,` + literal(m.Body.Text) + `);e.dispatchEvent(new Event('input',{bubbles:true}));return e.value===` + literal(m.Body.Text) + `})()`
 	if e := b.run(chromedp.Evaluate(js, &ready)); e != nil || !ready {
 		setState(&result, "Failed", "composer unavailable or contains a draft; no send attempted")
 		return
 	}
-	if e := b.run(chromedp.Poll(`!!document.querySelector('gv-message-entry button[aria-label="Send message"]:not([disabled])')`, &ready, chromedp.WithPollingTimeout(10*time.Second))); e != nil {
+	wait := 10 * time.Second
+	if len(m.Attachments) > 0 {
+		wait = 45 * time.Second
+	}
+	if e := b.run(chromedp.Poll(`!!document.querySelector('gv-message-entry button[aria-label^="Send message"]:not([disabled])')`, &ready, chromedp.WithPollingTimeout(wait))); e != nil {
 		setState(&result, "Failed", "send button unavailable; no send attempted")
 		return
 	}
@@ -165,7 +184,7 @@ func (b *Browser) send(store *Store, m Message) (result Message) {
 	}
 	// From here every unknown outcome stays uncertain; never click or POST again.
 	setState(&result, "Uncertain", "send outcome unconfirmed; reconciliation only, never automatic resend")
-	js = `(()=>{if(!(` + recipientReadyJS(m.Recipients[0].Number) + `))return false;const e=document.querySelector('` + composerSelector + `');const b=document.querySelector('gv-message-entry button[aria-label="Send message"]');if(!e||e.value!==` + literal(m.Body.Text) + `||!b||b.disabled)return false;b.click();return true})()`
+	js = `(()=>{if(!(` + recipientReadyJS(m.Recipients[0].Number) + `))return false;const e=document.querySelector('` + composerSelector + `');const b=document.querySelector('gv-message-entry button[aria-label^="Send message"]');if(!e||e.value!==` + literal(m.Body.Text) + `||!b||b.disabled)return false;b.click();return true})()`
 	if e := b.run(chromedp.Evaluate(js, &ready)); e != nil {
 		return
 	}
@@ -271,4 +290,61 @@ func (b *Browser) send(store *Store, m Message) (result Message) {
 		}
 	}
 	return
+}
+
+func writeOutboxFiles(home string, m Message) ([]string, func(), error) {
+	root := filepath.Join(home, "outbox")
+	if e := privateDir(root); e != nil {
+		return nil, func() {}, e
+	}
+	dir, e := os.MkdirTemp(root, "send-")
+	if e != nil {
+		return nil, func() {}, e
+	}
+	cleanup := func() { _ = os.RemoveAll(dir) }
+	files := []string{}
+	for i, attachment := range m.Attachments {
+		if len(attachment.Inline) == 0 {
+			cleanup()
+			return nil, func() {}, errors.New("attachment data unavailable")
+		}
+		name := filepath.Base(strings.ReplaceAll(attachment.Name, "\\", "_"))
+		if name == "" || name == "." || name == "/" {
+			name = fmt.Sprintf("attachment-%d", i+1)
+		}
+		path := filepath.Join(dir, fmt.Sprintf("%d-%s", i+1, name))
+		if e := os.WriteFile(path, attachment.Inline, 0600); e != nil {
+			cleanup()
+			return nil, func() {}, e
+		}
+		files = append(files, path)
+	}
+	return files, cleanup, nil
+}
+
+func (b *Browser) attach(files []string) error {
+	if len(files) == 0 {
+		return nil
+	}
+	var multiple bool
+	if e := b.run(chromedp.Evaluate(`(()=>{const i=document.querySelector('input[type=file]');return i?i.multiple:false})()`, &multiple)); e != nil {
+		return e
+	}
+	if multiple {
+		if e := b.run(chromedp.SetUploadFiles(`input[type=file]`, files, chromedp.ByQuery)); e != nil {
+			return e
+		}
+		var ready bool
+		return b.run(chromedp.Poll(`(()=>{const b=document.querySelector('gv-message-entry button[aria-label="Send message with an attachment"]');return !!b&&!b.disabled})()`, &ready, chromedp.WithPollingTimeout(45*time.Second)))
+	}
+	for _, file := range files {
+		if e := b.run(chromedp.SetUploadFiles(`input[type=file]`, []string{file}, chromedp.ByQuery)); e != nil {
+			return e
+		}
+		var cleared bool
+		if e := b.run(chromedp.Poll(`(()=>{const i=document.querySelector('input[type=file]');return !!i&&i.files.length===0})()`, &cleared, chromedp.WithPollingTimeout(30*time.Second))); e != nil {
+			return e
+		}
+	}
+	return nil
 }

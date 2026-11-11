@@ -5,6 +5,7 @@ import concurrent.futures
 import json
 import os
 from pathlib import Path
+import secrets
 import socket
 import signal
 import subprocess
@@ -160,8 +161,10 @@ def main():
                 address = '127.0.0.1:%d' % reserve.getsockname()[1]
             tcp_config = out / ('tcp-' + uuid.uuid4().hex[:8])
             tcp_config.mkdir()
-            (tcp_config / 'rc').write_text('set mpris=false\nset softvol=true\nset passwd=cmus_test_password\n')
-            tcp = Session(args.binary, args.remote, tcp_config, address=address, password='cmus_test_password')
+            password = 'test_' + secrets.token_hex(16)
+            (tcp_config / 'rc').write_text(
+                'set mpris=false\nset softvol=true\nset passwd=' + password + '\n')
+            tcp = Session(args.binary, args.remote, tcp_config, address=address, password=password)
             try:
                 tcp.start()
                 answer = tcp.command('status')

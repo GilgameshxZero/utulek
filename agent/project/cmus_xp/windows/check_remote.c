@@ -7,6 +7,7 @@
 #include <ws2tcpip.h>
 
 static wchar_t root[32768], remote_exe[32768], endpoint[512];
+static wchar_t test_password[64];
 static unsigned checks;
 
 static void verify(const char *label, int ok)
@@ -56,6 +57,13 @@ static char *run(const wchar_t *arguments)
     char *text = client(arguments, NULL, &code);
     if (code) { fprintf(report, "client exit %lu: %s\n", code, text); failed = 1; }
     return text;
+}
+
+static char *run_password(const wchar_t *arguments)
+{
+    wchar_t command[32768];
+    swprintf(command, 32768, L"--passwd %ls %ls", test_password, arguments);
+    return run(command);
 }
 
 static PROCESS_INFORMATION player(const wchar_t *exe, const wchar_t *arguments)
@@ -238,21 +246,28 @@ int CMUS_REMOTE_CHECK_MAIN(int argc, wchar_t **argv)
     stop(process, L"-C quit");
 
     swprintf(config, 32768, L"%ls/tcp_config", root);
-    rc(config, "set softvol=true\nset passwd=cmus_test_password\n");
+    LARGE_INTEGER counter;
+    QueryPerformanceCounter(&counter);
+    swprintf(test_password, 64, L"test_%08lx%08lx", (unsigned long)GetTickCount(),
+            (unsigned long)counter.LowPart);
+    char rc_contents[160];
+    snprintf(rc_contents, sizeof(rc_contents), "set softvol=true\nset passwd=%ls\n",
+            test_password);
+    rc(config, rc_contents);
     swprintf(endpoint, 512, L"127.0.0.1:%u", tcp_port());
     SetEnvironmentVariableW(L"CMUS_SOCKET", endpoint);
     swprintf(command, 32768, L"--listen %ls", endpoint);
     process = player(argv[1], command);
     text = client(L"--passwd wrong -Q", NULL, &code);
     verify("TCP incorrect password rejected", code == 1 && strstr(text, "authentication failed")); free(text);
-    text = run(L"--passwd cmus_test_password -Q"); verify("TCP authenticated status", strstr(text, "status stopped\n") != NULL); free(text);
-    text = run(L"--passwd cmus_test_password -C \"run cmus_missing_test_program\"");
+    text = run_password(L"-Q"); verify("TCP authenticated status", strstr(text, "status stopped\n") != NULL); free(text);
+    text = run_password(L"-C \"run cmus_missing_test_program\"");
     verify("TCP retains upstream silent unsafe-command restriction", !*text); free(text);
-    swprintf(command, 32768, L"--passwd cmus_test_password -l \"%ls\"", wav);
+    swprintf(command, 32768, L"--passwd %ls -l \"%ls\"", test_password, wav);
     free(run(command)); Sleep(200);
-    text = run(L"--passwd cmus_test_password -C \"save -l -\"");
+    text = run_password(L"-C \"save -l -\"");
     verify("TCP allows upstream stdout export exception", strstr(text, "spaced.wav") != NULL); free(text);
-    stop(process, L"--passwd cmus_test_password -C quit");
+    swprintf(command, 32768, L"--passwd %ls -C quit", test_password); stop(process, command);
     fprintf(report, "remote checks: %u; result: %s\n", checks, failed ? "FAIL" : "PASS");
     CloseHandle(input); CloseHandle(screen); FreeConsole(); fclose(report);
     return failed;

@@ -78,12 +78,5 @@
     "url": "https://www.sqlite.org/2026/sqlite-autoconf-3540100.tar.gz",
     "archive": "sqlite-autoconf-3540100.tar.gz",
     "sha256": "926ef8d3eab93fbf6e06011901273eec076b25594a4e1cdadd50c987f4f6d64e"
-  },
-  "gnupg_windows": {
-    "version": "2.5.24",
-    "url": "https://gnupg.org/ftp/gcrypt/binary/gnupg-w32-2.5.24_20260923.exe",
-    "archive": "gnupg-w32-2.5.24_20260923.exe",
-    "sha256": "ea6f9dee2cccd83287432625b8b399173805add81d27067fcaf019c0c4da1ad8",
-    "extraction": "7z, without executing installer; private GPGME engine only"
   }
 }
