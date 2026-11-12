@@ -33,13 +33,16 @@ class AddressBook(context: Context) {
     fun suggestions(query: String, limit: Int = 8): List<AddressEntry> {
         val needle = query.substringAfterLast(',').trim().lowercase()
         if (needle.isEmpty()) return emptyList()
-        return entries.asSequence()
+        val matches = entries.asSequence()
             .filter { entry ->
                 entry.address.lowercase().contains(needle) ||
                     entry.name.lowercase().contains(needle)
             }
             .take(limit)
             .toList()
+        val only = matches.singleOrNull()
+        if (only != null && only.address.equals(needle, ignoreCase = true)) return emptyList()
+        return matches
     }
 
     /** Rebuilds the cache when maildirs or system contacts changed; IO thread. */
@@ -107,7 +110,6 @@ class AddressBook(context: Context) {
             val existing = counts[key]
             counts[key] = when {
                 existing == null -> AddressEntry(name, mailbox, 1)
-                existing.count >= CONTACT_WEIGHT -> existing.copy(count = existing.count + 1)
                 else -> existing.copy(
                     name = existing.name.ifBlank { name },
                     count = existing.count + 1,
@@ -169,7 +171,7 @@ class AddressBook(context: Context) {
             val new = File(root, "new")
             "${folder.path}:${cur.lastModified()}:${new.lastModified()}:${cur.list()?.size ?: 0}:${new.list()?.size ?: 0}"
         }
-        val contactHash = contacts.joinToString(";") { it.address.lowercase() }.hashCode()
+        val contactHash = contacts.joinToString(";") { "${it.address.lowercase()}=${it.name}" }.hashCode()
         return "$mail|contacts:$contactHash"
     }
 

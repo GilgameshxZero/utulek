@@ -660,7 +660,9 @@ private fun MessageScreen(vm: MainViewModel, folderId: String) {
     val parsed = vm.parsed
     val loading = vm.messageLoading
     val error = vm.messageError
-    val currentMime = vm.viewAlternative ?: parsed?.let { defaultMime(it) }
+    val currentMime = vm.viewAlternative ?: parsed?.let {
+        defaultMime(it, vm.config.defaultMime == MimePreference.HTML)
+    }
     val showSource = vm.showSource
     val html = remember(parsed, currentMime, showSource, vm.rawSource) {
         if (showSource) {
@@ -1066,9 +1068,10 @@ private fun GoToItemScreen(vm: MainViewModel, target: Screen.GoToItem) {
     }
 }
 
-private fun defaultMime(message: ParsedMessage): String? = when {
-    !message.html.isNullOrBlank() -> "text/html"
+private fun defaultMime(message: ParsedMessage, preferHtml: Boolean): String? = when {
+    preferHtml && !message.html.isNullOrBlank() -> "text/html"
     !message.text.isNullOrBlank() -> "text/plain"
+    !message.html.isNullOrBlank() -> "text/html"
     else -> message.alternatives.firstOrNull()?.mimeType
 }
 

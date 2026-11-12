@@ -7,14 +7,32 @@ import java.util.TimeZone
 import javax.mail.internet.InternetAddress
 
 /** Pure text/address helpers shared by compose, drafts and replies. */
+/** The comma-delimited recipient token around a caret position. */
+data class AddressToken(val start: Int, val end: Int, val text: String)
+
 object MailText {
-    fun buildOutgoingBody(body: String, signature: String): String {
-        val builder = StringBuilder(body.trimEnd())
-        if (signature.isNotBlank()) {
-            if (builder.isNotEmpty()) builder.append('\n')
-            builder.append('\n').append(signature.trimEnd())
+    fun signatureBlock(signature: String): String =
+        if (signature.isBlank()) "" else "\n\n--\n" + signature.trimEnd()
+
+    /** Replace a trailing signature block, preserving the rest of the body. */
+    fun replaceSignature(body: String, signature: String): String {
+        val marker = "\n\n--\n"
+        val index = body.lastIndexOf(marker)
+        val base = if (index >= 0) body.substring(0, index) else body
+        return base + signatureBlock(signature)
+    }
+
+    /** `Name <address>` for autocomplete, quoting the name when needed. */
+    fun formatAddress(name: String, address: String): String {
+        val clean = name.trim()
+        if (clean.isEmpty()) return address
+        val needsQuote = clean.any { it.code > 127 } || clean.any { it in ",<>\"@;:" }
+        val personal = if (needsQuote) {
+            "\"" + clean.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+        } else {
+            clean
         }
-        return builder.toString()
+        return "$personal <$address>"
     }
 
     fun prefixedSubject(subject: String, prefix: String): String {
@@ -55,6 +73,20 @@ object MailText {
             InternetAddress.parse(value.replace('\n', ','), false)
                 .mapNotNull { it.address?.lowercase() }
         }.getOrDefault(emptyList())
+
+    /** Comma-delimited token around [cursor], trimmed, with its replace range. */
+    fun addressToken(text: String, cursor: Int): AddressToken {
+        val caret = cursor.coerceIn(0, text.length)
+        val leftComma = if (caret == 0) -1 else text.lastIndexOf(',', caret - 1)
+        val left = leftComma + 1
+        val rightComma = text.indexOf(',', caret)
+        val right = if (rightComma < 0) text.length else rightComma
+        val raw = text.substring(left, right)
+        val first = raw.indexOfFirst { !it.isWhitespace() }
+        if (first < 0) return AddressToken(right, right, "")
+        val last = raw.indexOfLast { !it.isWhitespace() } + 1
+        return AddressToken(left + first, left + last, raw.substring(first, last))
+    }
 
     fun recipientLines(value: String): List<String> =
         value.split('\n').map { it.trim() }.filter { it.isNotEmpty() }

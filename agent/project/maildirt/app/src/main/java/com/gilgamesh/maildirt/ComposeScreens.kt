@@ -79,6 +79,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -105,11 +107,14 @@ internal fun ComposeScreen(vm: MainViewModel) {
     val identities = vm.identities()
     val identity = identities.firstOrNull { it.id == seed.identityId } ?: identities.firstOrNull()
     val context = LocalContext.current
-    var to by remember { mutableStateOf(seed.to) }
-    var cc by remember { mutableStateOf(seed.cc) }
-    var bcc by remember { mutableStateOf(seed.bcc) }
+    var to by remember { mutableStateOf(TextFieldValue(seed.to)) }
+    var cc by remember { mutableStateOf(TextFieldValue(seed.cc)) }
+    var bcc by remember { mutableStateOf(TextFieldValue(seed.bcc)) }
     var subject by remember { mutableStateOf(seed.subject) }
-    var body by remember { mutableStateOf(seed.body) }
+    var bodyField by remember {
+        mutableStateOf(TextFieldValue(seed.body, selection = TextRange(0)))
+    }
+    val body = bodyField.text
     var attachments by remember { mutableStateOf(seed.attachments) }
     var activeField by remember { mutableStateOf<String?>(null) }
     val sending = vm.sending
@@ -127,22 +132,29 @@ internal fun ComposeScreen(vm: MainViewModel) {
 
     val fields = ComposeFields(
         identityId = identity?.id.orEmpty(),
-        to = to,
-        cc = cc,
-        bcc = bcc,
+        to = to.text,
+        cc = cc.text,
+        bcc = bcc.text,
         subject = subject,
         body = body,
     )
     val activeValue = when (activeField) {
-        "to" -> to
-        "cc" -> cc
-        "bcc" -> bcc
+        "to" -> to.text
+        "cc" -> cc.text
+        "bcc" -> bcc.text
         else -> ""
     }
-    val suggestions = if (activeValue.isBlank()) {
+    val activeCaret = when (activeField) {
+        "to" -> to.selection.end
+        "cc" -> cc.selection.end
+        "bcc" -> bcc.selection.end
+        else -> 0
+    }
+    val activeToken = MailText.addressToken(activeValue, activeCaret).text
+    val suggestions = if (activeToken.isBlank()) {
         emptyList()
     } else {
-        vm.addressSuggestions(activeValue)
+        vm.addressSuggestions(activeToken)
     }
 
     BackHandler(enabled = true) {
@@ -219,7 +231,7 @@ internal fun ComposeScreen(vm: MainViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { vm.openIdentityPicker() }
+                    .clickable { vm.openIdentityPicker(fields, attachments) }
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -239,7 +251,7 @@ internal fun ComposeScreen(vm: MainViewModel) {
                 onValueChange = { to = it },
                 onFocus = { activeField = "to" },
                 suggestions = if (activeField == "to") suggestions else emptyList(),
-                onPick = { to = replaceAddressToken(to, it.address); activeField = "to" },
+                onPick = { to = to.autofilled(it); activeField = "to" },
             )
             RecipientField(
                 label = "Cc",
@@ -247,7 +259,7 @@ internal fun ComposeScreen(vm: MainViewModel) {
                 onValueChange = { cc = it },
                 onFocus = { activeField = "cc" },
                 suggestions = if (activeField == "cc") suggestions else emptyList(),
-                onPick = { cc = replaceAddressToken(cc, it.address); activeField = "cc" },
+                onPick = { cc = cc.autofilled(it); activeField = "cc" },
             )
             RecipientField(
                 label = "Bcc",
@@ -255,13 +267,14 @@ internal fun ComposeScreen(vm: MainViewModel) {
                 onValueChange = { bcc = it },
                 onFocus = { activeField = "bcc" },
                 suggestions = if (activeField == "bcc") suggestions else emptyList(),
-                onPick = { bcc = replaceAddressToken(bcc, it.address); activeField = "bcc" },
+                onPick = { bcc = bcc.autofilled(it); activeField = "bcc" },
             )
             OutlinedTextField(
                 value = subject,
-                onValueChange = { subject = it },
+                onValueChange = { subject = it.replace("\n", "") },
                 label = { Text("Subject") },
-                singleLine = true,
+                singleLine = false,
+                minLines = 1,
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -304,8 +317,8 @@ internal fun ComposeScreen(vm: MainViewModel) {
 
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
-                value = body,
-                onValueChange = { body = it },
+                value = bodyField,
+                onValueChange = { bodyField = it },
                 placeholder = { Text("Message") },
                 minLines = 6,
                 modifier = Modifier.fillMaxWidth(),
@@ -329,17 +342,18 @@ internal fun ComposeScreen(vm: MainViewModel) {
 @Composable
 internal fun RecipientField(
     label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
     onFocus: () -> Unit,
     suggestions: List<AddressEntry>,
     onPick: (AddressEntry) -> Unit,
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = { next -> onValueChange(next.withoutNewlines()) },
         label = { Text(label) },
-        singleLine = true,
+        singleLine = false,
+        minLines = 1,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         modifier = Modifier
             .fillMaxWidth()
@@ -350,13 +364,26 @@ internal fun RecipientField(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onPick(suggestion) }
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 if (suggestion.name.isNotBlank()) {
-                    Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        suggestion.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
-                Text(suggestion.address, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    suggestion.address,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -397,13 +424,19 @@ internal fun IdentityPickerScreen(vm: MainViewModel) {
     }
 }
 
-internal fun replaceAddressToken(value: String, address: String): String {
-    val comma = value.lastIndexOf(',')
-    return if (comma < 0) {
-        address
-    } else {
-        value.substring(0, comma + 1) + " " + address
-    }
+/** Recipient text never takes literal newlines; wrapping is display-only. */
+internal fun TextFieldValue.withoutNewlines(): TextFieldValue {
+    if (!text.contains('\n')) return this
+    val next = text.replace("\n", "")
+    return copy(text = next, selection = TextRange(selection.end.coerceAtMost(next.length)))
+}
+
+/** Autocomplete replacement of the token at the caret, leaving the caret after it. */
+internal fun TextFieldValue.autofilled(entry: AddressEntry): TextFieldValue {
+    val address = MailText.formatAddress(entry.name, entry.address)
+    val token = MailText.addressToken(text, selection.end)
+    val next = text.substring(0, token.start) + address + text.substring(token.end)
+    return copy(text = next, selection = TextRange(token.start + address.length))
 }
 
 internal fun attachmentFor(context: Context, uri: Uri): OutgoingAttachment? = runCatching {

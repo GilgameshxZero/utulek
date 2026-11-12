@@ -108,6 +108,15 @@ internal fun SettingsScreen(vm: MainViewModel) {
     val paged = vm.config.pagedScrolling
     var pollText by remember { mutableStateOf(vm.config.notifyPollSeconds.toString()) }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            val parsed = pollText.toIntOrNull()
+            if (parsed != null && parsed != vm.config.notifyPollSeconds) {
+                vm.setNotifyPollSeconds(parsed)
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
@@ -181,6 +190,34 @@ internal fun SettingsScreen(vm: MainViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
+                    Text("Message format", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (vm.config.defaultMime == MimePreference.PLAIN) "Plain text first"
+                        else "HTML first",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                OutlinedButton(onClick = {
+                    vm.setDefaultMime(
+                        if (vm.config.defaultMime == MimePreference.PLAIN) {
+                            MimePreference.HTML
+                        } else {
+                            MimePreference.PLAIN
+                        },
+                    )
+                }) {
+                    Text(
+                        if (vm.config.defaultMime == MimePreference.PLAIN) "Plain" else "HTML",
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
                     Text("Notification sound", style = MaterialTheme.typography.titleMedium)
                     Text(
                         if (vm.config.notifySound) "Sound on" else "Silent",
@@ -232,11 +269,6 @@ internal fun SettingsScreen(vm: MainViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.width(84.dp),
                 )
-                TextButton(onClick = {
-                    vm.setNotifyPollSeconds(pollText.toIntOrNull() ?: 3600)
-                }) {
-                    Text("Set")
-                }
             }
 
             Spacer(Modifier.height(20.dp))

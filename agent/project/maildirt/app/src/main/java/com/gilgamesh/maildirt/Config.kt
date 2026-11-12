@@ -15,6 +15,9 @@ enum class AuthMode { STANDARD, XOAUTH2 }
 enum class SmtpSecurity { STARTTLS, SSL, NONE }
 
 @Serializable
+enum class MimePreference { PLAIN, HTML }
+
+@Serializable
 data class SenderIdentity(
     val id: String,
     val email: String,
@@ -57,6 +60,7 @@ data class AppConfig(
     val notifySound: Boolean = true,
     val notifyShowContent: Boolean = true,
     val notifyPollSeconds: Int = 3600,
+    val defaultMime: MimePreference = MimePreference.PLAIN,
 )
 
 class ConfigStore(context: Context) {

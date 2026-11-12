@@ -843,6 +843,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         MailNotificationService.start(getApplication())
     }
 
+    fun setDefaultMime(preference: MimePreference) {
+        save(config.copy(defaultMime = preference))
+    }
+
     fun defaultIdentity(): SenderIdentity? = config.identities.firstOrNull()
 
     fun addressSuggestions(query: String): List<AddressEntry> = addressBook.suggestions(query)
@@ -853,7 +857,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             toast = "Add a sender identity in Settings first"
             return
         }
-        composeSeed = ComposeSeed(identityId = identity.id)
+        composeSeed = ComposeSeed(
+            identityId = identity.id,
+            body = MailText.signatureBlock(identity.signature),
+        )
         composeError = null
         identityTestResult = null
         screen = Screen.Compose
@@ -882,7 +889,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         composeSeed = ComposeSeed(
             identityId = identity.id,
             subject = MailText.prefixedSubject(message.subject, "Fwd:"),
-            body = MailText.quotedBody(message),
+            body = MailText.quotedBody(message) + MailText.signatureBlock(identity.signature),
             replyFolderId = folder.id,
             replyPath = entry.relativePath,
         )
@@ -923,7 +930,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             to = MailText.recipientLines(message.from).joinToString(", "),
             cc = cc,
             subject = MailText.prefixedSubject(message.subject, "Re:"),
-            body = MailText.quotedBody(message),
+            body = MailText.quotedBody(message) + MailText.signatureBlock(identity.signature),
             inReplyTo = message.messageId,
             references = MailText.referencesFor(message),
             replyFolderId = folder.id,
@@ -955,13 +962,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun openIdentityPicker() {
+    fun openIdentityPicker(fields: ComposeFields, attachments: List<OutgoingAttachment>) {
+        composeSeed = composeSeed?.copy(
+            identityId = fields.identityId,
+            to = fields.to,
+            cc = fields.cc,
+            bcc = fields.bcc,
+            subject = fields.subject,
+            body = fields.body,
+            attachments = attachments,
+        )
         screen = Screen.PickIdentity
         saveNavigation()
     }
 
     fun chooseIdentity(id: String) {
-        composeSeed = composeSeed?.copy(identityId = id)
+        val seed = composeSeed ?: return
+        val next = identity(id)
+        composeSeed = if (next == null) {
+            seed.copy(identityId = id)
+        } else {
+            seed.copy(
+                identityId = id,
+                body = MailText.replaceSignature(seed.body, next.signature),
+            )
+        }
         screen = Screen.Compose
         saveNavigation()
     }
@@ -996,7 +1021,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val outcome = withContext(Dispatchers.IO) {
                 runCatching {
-                    val body = MailText.buildOutgoingBody(fields.body, identity.signature)
+                    val body = fields.body
                     val mail = OutgoingMail(
                         identity = identity,
                         to = fields.to,
