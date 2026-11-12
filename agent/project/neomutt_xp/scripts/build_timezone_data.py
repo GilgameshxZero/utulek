@@ -7,9 +7,9 @@ from zipfile import ZIP_DEFLATED,ZipFile,ZipInfo
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--source',type=Path,default=Path('/usr/share/zoneinfo'))
+    parser.add_argument('--source', type=Path, default=Path('/usr/share/zoneinfo'))
     parser.add_argument('--version',default='2026f')
-    parser.add_argument('--output',type=Path,default=Path(__file__).parent/'python/timezones.zip')
+    parser.add_argument('--output',type=Path,default=Path(__file__).resolve().parents[1] / 'python/timezones.zip')
     args=parser.parse_args()
     version=(args.source/'tzdata.zi').read_text().splitlines()[0]
     if version!='# version '+args.version:

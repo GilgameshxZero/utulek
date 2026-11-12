@@ -6,47 +6,9 @@ from pathlib import Path
 import subprocess
 import time
 
-from linux_test_session import Session
+from checklib import Session, memory, wait_status
 
 ROOT = Path(__file__).resolve().parent.parent
-
-
-def wait_status(session, needle, limit=100):
-    for _ in range(limit):
-        text = session.command('status')
-        if needle in text:
-            return True, text
-        session.drain(.03)
-    return False, text
-
-
-def process_tree(pid):
-    seen = []
-    pending = [pid]
-    while pending:
-        current = pending.pop()
-        seen.append(current)
-        try:
-            children = (Path('/proc') / str(current) / 'task' / str(current) /
-                        'children').read_text().split()
-        except OSError:
-            continue
-        pending.extend(int(child) for child in children)
-    return seen
-
-
-def memory(pid):
-    rss = 0
-    fds = 0
-    for current in process_tree(pid):
-        try:
-            for line in (Path('/proc') / str(current) / 'status').read_text().splitlines():
-                if line.startswith('VmRSS:'):
-                    rss = max(rss, int(line.split()[1]) * 1024)
-            fds = max(fds, len(list((Path('/proc') / str(current) / 'fd').iterdir())))
-        except OSError:
-            pass
-    return rss, fds
 
 
 def main():

@@ -50,12 +50,8 @@ char *win_absolute_path(const char *src, const char *cwd)
     return result;
 }
 
-wchar_t *win_path(const char *src)
+static wchar_t *extended(wchar_t *plain)
 {
-    char *absolute = win_absolute_path(src, NULL);
-    if (!absolute) return NULL;
-    wchar_t *plain = win_wide(absolute); free(absolute);
-    if (!plain) return NULL;
     for (wchar_t *p = plain; *p; p++) if (*p == L'/') *p = L'\\';
     size_t len = wcslen(plain);
     int unc = plain[0] == L'\\' && plain[1] == L'\\';
@@ -65,4 +61,41 @@ wchar_t *win_path(const char *src)
     else { wcscpy(result, L"\\\\?\\"); wcscat(result, plain); }
     free(plain);
     return result;
+}
+
+/* Absolute paths with no components Win32 would rewrite already are their own
+ * canonical form. Skipping GetFullPathNameW() saves two full UTF-8/UTF-16
+ * conversions and a syscall on every open/stat/directory call. */
+static int plain_absolute(const char *src)
+{
+    size_t len = strlen(src);
+    if (!len) return 0;
+    int drive = src[0] && src[1] == ':' && (src[2] == '/' || src[2] == '\\');
+    int unc = (src[0] == '/' || src[0] == '\\') && (src[1] == '/' || src[1] == '\\');
+    if (!drive && !unc) return 0;
+    if (src[len-1] == '/' || src[len-1] == '\\')
+        if (!(drive && len == 3)) return 0;
+    for (const char *p = src; *p; ) {
+        if (*p == '/' || *p == '\\') { p++; continue; }
+        const char *start = p;
+        while (*p && *p != '/' && *p != '\\') p++;
+        size_t part = (size_t)(p - start);
+        if (part == 1 && start[0] == '.') return 0;
+        if (part == 2 && start[0] == '.' && start[1] == '.') return 0;
+        if (start[part-1] == '.' || start[part-1] == ' ') return 0;
+    }
+    return 1;
+}
+
+wchar_t *win_path(const char *src)
+{
+    if (plain_absolute(src)) {
+        wchar_t *plain = win_wide(src);
+        return plain ? extended(plain) : NULL;
+    }
+    char *absolute = win_absolute_path(src, NULL);
+    if (!absolute) return NULL;
+    wchar_t *plain = win_wide(absolute); free(absolute);
+    if (!plain) return NULL;
+    return extended(plain);
 }

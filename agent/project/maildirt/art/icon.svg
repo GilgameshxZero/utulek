@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Simplified interpretation of a bean-sprout silhouette.
+     Reference: https://cdn-icons-png.flaticon.com/512/8656/8656571.png -->
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <rect width="108" height="108" fill="#ffffff"/>
+
+  <!-- pot -->
+  <path d="M28,74 H80 L74,88 H34 Z"
+        fill="#ffffff" stroke="#000000" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="23" y="64" width="62" height="10" rx="4" fill="#000000"/>
+  <path d="M32,68 l3,0 l0,2 l-3,1 Z" fill="#ffffff"/>
+  <path d="M68,69 l3,0 l0,2 l-3,0 Z" fill="#ffffff"/>
+  <path d="M40,79 l4,0 l1,3 l-5,1 Z" fill="#000000"/>
+  <path d="M60,81 l4,0 l1,3 l-5,0 Z" fill="#000000"/>
+
+  <!-- stem -->
+  <path d="M54,70 C52,60 58,52 52,42 C49,36 49,31 54,29"
+        fill="none" stroke="#000000" stroke-width="5.5" stroke-linecap="round"/>
+
+  <!-- leaves -->
+  <path d="M54,42 C67,42 76,34 76,24 C63,24 55,31 54,42 Z" fill="#000000"/>
+  <path d="M52,50 C41,50 34,43 35,33 C45,33 52,40 52,50 Z" fill="#000000"/>
+  <path d="M54,29 C51,26 52,22 56,20 C59,23 59,26 54,29 Z" fill="#000000"/>
+</svg>

@@ -78,5 +78,36 @@
     "url": "https://www.sqlite.org/2026/sqlite-autoconf-3540100.tar.gz",
     "archive": "sqlite-autoconf-3540100.tar.gz",
     "sha256": "926ef8d3eab93fbf6e06011901273eec076b25594a4e1cdadd50c987f4f6d64e"
-  }
+  },
+  "platforms": {
+    "linux": [
+      "neomutt",
+      "lmdb",
+      "libgpg-error",
+      "libassuan",
+      "gpgme",
+      "sqlite"
+    ],
+    "windows": [
+      "neomutt",
+      "ncurses",
+      "libiconv",
+      "pcre2",
+      "openssl",
+      "lmdb",
+      "libgpg-error",
+      "libassuan",
+      "gpgme",
+      "sqlite"
+    ]
+  },
+  "source_verification": [
+    "neomutt",
+    "ncurses",
+    "lmdb",
+    "libgpg-error",
+    "libassuan",
+    "gpgme",
+    "sqlite"
+  ]
 }

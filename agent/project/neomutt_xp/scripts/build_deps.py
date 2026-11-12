@@ -1,48 +1,66 @@
 #!/usr/bin/env python3
 """Build static native Windows dependencies, retaining logs under .obj/."""
 import argparse
-import os
 from pathlib import Path
-import subprocess
 
-ROOT = Path(__file__).resolve().parents[1]
+from deps import (MANIFEST, ROOT, Toolchain, jobs, prefix, run, source,
+                  source_identity, stamp_matches, write_stamp)
 
-def run(command, cwd, env, log):
-    with (cwd / log).open('w') as output:
-        subprocess.run(list(map(str, command)), cwd=cwd, env=env,
-                       stdout=output, stderr=subprocess.STDOUT, check=True)
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('library', choices=['ncurses', 'iconv', 'pcre2'])
-    parser.add_argument('--toolchain', type=Path, required=True)
-    args = parser.parse_args()
-    tools = args.toolchain.resolve() / 'bin'
-    env = dict(os.environ, CC=str(tools / 'x86_64-w64-mingw32-clang'),
-               AR=str(tools / 'llvm-ar'), RANLIB=str(tools / 'llvm-ranlib'),
-               STRIP=str(tools / 'llvm-strip'), WINDRES=str(tools / 'x86_64-w64-mingw32-windres'), RC=str(tools / 'x86_64-w64-mingw32-windres'), CFLAGS='-O2')
-    prefix = ROOT / '.obj/windows-prefix'
-    options = ['--host=x86_64-w64-mingw32', '--prefix=' + str(prefix),
-               '--disable-shared', '--enable-static']
-    if args.library == 'ncurses':
-        source = ROOT / '.obj/deps/ncurses-6.5'
-        options += ['--enable-widec', '--enable-term-driver', '--enable-sp-funcs',
+LIBRARIES = {
+    'ncurses': {
+        'outputs': ['lib/libncursesw.a'],
+        'options': ['--enable-widec', '--enable-term-driver', '--enable-sp-funcs',
                     '--without-shared', '--without-debug', '--without-ada',
                     '--without-cxx', '--without-cxx-binding', '--without-tests',
                     '--without-progs', '--disable-db-install', '--with-build-cc=cc',
-                    '--with-fallbacks=xterm-256color', '--with-build-cflags=-include wchar.h']
-    elif args.library == 'iconv':
-        source = ROOT / '.obj/deps/libiconv-1.19'
-        options += ['--disable-nls']
-    else:
-        source = ROOT / '.obj/deps/pcre2-10.46'
-        options += ['--enable-unicode', '--disable-pcre2grep-libz', '--disable-pcre2grep-libbz2']
+                    '--with-fallbacks=xterm-256color',
+                    '--with-build-cflags=-include wchar.h'],
+        'make_args': ['BUILD_CCFLAGS=-include wchar.h'],
+    },
+    'iconv': {
+        'outputs': ['lib/libiconv.a'],
+        'options': ['--disable-nls'],
+        'make_args': [],
+    },
+    'pcre2': {
+        'outputs': ['lib/libpcre2-8.a', 'lib/libpcre2-posix.a'],
+        'options': ['--enable-unicode', '--disable-pcre2grep-libz',
+                    '--disable-pcre2grep-libbz2'],
+        'make_args': [],
+    },
+}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('library', choices=sorted(LIBRARIES))
+    parser.add_argument('--toolchain', type=Path, required=True)
+    parser.add_argument('-j', '--jobs', type=int)
+    args = parser.parse_args()
+
+    spec = LIBRARIES[args.library]
+    manifest_name = 'libiconv' if args.library == 'iconv' else args.library
+    item = MANIFEST[manifest_name]
+    toolchain = Toolchain(args.toolchain)
     build = ROOT / ('.obj/build-' + args.library)
-    build.mkdir(parents=True, exist_ok=True)
-    run([source / 'configure', *options], build, env, 'configure.log')
-    make_args = ['BUILD_CCFLAGS=-include wchar.h'] if args.library == 'ncurses' else []
-    run(['make', '-j4', *make_args], build, env, 'build.log')
-    run(['make', 'install'], build, env, 'install.log')
+    target = prefix('windows')
+    options = ['--host=x86_64-w64-mingw32', '--prefix=' + str(target),
+               '--disable-shared', '--enable-static', *spec['options']]
+    snapshot = {'library': args.library, 'version': item['version'],
+                'toolchain': str(toolchain.path), 'options': options,
+                'source': source_identity(manifest_name)}
+    outputs = [target / name for name in spec['outputs']]
+    if stamp_matches('deps-' + args.library, snapshot) and all(path.exists() for path in outputs):
+        print(f'{args.library}: up to date')
+        return
+
+    environment = toolchain.env(CFLAGS='-O2')
+    run([source(manifest_name) / 'configure', *options], build, 'configure.log', environment)
+    run(['make', '-j' + str(jobs(args.jobs)), *spec['make_args']], build, 'build.log', environment)
+    run(['make', 'install'], build, 'install.log', environment)
+    write_stamp('deps-' + args.library, snapshot)
+    print(f'{args.library}: installed into {target}')
+
 
 if __name__ == '__main__':
     main()

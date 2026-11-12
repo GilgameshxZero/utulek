@@ -24,10 +24,15 @@ Act as a helpful, general-purpose conversational assistant, similar to ChatGPT i
 * Recursively deleting directories under `.obj/` is pre-authorized; do not ask for approval.
 * Shell commands on this machine and adb access to `10.8.40.48:5555` (test device) and `10.8.58.57:5555` (user device) are pre-authorized for this project. Run the needed build, install, test, and cleanup commands — including deleting build outputs, failed downloads, and other artifacts under the project or `.obj/` — without asking for approval.
 * For Android work, install and test builds on `10.8.40.48:5555`; copy finalized milestone builds to `10.8.58.57:5555` for the user.
+* After finishing a milestone: uninstall the app from the test emulator, delete any test maildirs or generated test files, then reinstall the milestone build with the same folder/role configuration as the Kompakt (paths adapted to the emulator).
+* Force-stop the app on a physical device before installing an update; streamed installs can fail while it is running.
+* Do not ask for approval to remove build intermediates, build outputs, caches, or generated artifacts under the project or `.obj/`; remove them directly.
+* Do not run `git status`, `git diff`, `git check-ignore`, or other index-refreshing Git commands during routine work. They rewrite `.git/index` (and submodule indexes), which Syncthing treats as file changes. Use filesystem checks (`find`, `ls`) instead. If a Git query is unavoidable, run it with `GIT_OPTIONAL_LOCKS=0` or `git --no-optional-locks`.
 
 ## Information and tools
 
 * Put temporary files and other workspace artifacts in `/home/gilgamesh/main.syncthing/utulek/agent/.obj/`. Do not recreate the deleted `workspace/` directory.
+* Intermediate files, including build intermediates, go in a project-local `.obj/` directory. Build outputs go in a project-local `.bin/` directory. See `workflow/project_artifacts-workflow.md` for the concrete Gradle setup.
 * Download temporary files only into a `.obj/` subdirectory of the workspace; never into the workspace root, the home directory, `/tmp`, or other non-workspace locations.
 * For downloads, keep the process attached to the active turn and keep the turn open until all requested files finish. Give progress updates. Do not create systemd services for downloads unless explicitly requested.
 * Save lasting user instructions and preferences in the appropriate instruction or workflow file so future agents can follow them; keep private details in ignored context files.

@@ -3,7 +3,7 @@
 A native Windows port of cmus, preserving its terminal interface, commands,
 library, queue, and playback engine. Version 0.4 adds optimized decoding,
 expanded codecs, and tested audio playback from video containers.
-Current version: **1.0.0**. Version 0.5 adds file-backed playlist imports and `:update` synchronization;
+Current version: **1.0.1**. Version 0.5 adds file-backed playlist imports and `:update` synchronization;
 see the [shared README](README.md) for usage and supported playlist formats.
 
 ## Run the preview
@@ -243,7 +243,9 @@ pins are in `scripts/windows_dependencies.json`. A checksum mismatch stops the
 build; unverified downloads are never extracted.
 
 `scripts/build_native_windows.py` is the lower-level cross-build using a supplied
-LLVM-MinGW toolchain and PDCurses source. The compiler defaults to
+LLVM-MinGW toolchain and PDCurses source. Objects are reused while compiler flags
+and generated headers are unchanged, and the linked executables are stripped.
+The compiler defaults to
 `.obj/deps/llvm_mingw` and can be selected with `--toolchain`; PDCurses defaults to
 `.obj/deps/pdcurses` and can be selected with `--pdcurses`.
 FFmpeg source belongs in the ignored `.obj/deps/ffmpeg`. Build the audio-only
@@ -293,8 +295,9 @@ checks, and `--windows` cross-compiles the checker for actual Windows execution.
 These are
 development checks, not runtime dependencies of the player.
 
-The original `scripts/build_windows.sh` Cygwin recipe remains as a reference;
-it is **not** the native build path and has not been exercised.
+The original Cygwin compatibility baseline recipe has been removed; it was
+**not** the native build path and has not been exercised. `scripts/build_native_windows.py`
+is the supported Windows build.
 
 ## Source and licensing
 

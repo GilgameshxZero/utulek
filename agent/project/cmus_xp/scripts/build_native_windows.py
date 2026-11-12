@@ -6,6 +6,7 @@ No downloads or remote operations are performed by this script.
 """
 import argparse
 import concurrent.futures
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -96,7 +97,7 @@ int win_resource(const char *name, const char **data, size_t *size) {
         modplug_source = modplug
     native = ['-DCMUS_NATIVE_WINDOWS', '-DHAVE_CONFIG', '-DHAVE_STRDUP', '-DMODPLUG_STATIC',
               '-I' + str(modplug / 'include'),
-              '-DVERSION="1.0.0"', '-DDEFAULT_PORT=3000', '-D_CRT_SECURE_NO_WARNINGS',
+              '-DVERSION="1.0.1"', '-DDEFAULT_PORT=3000', '-D_CRT_SECURE_NO_WARNINGS',
               '-I' + str(ROOT / 'windows/include'), '-include', str(ROOT / 'windows/compat.h')]
     jobs = []
     for path in [ROOT / (s + '.c') for s in SOURCES] + [ROOT / 'ip/wav.c', ROOT / 'ip/ffmpeg.c', ROOT / 'ip/stream.c', ROOT / 'ip/cue.c',
@@ -127,8 +128,27 @@ int win_resource(const char *name, const char **data, size_t *size) {
             path = curses_addstr
         jobs.append((path, obj, common + ['-include', str(curses_header)]))
 
+    # Reuse objects only while compiler flags and generated headers are
+    # unchanged; anything else could silently link a stale ABI.
+    signature = hashlib.sha256()
+    signature.update((' '.join(common) + '\n' + ' '.join(native) + '\n').encode())
+    for path in [curses_header, curses_addstr, resource_c, *sorted((out / 'config').iterdir())]:
+        signature.update(path.read_bytes())
+    stamp = out / 'build.signature'
+    stale = not stamp.is_file() or stamp.read_text() != signature.hexdigest()
+    if stale:
+        for path in out.glob('*.o'):
+            path.unlink()
+        stamp.write_text(signature.hexdigest())
+
     def compile_one(item):
         path, obj, flags = item
+        if not stale and obj.is_file():
+            try:
+                if obj.stat().st_mtime >= path.stat().st_mtime:
+                    return None
+            except OSError:
+                pass
         result = subprocess.run(flags + ['-c', str(path), '-o', str(obj)], capture_output=True, text=True)
         if result.stderr:
             print(result.stderr, end='', flush=True)
@@ -157,6 +177,10 @@ int win_resource(const char *name, const char **data, size_t *size) {
     remote_objects = [str(obj) for path, obj, flags in jobs + [remote_main] if path.name in remote_sources]
     subprocess.run([str(cc), '-static', '-Wl,--no-insert-timestamp', '-o', str(remote_exe)] +
                    remote_objects + ['-ladvapi32', '-luser32', '-lshell32', '-lws2_32'], check=True)
+    strip = args.toolchain.resolve() / 'bin/llvm-strip'
+    if strip.is_file():
+        for binary in (exe, remote_exe):
+            subprocess.run([str(strip), '--strip-all', str(binary)], check=True)
     destination = args.install_dir.resolve() / 'cmus.exe'
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination != exe:

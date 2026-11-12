@@ -1,5 +1,6 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.gradle.api.tasks.Copy
 
 plugins {
     id("com.android.application")
@@ -24,8 +25,8 @@ android {
         applicationId = "com.gilgamesh.maildirt"
         minSdk = 28
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0-m2"
+        versionCode = 21
+        versionName = "0.5.0"
     }
 
     signingConfigs {
@@ -41,7 +42,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -67,10 +73,12 @@ android {
                 "META-INF/DEPENDENCIES",
                 "META-INF/LICENSE",
                 "META-INF/LICENSE.txt",
+                "META-INF/LICENSE.md",
                 "META-INF/NOTICE",
                 "META-INF/NOTICE.txt",
                 "META-INF/NOTICE.md",
-                "META-INF/LICENSE.md",
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
+                "META-INF/versions/9/module-info.class",
             )
         }
     }
@@ -96,4 +104,25 @@ dependencies {
 
     implementation("com.sun.mail:android-mail:1.6.7")
     implementation("com.sun.mail:android-activation:1.6.7")
+    implementation("org.bouncycastle:bcpg-jdk18on:1.78.1")
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(rootProject.tasks.named("verifyArtifactLayout"))
+}
+
+tasks.register<Copy>("publishDebugApk") {
+    dependsOn("assembleDebug")
+    from(layout.buildDirectory.dir("outputs/apk/debug"))
+    include("*.apk")
+    into(rootProject.file(".bin"))
+    rename { "maildirt-debug.apk" }
+}
+
+tasks.register<Copy>("publishReleaseApk") {
+    dependsOn("assembleRelease")
+    from(layout.buildDirectory.dir("outputs/apk/release"))
+    include("*.apk")
+    into(rootProject.file(".bin"))
+    rename { "maildirt-release.apk" }
 }

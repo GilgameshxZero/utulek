@@ -14,6 +14,8 @@ import termios
 import time
 import uuid
 
+from checklib import write
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -115,8 +117,8 @@ def main():
             process.wait(timeout=5)
         socket.unlink(missing_ok=True)
         (out / 'screen.bin').write_bytes(screen)
-        (out / 'results.json').write_text(json.dumps({'binary': str(args.binary),
-            'checks': checks, 'passed': len(checks) == 5}, indent=2) + '\n')
+        write(out / 'results.json', [{'check': name, 'passed': True} for name in checks],
+              binary=str(args.binary))
     print(json.dumps({'results': str(out / 'results.json'), 'checks': checks}))
 
 

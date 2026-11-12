@@ -5,50 +5,51 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- soil mound -->
+    <!-- pot body -->
     <path
-        android:fillColor="#000000"
-        android:pathData="M20,86 L20,74 C28,66 34,70 42,64 C48,60 56,60 62,64 C70,68 76,64 88,74 L88,86 Z" />
-
-    <!-- envelope -->
-    <path
-        android:fillColor="#000000"
-        android:pathData="M27,32 L69,32 A5,5 0 0 1 74,37 L74,59 A5,5 0 0 1 69,64 L27,64 A5,5 0 0 1 22,59 L22,37 A5,5 0 0 1 27,32 Z" />
-
-    <!-- flap -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
+        android:fillColor="#FFFFFFFF"
+        android:strokeColor="#FF000000"
         android:strokeWidth="4"
-        android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M26,37 L48,53 L70,37" />
+        android:pathData="M28,74 H80 L74,88 H34 Z" />
 
-    <!-- soil speckles -->
+    <!-- soil rim -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M32,80 m-1.8,0 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M50,82 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M64,79 m-1.4,0 a1.4,1.4 0 1,0 2.8,0 a1.4,1.4 0 1,0 -2.8,0" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M76,82 m-1.4,0 a1.4,1.4 0 1,0 2.8,0 a1.4,1.4 0 1,0 -2.8,0" />
+        android:fillColor="#FF000000"
+        android:pathData="M27,64 H81 A4,4 0 0 1 85,68 V70 A4,4 0 0 1 81,74 H27 A4,4 0 0 1 23,70 V68 A4,4 0 0 1 27,64 Z" />
 
-    <!-- sprout -->
+    <!-- light specks in the soil -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M32,68 l3,0 l0,2 l-3,1 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M68,69 l3,0 l0,2 l-3,0 Z" />
+
+    <!-- pebbles on the pot -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M40,79 l4,0 l1,3 l-5,1 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M60,81 l4,0 l1,3 l-5,0 Z" />
+
+    <!-- stem -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#000000"
-        android:strokeWidth="3"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="5.5"
         android:strokeLineCap="round"
-        android:pathData="M82,76 C82,68 79,62 82,54" />
+        android:pathData="M54,70 C52,60 58,52 52,42 C49,36 49,31 54,29" />
+
+    <!-- leaves -->
     <path
-        android:fillColor="#000000"
-        android:pathData="M82,58 C78,58 76,55 76,52 C79,52 82,54 82,58 Z" />
+        android:fillColor="#FF000000"
+        android:pathData="M54,42 C67,42 76,34 76,24 C63,24 55,31 54,42 Z" />
     <path
-        android:fillColor="#000000"
-        android:pathData="M82,52 C85,52 86,49 86,46 C83,46 82,49 82,52 Z" />
+        android:fillColor="#FF000000"
+        android:pathData="M52,50 C41,50 34,43 35,33 C45,33 52,40 52,50 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M54,29 C51,26 52,22 56,20 C59,23 59,26 54,29 Z" />
 </vector>

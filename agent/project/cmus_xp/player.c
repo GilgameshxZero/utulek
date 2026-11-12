@@ -978,8 +978,7 @@ static void *consumer_loop(void *arg)
 						producer_unlock();
 						_consumer_position_update(0, 0.0);
 						consumer_unlock();
-/* 						d_print("possible underrun\n"); */
-						ms_sleep(10);
+						buffer_wait(100);
 						break;
 					}
 				}
@@ -1047,9 +1046,9 @@ static void *producer_loop(void *arg)
 		for (i = 0; ; i++) {
 			size = buffer_get_wpos(&wpos);
 			if (size == 0) {
-				/* buffer is full */
+				/* buffer is full: the consumer signals buffer_consume() */
 				producer_unlock();
-				ms_sleep(50);
+				buffer_wait(200);
 				break;
 			}
 			nr_read = ip_read(ip, wpos, size);
@@ -1060,8 +1059,9 @@ static void *producer_loop(void *arg)
 					/* ip_read sets eof */
 					nr_read = 0;
 				} else {
+					/* a live source publishes asynchronously */
 					producer_unlock();
-					ms_sleep(50);
+					ms_sleep(10);
 					break;
 				}
 			}
@@ -1073,7 +1073,6 @@ static void *producer_loop(void *arg)
 			if (nr_read == 0) {
 				/* consumer handles EOF */
 				producer_unlock();
-				ms_sleep(50);
 				break;
 			}
 			if (i == chunks) {
@@ -1147,6 +1146,7 @@ void player_exit(void)
 	producer_running = 0;
 	pthread_cond_broadcast(&producer_playing);
 	player_unlock();
+	buffer_wake();
 
 	rc = pthread_join(consumer_thread, NULL);
 	BUG_ON(rc);

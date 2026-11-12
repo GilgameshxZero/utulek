@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.Properties
+import java.util.TimeZone
 import javax.mail.Address
 import javax.mail.Message
 import javax.mail.Multipart
@@ -46,6 +47,8 @@ data class ParsedMessage(
     val alternatives: List<MimeAlternative>,
     val attachments: List<Attachment>,
     val inlineImages: Map<String, InlineImage>,
+    val messageId: String? = null,
+    val references: String? = null,
 )
 
 class MimeReader(private val context: Context) {
@@ -56,15 +59,22 @@ class MimeReader(private val context: Context) {
         }
 
         val cacheDir = File(context.cacheDir, "msg_$cacheKey")
-        cacheDir.deleteRecursively()
-        cacheDir.mkdirs()
+        val stamp = "${file.lastModified()}_${file.length()}"
+        val stampFile = File(cacheDir, ".stamp")
+        val reuse = cacheDir.isDirectory &&
+            runCatching { stampFile.readText() }.getOrNull() == stamp
+        if (!reuse) {
+            cacheDir.deleteRecursively()
+            cacheDir.mkdirs()
+            runCatching { stampFile.writeText(stamp) }
+        }
 
         val bytes = file.inputStream().use { it.readBytes() }
         val session = Session.getInstance(Properties())
         val message = MimeMessage(session, ByteArrayInputStream(bytes))
 
         val state = ParseState()
-        walk(message, state, cacheDir)
+        walk(message, state, cacheDir, reuse)
 
         return ParsedMessage(
             subject = decodeHeader(message.subject).ifBlank { "(no subject)" },
@@ -77,6 +87,8 @@ class MimeReader(private val context: Context) {
             alternatives = state.alternatives.map { MimeAlternative(it.key, it.value) },
             attachments = state.attachments,
             inlineImages = state.inline,
+            messageId = message.getHeader("Message-ID")?.firstOrNull()?.trim(),
+            references = message.getHeader("References")?.firstOrNull()?.trim(),
         )
     }
 
@@ -89,7 +101,7 @@ class MimeReader(private val context: Context) {
         var inlineBytes = 0
     }
 
-    private fun walk(part: Part, state: ParseState, cacheDir: File) {
+    private fun walk(part: Part, state: ParseState, cacheDir: File, reuse: Boolean) {
         val fileName = runCatching { part.fileName }.getOrNull()
         val disposition = runCatching { part.disposition }.getOrNull()
         val contentId = runCatching {
@@ -101,7 +113,7 @@ class MimeReader(private val context: Context) {
             if (multipart != null) {
                 for (index in 0 until multipart.count) {
                     runCatching { multipart.getBodyPart(index) }.getOrNull()?.let {
-                        walk(it, state, cacheDir)
+                        walk(it, state, cacheDir, reuse)
                     }
                 }
             }
@@ -111,14 +123,14 @@ class MimeReader(private val context: Context) {
         if (part.isMimeType("message/rfc822")) {
             val inner = runCatching { part.content as? Part }.getOrNull()
             if (inner != null && fileName.isNullOrBlank()) {
-                walk(inner, state, cacheDir)
+                walk(inner, state, cacheDir, reuse)
                 return
             }
         }
 
         val isAttachment = !fileName.isNullOrBlank() || Part.ATTACHMENT.equals(disposition, true)
         if (isAttachment) {
-            saveAttachment(part, fileName, cacheDir, state)
+            saveAttachment(part, fileName, cacheDir, state, reuse)
             return
         }
 
@@ -142,9 +154,23 @@ class MimeReader(private val context: Context) {
         }
     }
 
-    private fun saveAttachment(part: Part, rawName: String?, cacheDir: File, state: ParseState) {
-        val name = safeFileName(rawName, state.attachments.size)
-        val target = File(cacheDir, name)
+    private fun saveAttachment(
+        part: Part,
+        rawName: String?,
+        cacheDir: File,
+        state: ParseState,
+        reuse: Boolean,
+    ) {
+        val displayName = safeName(rawName, state.attachments.size)
+        val target = File(cacheDir, "${state.attachments.size}_$displayName")
+        val mimeType = runCatching { part.contentType?.substringBefore(';')?.trim() }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: "application/octet-stream"
+        if (reuse && target.isFile) {
+            state.attachments.add(Attachment(displayName, mimeType, target.length(), target))
+            return
+        }
         val size = runCatching {
             part.inputStream.use { input ->
                 target.outputStream().use { output -> input.copyTo(output) }
@@ -153,11 +179,7 @@ class MimeReader(private val context: Context) {
             target.delete()
             return
         }
-        val mimeType = runCatching { part.contentType?.substringBefore(';')?.trim() }
-            .getOrNull()
-            ?.takeIf { it.isNotBlank() }
-            ?: "application/octet-stream"
-        state.attachments.add(Attachment(name, mimeType, size, target))
+        state.attachments.add(Attachment(displayName, mimeType, size, target))
     }
 
     private fun addInline(part: Part, contentId: String, state: ParseState) {
@@ -172,24 +194,18 @@ class MimeReader(private val context: Context) {
         state.inlineBytes += data.size
     }
 
-    private fun safeFileName(rawName: String?, index: Int): String {
+    private fun safeName(rawName: String?, index: Int): String {
         val base = rawName?.trim()?.takeIf { it.isNotEmpty() } ?: "attachment-$index"
-        val cleaned = base
+        return base
             .replace(Regex("""[\\/:*?"<>|\u0000-\u001f]"""), "_")
             .trim()
             .take(120)
             .ifBlank { "attachment-$index" }
-        return "${index}_$cleaned"
     }
 
     private fun formatAddresses(addresses: Array<Address>?): String =
-        addresses?.joinToString(", ") { address ->
-            if (address is InternetAddress) {
-                val personal = address.personal
-                if (!personal.isNullOrBlank()) "$personal <${address.address}>" else address.address.orEmpty()
-            } else {
-                address.toString()
-            }
+        addresses?.joinToString("\n") { address ->
+            if (address is InternetAddress) HeaderParser.format(address) else address.toString()
         }.orEmpty()
 
     private fun decodeHeader(value: String?): String {
@@ -205,6 +221,31 @@ class MimeReader(private val context: Context) {
 }
 
 private val CID_PATTERN = Regex("""(?i)cid:([^"'\s)>]+)""")
+
+private const val PAPERCLIP_SVG =
+    "<svg class=\"summaryicon\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">" +
+        "<path fill=\"#000000\" d=\"M16.5,6v11.5c0,2.21 -1.79,4 -4,4s-4,-1.79 -4,-4V5" +
+        "c0,-1.38 1.12,-2.5 2.5,-2.5s2.5,1.12 2.5,2.5v10.5c0,0.55 -0.45,1 -1,1s-1,-0.45 " +
+        "-1,-1V6H10v9.5c0,1.38 1.12,2.5 2.5,2.5s2.5,-1.12 2.5,-2.5V5c0,-2.21 -1.79,-4 " +
+        "-4,-4S7,2.79 7,5v12.5c0,3.04 2.46,5.5 5.5,5.5s5.5,-2.46 5.5,-5.5V6h-1.5z\"/></svg>"
+
+private const val SHARE_ICON_SVG =
+    "<svg class=\"shareicon\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">" +
+        "<path fill=\"#000000\" d=\"M18,16.08c-0.76,0 -1.44,0.3 -1.96,0.77L8.91,12.7" +
+        "c0.05,-0.23 0.09,-0.46 0.09,-0.7s-0.04,-0.47 -0.09,-0.7l7.05,-4.11" +
+        "c0.54,0.5 1.25,0.81 2.04,0.81 1.66,0 3,-1.34 3,-3s-1.34,-3 -3,-3" +
+        "-3,1.34 -3,3c0,0.24 0.04,0.47 0.09,0.7L8.04,9.81C7.5,9.31 6.79,9 6,9" +
+        "c-1.66,0 -3,1.34 -3,3s1.34,3 3,3c0.79,0 1.5,-0.31 2.04,-0.81l7.12,4.16" +
+        "c-0.05,0.21 -0.08,0.43 -0.08,0.65 0,1.61 1.31,2.92 2.92,2.92s2.92,-1.31 " +
+        "2.92,-2.92 -1.31,-2.92 -2.92,-2.92z\"/></svg>"
+
+fun renderSourceHtml(source: String): String =
+    "<!doctype html><html><head><meta charset=\"utf-8\">" +
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
+        "<style>html,body{margin:0;padding:6px;background:#fff;color:#000;}" +
+        "body{font-family:monospace;font-size:12px;line-height:1.3;}" +
+        "pre{white-space:pre-wrap;word-wrap:break-word;}</style></head><body><pre>" +
+        escapeHtml(source) + "</pre></body></html>"
 
 fun renderMessageHtml(message: ParsedMessage, alternativeMime: String? = null): String {
     val selected = alternativeMime?.let { mime ->
@@ -227,40 +268,85 @@ fun renderMessageHtml(message: ParsedMessage, alternativeMime: String? = null): 
     builder.append(
         """
         <style>
-        html,body{margin:0;padding:12px;background:#fff;color:#000;width:100%;max-width:100%;overflow-x:hidden;}
-        body{font-family:sans-serif;font-size:17px;line-height:1.45;word-wrap:break-word;overflow-wrap:anywhere;}
-        *{box-sizing:border-box;max-width:100%!important;}
-        img,iframe,video{max-width:100%!important;height:auto!important;}
-        table{width:100%!important;table-layout:fixed;}
-        td,th{word-break:break-word;}
-        pre{white-space:pre-wrap;word-wrap:break-word;font-family:sans-serif;font-size:17px;}
-        blockquote{margin:8px 0 8px 12px;padding-left:10px;border-left:2px solid #000;}
+        html,body{margin:0;padding:4px;background:#fff;color:#000;width:100%;max-width:100%;overflow-x:hidden;}
+        body{font-family:sans-serif;font-size:18px;line-height:1.45;word-wrap:break-word;overflow-wrap:anywhere;filter:grayscale(1);}
+        body *{margin-left:0!important;margin-right:0!important;padding-left:0!important;padding-right:0!important;}
+        html,body{background:#fff!important;}
+        body,div,p,span,li,td,th,tr,table,h1,h2,h3,h4,h5,h6,blockquote,pre,code{color:#000!important;background-color:transparent!important;}
+        *{box-sizing:border-box;min-width:0!important;max-width:100%!important;}
+        div,p,span,li,td,th{min-width:0!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important;}
+        table{width:100%!important;max-width:100%!important;table-layout:fixed!important;border-collapse:collapse!important;border-spacing:0!important;}
+        td,th{width:auto!important;}
+        img,svg,video,iframe,canvas{width:auto!important;max-width:100%!important;height:auto!important;}
+        pre,code{white-space:pre-wrap!important;word-break:break-word!important;max-width:100%!important;font-family:sans-serif;font-size:18px;}
+        blockquote{margin:6px 0;padding-left:8px;font-style:italic;}
         a{color:#000;text-decoration:underline;}
-        .header{border-bottom:1px solid #000;margin-bottom:12px;padding-bottom:10px;}
-        .subject{font-size:21px;font-weight:bold;line-height:1.3;margin-bottom:8px;}
-        .label{font-size:13px;font-weight:bold;text-transform:uppercase;margin-top:6px;}
-        .value{font-size:16px;}
+        .header{margin:0 0 10px 0;padding:0;background:#fff!important;}
+        .field{margin:6px 0;}
+        .field .label{display:block;font-size:16px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;line-height:1.2;}
+        .value,.value-list,.subject-value{font-size:16px;line-height:1.35;}
+        .attachments{margin:6px 0 10px 0;background:#fff!important;}
+        .attach-summary{display:flex;align-items:center;gap:7px;font-size:16px;font-weight:bold;padding:2px 0 4px 0;}
+        .summaryicon{width:18px!important;height:18px!important;max-width:18px!important;max-height:18px!important;display:block;}
+        .attach{display:flex;align-items:center;gap:8px;font-size:16px;line-height:1.3;margin:3px 0;}
+        .attach .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap!important;}
+        .attach .name a{color:#000;text-decoration:underline;}
+        .attach .size{font-size:13px;white-space:nowrap!important;}
+        .attach .share{flex:none;display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;}
+        .shareicon{width:20px!important;height:20px!important;max-width:20px!important;max-height:20px!important;display:block;}
         </style>
         """.trimIndent()
     )
     builder.append("</head><body>")
 
     builder.append("<div class=\"header\">")
-    builder.append("<div class=\"subject\">").append(escapeHtml(message.subject)).append("</div>")
+    appendField(builder, "Subject", message.subject)
     appendField(builder, "From", message.from)
-    if (message.to.isNotBlank()) appendField(builder, "To", message.to)
-    if (message.cc.isNotBlank()) appendField(builder, "Cc", message.cc)
+    if (message.to.isNotBlank()) appendAddressField(builder, "To", message.to)
+    if (message.cc.isNotBlank()) appendAddressField(builder, "Cc", message.cc)
     appendField(builder, "Date", formatDate(message.date))
     builder.append("</div>")
 
-    builder.append(body)
+    if (message.attachments.isNotEmpty()) {
+        val attachmentCount = message.attachments.size
+        builder.append("<div class=\"attachments\">")
+        builder.append("<div class=\"attach-summary\">")
+            .append(PAPERCLIP_SVG)
+            .append("<span>")
+            .append(attachmentCount)
+            .append(if (attachmentCount == 1) " attachment" else " attachments")
+            .append("</span></div>")
+        for ((index, attachment) in message.attachments.withIndex()) {
+            builder.append("<div class=\"attach\">")
+            builder.append("<span class=\"name\"><a href=\"maildirt://attachment/")
+                .append(index).append("\">")
+                .append(escapeHtml(attachment.name)).append("</a></span>")
+            builder.append("<span class=\"size\">").append(formatSize(attachment.size)).append("</span>")
+            builder.append("<a class=\"share\" href=\"maildirt://share/")
+                .append(index).append("\" title=\"Share\">")
+                .append(SHARE_ICON_SVG).append("</a>")
+            builder.append("</div>")
+        }
+        builder.append("</div>")
+    }
+
+    builder.append(stripDocumentWrapper(body))
     builder.append("</body></html>")
     return builder.toString()
 }
 
 private fun appendField(builder: StringBuilder, label: String, value: String) {
-    builder.append("<div class=\"label\">").append(label).append("</div>")
-    builder.append("<div class=\"value\">").append(escapeHtml(value)).append("</div>")
+    builder.append("<div class=\"field\"><span class=\"label\">").append(label).append("</span>")
+    builder.append("<div class=\"value\">")
+        .append(escapeHtml(value).replace("\n", "<br>"))
+        .append("</div></div>")
+}
+
+private fun appendAddressField(builder: StringBuilder, label: String, value: String) {
+    builder.append("<div class=\"field\"><span class=\"label\">").append(label).append("</span>")
+    builder.append("<div class=\"value-list\">")
+        .append(escapeHtml(value).replace("\n", "<br>"))
+        .append("</div></div>")
 }
 
 private fun rewriteCids(html: String, inline: Map<String, InlineImage>): String {
@@ -289,6 +375,14 @@ private fun findInline(key: String, inline: Map<String, InlineImage>): InlineIma
     }?.value
 }
 
+private fun stripDocumentWrapper(html: String): String =
+    html
+        .replace(Regex("""(?is)<!doctype[^>]*>"""), "")
+        .replace(Regex("""(?is)</?html[^>]*>"""), "")
+        .replace(Regex("""(?is)</?head[^>]*>"""), "")
+        .replace(Regex("""(?is)<body[^>]*>"""), "")
+        .replace(Regex("""(?is)</body>"""), "")
+
 private fun sanitizeHtml(html: String): String {
     var result = html
     result = result.replace(Regex("""(?is)<script.*?</script>"""), "")
@@ -309,7 +403,9 @@ private fun escapeHtml(value: String): String =
         .replace("\"", "&quot;")
 
 private fun formatDate(timestamp: Long): String =
-    SimpleDateFormat("EEE, d MMM yyyy HH:mm", Locale.getDefault()).format(Date(timestamp))
+    SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
+        .apply { timeZone = TimeZone.getDefault() }
+        .format(Date(timestamp))
 
 internal fun formatSize(bytes: Long): String = when {
     bytes >= 1024 * 1024 -> String.format(Locale.getDefault(), "%.1f MB", bytes / 1024.0 / 1024.0)

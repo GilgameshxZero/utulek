@@ -21,6 +21,8 @@
 #include "locking.h"
 #include "debug.h"
 
+#include <time.h>
+
 /*
  * chunk can be accessed by either consumer OR producer, not both at same time
  * -> no need to lock
@@ -46,9 +48,33 @@ struct chunk {
 unsigned int buffer_nr_chunks;
 
 static pthread_mutex_t buffer_mutex = CMUS_MUTEX_INITIALIZER;
+static pthread_cond_t buffer_cond = CMUS_COND_INITIALIZER;
 static struct chunk *buffer_chunks = NULL;
 static unsigned int buffer_ridx;
 static unsigned int buffer_widx;
+
+void buffer_wait(int ms)
+{
+	struct timespec deadline;
+
+	clock_gettime(CLOCK_REALTIME, &deadline);
+	deadline.tv_sec += ms / 1000;
+	deadline.tv_nsec += (long)(ms % 1000) * 1000000L;
+	if (deadline.tv_nsec >= 1000000000L) {
+		deadline.tv_sec++;
+		deadline.tv_nsec -= 1000000000L;
+	}
+	cmus_mutex_lock(&buffer_mutex);
+	pthread_cond_timedwait(&buffer_cond, &buffer_mutex, &deadline);
+	cmus_mutex_unlock(&buffer_mutex);
+}
+
+void buffer_wake(void)
+{
+	cmus_mutex_lock(&buffer_mutex);
+	pthread_cond_broadcast(&buffer_cond);
+	cmus_mutex_unlock(&buffer_mutex);
+}
 
 void buffer_init(void)
 {
@@ -125,6 +151,7 @@ void buffer_consume(int count)
 		buffer_ridx++;
 		buffer_ridx %= buffer_nr_chunks;
 	}
+	pthread_cond_broadcast(&buffer_cond);
 	cmus_mutex_unlock(&buffer_mutex);
 }
 
@@ -146,6 +173,7 @@ int buffer_fill(int count)
 		filled = 1;
 	}
 
+	pthread_cond_broadcast(&buffer_cond);
 	cmus_mutex_unlock(&buffer_mutex);
 	return filled;
 }
@@ -162,6 +190,7 @@ void buffer_reset(void)
 		buffer_chunks[i].h = 0;
 		buffer_chunks[i].filled = 0;
 	}
+	pthread_cond_broadcast(&buffer_cond);
 	cmus_mutex_unlock(&buffer_mutex);
 }
 

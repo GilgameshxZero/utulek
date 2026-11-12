@@ -2,24 +2,44 @@
 """Build the same pinned LMDB cache backend for Linux and native Windows."""
 import argparse
 from pathlib import Path
-import shutil
-import subprocess
-ROOT=Path(__file__).resolve().parents[1]
-p=argparse.ArgumentParser();p.add_argument('target',choices=['linux','windows']);p.add_argument('--toolchain',type=Path)
-a=p.parse_args()
-source=ROOT/'.obj/deps/lmdb-0.9.37/libraries/liblmdb'
-build=ROOT/('.obj/build-lmdb-'+a.target);build.mkdir(parents=True,exist_ok=True)
-prefix=ROOT/('.obj/windows-prefix' if a.target=='windows' else '.obj/host-prefix')
-(prefix/'include').mkdir(parents=True,exist_ok=True);(prefix/'lib').mkdir(exist_ok=True)
-if a.target=='windows':
- if not a.toolchain:p.error('--toolchain is required for Windows')
- tools=a.toolchain.resolve()/'bin';cc=tools/'x86_64-w64-mingw32-clang';ar=tools/'llvm-ar'
-else:cc='cc';ar='ar'
-objects=[]
-with (build/'build.log').open('w') as output:
- for name in ('mdb','midl'):
-  obj=build/(name+'.o');objects.append(obj)
-  subprocess.run(list(map(str,[cc,'-std=c11','-D_GNU_SOURCE','-O2','-c',source/(name+'.c'),'-o',obj])),stdout=output,stderr=subprocess.STDOUT,check=True)
- subprocess.run(list(map(str,[ar,'rcs',prefix/'lib/liblmdb.a',*objects])),stdout=output,stderr=subprocess.STDOUT,check=True)
-shutil.copy2(source/'lmdb.h',prefix/'include/lmdb.h')
-print(prefix)
+
+from deps import (MANIFEST, ROOT, Toolchain, jobs, prefix, run, source,
+                  source_identity, stamp_matches, write_stamp)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('target', choices=['linux', 'windows'])
+    parser.add_argument('--toolchain', type=Path)
+    args = parser.parse_args()
+    if args.target == 'windows' and not args.toolchain:
+        parser.error('--toolchain is required for Windows')
+    toolchain = Toolchain(args.toolchain) if args.toolchain else None
+    compiler = str(toolchain.clang) if toolchain else 'cc'
+    archiver = str(toolchain.tool('llvm-ar')) if toolchain else 'ar'
+    build = ROOT / ('.obj/build-lmdb-' + args.target)
+    target = prefix(args.target)
+    (target / 'include').mkdir(parents=True, exist_ok=True)
+    (target / 'lib').mkdir(parents=True, exist_ok=True)
+    library = target / 'lib/liblmdb.a'
+    source_dir = source('lmdb') / 'libraries/liblmdb'
+    flags = ['-std=c11', '-D_GNU_SOURCE', '-O2']
+    snapshot = {'version': MANIFEST['lmdb']['version'], 'compiler': compiler,
+                'flags': flags, 'source': source_identity('lmdb')}
+    if stamp_matches('lmdb-' + args.target, snapshot) and library.exists():
+        print(library)
+        return
+    objects = []
+    for name in ('mdb', 'midl'):
+        obj = build / (name + '.o')
+        objects.append(obj)
+        run([compiler, *flags, '-c', source_dir / (name + '.c'), '-o', obj],
+            build, 'build.log')
+    run([archiver, 'rcs', library, *objects], build, 'archive.log')
+    (target / 'include/lmdb.h').write_bytes((source_dir / 'lmdb.h').read_bytes())
+    write_stamp('lmdb-' + args.target, snapshot)
+    print(library)
+
+
+if __name__ == '__main__':
+    main()

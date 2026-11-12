@@ -38,6 +38,51 @@ static int speaker_gain(channel_position_t position, int left, int right)
 	}
 }
 
+static int32_t pcm_read_s24le(const unsigned char *p)
+{
+	int32_t value = (int32_t)((uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16);
+	return (value & 0x800000) ? value - 0x1000000 : value;
+}
+
+static void pcm_write_s24le(unsigned char *p, int32_t value)
+{
+	p[0] = (uint32_t)value;
+	p[1] = (uint32_t)value >> 8;
+	p[2] = (uint32_t)value >> 16;
+}
+
+/* Native packed formats reach the output unchanged, so scaling runs on every
+ * channel. These paths avoid the per-byte load/store loop of the generic
+ * version for the two formats used by almost all music. */
+static void pcm_scale_s16le(int16_t *pcm, size_t frames, unsigned channels, const int *gains)
+{
+	for (size_t frame = 0; frame < frames; frame++) {
+		for (unsigned channel = 0; channel < channels; channel++) {
+			int64_t value = pcm[channel];
+			if (gains[channel] != 65536)
+				value = value * gains[channel] / 65536;
+			if (value < -32768) value = -32768;
+			if (value > 32767) value = 32767;
+			pcm[channel] = value;
+		}
+		pcm += channels;
+	}
+}
+
+static void pcm_scale_s24le(unsigned char *pcm, size_t frames, unsigned channels, const int *gains)
+{
+	for (size_t frame = 0; frame < frames; frame++) {
+		for (unsigned channel = 0; channel < channels; channel++, pcm += 3) {
+			int64_t value = pcm_read_s24le(pcm);
+			if (gains[channel] != 65536)
+				value = value * gains[channel] / 65536;
+			if (value < -8388608) value = -8388608;
+			if (value > 8388607) value = 8388607;
+			pcm_write_s24le(pcm, value);
+		}
+	}
+}
+
 void pcm_scale_channels(void *buffer, size_t count, sample_format_t sf,
 		const channel_position_t *map, int left, int right)
 {
@@ -58,6 +103,16 @@ void pcm_scale_channels(void *buffer, size_t count, sample_format_t sf,
 	int gains[CHANNELS_MAX];
 	for (unsigned i = 0; i < channels; i++)
 		gains[i] = speaker_gain(map && channel_map_valid(map) ? map[i] : CHANNEL_POSITION_INVALID, left, right);
+	if (sf_get_signed(sf) && !sf_get_bigendian(sf)) {
+		if (bits == 16) {
+			pcm_scale_s16le(buffer, frames, channels, gains);
+			return;
+		}
+		if (bits == 24) {
+			pcm_scale_s24le(buffer, frames, channels, gains);
+			return;
+		}
+	}
 	int64_t half = INT64_C(1) << (bits - 1);
 	unsigned char *pcm = buffer;
 	for (size_t frame = 0; frame < frames; frame++) {

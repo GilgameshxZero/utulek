@@ -16,6 +16,8 @@ import shlex
 import subprocess
 import sys
 
+from build_local import sync as stage_sources
+
 ROOT = Path(__file__).resolve().parent.parent
 # Match the distro cmus feature set instead of silently dropping native plugins
 # and their saved options merely because FFmpeg can decode the same file types.
@@ -52,10 +54,18 @@ def main():
     support = ROOT / '.obj/deps/linux'
     if not (support / 'lib/libao.a').is_file():
         parser.error('Embedded libao drivers missing; prepare dependencies with scripts/prepare_linux.py')
-    if (support / 'lib/pkgconfig/ao.pc').is_file():
-        for variable, directory in (('PKG_CONFIG_PATH', 'lib/pkgconfig'),
-                                    ('C_INCLUDE_PATH', 'include'), ('LIBRARY_PATH', 'lib')):
-            env[variable] = str(support / directory) + os.pathsep + env.get(variable, '')
+    # The extracted distro development packages carry the remaining plugins.
+    for base, pkg, include, lib in (
+            (ROOT / '.obj/deps/linux_audio/usr', 'lib/x86_64-linux-gnu/pkgconfig',
+             'include', 'lib/x86_64-linux-gnu'),
+            (support, 'lib/pkgconfig', 'include', 'lib')):
+        if not base.is_dir():
+            continue
+        for variable, directory in (('PKG_CONFIG_PATH', pkg), ('C_INCLUDE_PATH', include),
+                                    ('LIBRARY_PATH', lib)):
+            path = base / directory
+            if path.is_dir():
+                env[variable] = str(path) + os.pathsep + env.get(variable, '')
     if args.audio_libs is None and (ROOT / '.obj/deps/audio_host/lib/libavcodec.a').is_file():
         args.audio_libs = ROOT / '.obj/deps/audio_host'
     if args.audio_libs is None:
@@ -64,6 +74,7 @@ def main():
         path = str(args.audio_libs.resolve() / 'lib/pkgconfig')
         env['PKG_CONFIG_PATH'] = path + os.pathsep + env.get('PKG_CONFIG_PATH', '')
     subprocess.run(['pkg-config', '--exists', 'libcurl >= 8.23'], env=env, check=True)
+    stage = stage_sources()
     configure = ['./configure', 'EMBEDDED=y']
     configure += ['CONFIG_' + name + '=n' for name in
                   ('OSS', 'SNDIO', 'ROAR', 'ARTS', 'COREAUDIO', 'WAVEOUT',
@@ -71,11 +82,11 @@ def main():
     configure += ['CONFIG_' + name + '=y' for name in LINUX_FEATURES]
     if args.audio_libs:
         configure += ['FFMPEG_PKG_CONFIG=pkg-config --static']
-    subprocess.run(configure, cwd=ROOT, env=env, check=True)
+    subprocess.run(configure, cwd=stage, env=env, check=True)
     raw = ROOT / '.obj/linux_unbundled'
     raw.mkdir(parents=True, exist_ok=True)
     subprocess.run(['make', '-j' + str(args.jobs), 'BINDIR=' + str(raw), 'main'],
-                   cwd=ROOT, env=env, check=True)
+                   cwd=stage, env=env, check=True)
     # Resolving a venv Python symlink loses the venv; preserve its original path.
     packaging_env = dict(env, PATH=str(args.packaging_python.absolute().parent) +
                          os.pathsep + env.get('PATH', ''))
@@ -91,7 +102,7 @@ def main():
         subprocess.run(command, env=packaging_env, check=True)
         pending.replace(finished)
     enabled = set(re.findall(r'^CONFIG_(\w+)\s*=\s*y\s*$',
-                            (ROOT / '.obj/build/config.mk').read_text(), re.MULTILINE))
+                            (stage / 'config.mk').read_text(), re.MULTILINE))
     enabled.add('STREAM')
     # Verify both completed artifacts before replacing an installed program.
     for name in ('cmus', 'cmus-remote'):

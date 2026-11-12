@@ -2,7 +2,7 @@
 
 Native Linux and Windows builds share cmus's interface, playback engine and
 expanded FFmpeg decoder. See [the Windows README](README_WINDOWS.md) for codec
-coverage and platform-specific limits. Current version: **1.0.0**.
+coverage and platform-specific limits. Current version: **1.0.1**.
 [Release validation and source review](RELEASE.md) describes the completed
 reliability checkpoints and the remaining requirements before distribution.
 
@@ -250,4 +250,7 @@ Bug fixes and implementations of new features should be suggested as a
 
 ## Local build output
 
-Intermediates, build artifacts, dependencies, caches, and generated test reports belong in `.obj/`. Finished binaries belong in `.bin/`. Both directories are local to this project and ignored by Git. `make clean` removes both directories.
+Intermediates, build artifacts, dependencies, caches, and generated test reports belong in `.obj/`. Finished binaries belong in `.bin/`. Both directories are local to this project and ignored by Git. Builds run out-of-source: `make` and `scripts/build_linux.py` sync the source tree into `.obj/build` and compile there, so no object files or generated headers appear in the source tree. `make clean` removes only build outputs (`.obj/build`, `.obj/linux_unbundled`, `.obj/native`); it never deletes dependencies, checkpoints or evidence kept under the rest of `.obj/`.
+
+`scripts/check_all.py` runs related regression groups in parallel against the finished programs in `.bin/` and writes an index under `.obj/checks/`. Use `--list` for the group names; the individual check scripts still write their own detailed reports. The Windows build strips the release executables, so shipped binaries contain no debug sections.
+
