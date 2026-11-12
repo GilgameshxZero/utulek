@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
 
 private val Black = Color(0xFF000000)
 private val White = Color(0xFFFFFFFF)
+val InkDim = Color(0x9E000000)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,10 +103,10 @@ fun MaildirtTheme(content: @Composable () -> Unit) {
                 surfaceContainerHighest = White,
             ),
             typography = Typography(
-                bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 26.sp),
-                bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 23.sp),
-                titleLarge = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold),
-                titleMedium = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
+                bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 22.sp),
+                bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
+                titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
+                titleMedium = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
             ),
             content = content,
         )

@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.FileObserver
 import android.os.IBinder
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,6 +18,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import java.io.File
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,7 +44,10 @@ object OpenRequests {
 }
 
 class MailNotificationService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val failureHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e(TAG, "notification watcher task failed", throwable)
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + failureHandler)
     private val observers = mutableListOf<FileObserver>()
     private var scanJob: Job? = null
     private var pollJob: Job? = null
@@ -53,13 +58,19 @@ class MailNotificationService : Service() {
         super.onCreate()
         prefs = getSharedPreferences("notify", 0)
         createChannels()
-        startForeground(SERVICE_NOTIFICATION_ID, foregroundNotification())
+        runCatching { startForeground(SERVICE_NOTIFICATION_ID, foregroundNotification()) }
+            .onFailure {
+                Log.e(TAG, "could not start foreground watcher", it)
+                stopSelf()
+            }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         scope.launch {
-            stopWatching()
-            restartWatching()
+            runCatching {
+                stopWatching()
+                restartWatching()
+            }.onFailure { Log.e(TAG, "could not start watching inbox", it) }
         }
         return START_STICKY
     }
@@ -112,6 +123,9 @@ class MailNotificationService : Service() {
             observers.add(observer)
         }
 
+        Log.d(TAG, "watching ${folder.path} (poll ${pollSeconds}s)")
+        scan(folder)
+
         pollJob = scope.launch {
             var lastCur = File(folder.path, "cur").lastModified()
             var lastNew = File(folder.path, "new").lastModified()
@@ -153,13 +167,16 @@ class MailNotificationService : Service() {
         val newKeys = ArrayList<String>()
 
         for (relativePath in messageFiles(folder)) {
-            val file = File(folder.path, relativePath)
-            val key = notificationKey(file) ?: continue
-            if (key in seen) continue
-            seen.add(key)
-            newKeys.add(key)
-            if (AppVisibility.foreground) continue
-            postMessageNotification(folder, relativePath, key, config)
+            runCatching {
+                val file = File(folder.path, relativePath)
+                val key = notificationKey(file) ?: return@runCatching
+                if (key in seen) return@runCatching
+                seen.add(key)
+                newKeys.add(key)
+                if (AppVisibility.foreground) return@runCatching
+                Log.d(TAG, "new message $relativePath")
+                postMessageNotification(folder, relativePath, key, config)
+            }.onFailure { Log.w(TAG, "could not inspect $relativePath", it) }
         }
 
         if (newKeys.isNotEmpty()) {
@@ -234,6 +251,10 @@ class MailNotificationService : Service() {
 
         runCatching {
             NotificationManagerCompat.from(this).notify(key.hashCode(), builder.build())
+        }.onSuccess {
+            Log.d(TAG, "posted notification for $relativePath")
+        }.onFailure {
+            Log.w(TAG, "could not post notification for $relativePath", it)
         }
     }
 
@@ -266,16 +287,30 @@ class MailNotificationService : Service() {
         return if (cut > 0) base.substring(0, cut) else base
     }
 
-    private fun loadSeen(folderPath: String): MutableList<String> =
-        prefs.getString("seen:$folderPath", "")
-            .orEmpty()
-            .split('\n')
-            .filter { it.isNotBlank() }
-            .toMutableList()
+    /**
+     * Seen keys were once stored as a StringSet; current builds store a newline-separated
+     * String. Read either form and rewrite the legacy type so it cannot crash the process.
+     */
+    private fun loadSeen(folderPath: String): MutableList<String> {
+        val key = "seen:$folderPath"
+        val stored = runCatching { prefs.all[key] }.getOrNull() ?: return mutableListOf()
+        val keys = LinkedHashSet<String>()
+        when (stored) {
+            is String -> keys.addAll(stored.split('\n').filter { it.isNotBlank() })
+            is Set<*> -> {
+                keys.addAll(stored.filterIsInstance<String>())
+                runCatching { prefs.edit().putString(key, keys.joinToString("\n")).apply() }
+                    .onFailure { Log.w(TAG, "could not migrate seen keys", it) }
+            }
+            else -> Log.w(TAG, "unexpected seen-key type ${stored.javaClass.name}")
+        }
+        return keys.toMutableList()
+    }
 
     private fun saveSeen(folderPath: String, keys: List<String>) {
         val trimmed = if (keys.size > 5000) keys.takeLast(5000) else keys
-        prefs.edit().putString("seen:$folderPath", trimmed.joinToString("\n")).apply()
+        runCatching { prefs.edit().putString("seen:$folderPath", trimmed.joinToString("\n")).apply() }
+            .onFailure { Log.w(TAG, "could not save seen keys", it) }
     }
 
     private fun createChannels() {
@@ -310,6 +345,7 @@ class MailNotificationService : Service() {
     }
 
     companion object {
+        private const val TAG = "MailNotify"
         const val CHANNEL_SERVICE = "service"
         const val CHANNEL_SOUND = "mail_sound"
         const val CHANNEL_SILENT = "mail_silent"
@@ -333,20 +369,35 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val operation = intent.getStringExtra("op") ?: return
         val notificationId = intent.getIntExtra("notificationId", 0)
 
-        val config = ConfigStore(context).load()
-        val folder = config.folders.firstOrNull { it.id == folderId } ?: return
-        val source = MaildirFolderStore(folder)
-        val entry = source.entry(path) ?: return
+        runCatching {
+            val config = ConfigStore(context).load()
+            val folder = config.folders.firstOrNull { it.id == folderId } ?: return
+            val source = MaildirFolderStore(folder)
+            val entry = source.entry(path) ?: return
 
-        when (operation) {
-            "read" -> source.setSeen(entry, true)
-            "archive" -> {
-                val archive = config.folders.firstOrNull { it.role == FolderRole.ARCHIVE }
-                if (archive != null) {
-                    source.moveTo(MaildirFolderStore(archive), entry, addSeen = true)
+            when (operation) {
+                "read" -> source.setSeen(entry, true)
+                "archive" -> {
+                    val archive = config.folders.firstOrNull { it.role == FolderRole.ARCHIVE }
+                    if (archive != null) {
+                        source.moveTo(MaildirFolderStore(archive), entry, addSeen = true)
+                    }
                 }
             }
+            NotificationManagerCompat.from(context).cancel(notificationId)
+        }.onFailure {
+            Log.w("MailNotify", "notification action $operation failed", it)
         }
-        NotificationManagerCompat.from(context).cancel(notificationId)
+    }
+}
+
+/** Restart the inbox watcher after a reboot or an app update. */
+class MailNotificationBootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.action) {
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            -> MailNotificationService.start(context)
+        }
     }
 }

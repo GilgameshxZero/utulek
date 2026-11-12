@@ -458,3 +458,171 @@ internal fun attachmentFor(context: Context, uri: Uri): OutgoingAttachment? = ru
     val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
     OutgoingAttachment(uri, name, mimeType)
 }.getOrNull()
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CalendarReplyScreen(vm: MainViewModel) {
+    val invite = vm.parsed?.calendar
+    val identities = vm.identities()
+    val sending = vm.calendarReplySending
+    val error = vm.calendarReplyError
+    val paged = vm.config.pagedScrolling
+    val scrollState = rememberScrollState()
+    val detected = remember(invite?.uid, identities) {
+        invite?.attendees?.let { attendees ->
+            val emails = attendees.map { it.email.trim().lowercase() }.toSet()
+            identities.firstOrNull { it.email.trim().lowercase() in emails }?.id
+        } ?: identities.firstOrNull()?.id
+    }
+    var response by remember(invite?.uid) { mutableStateOf(CalendarResponseState.ACCEPTED) }
+    var selectedIdentityId by remember(invite?.uid, identities) { mutableStateOf(detected) }
+
+    Scaffold(
+        topBar = {
+            AppTopBar(
+                title = "Invitation",
+                onBack = { vm.back() },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            val id = selectedIdentityId ?: return@IconButton
+                            vm.sendCalendarReply(id, response)
+                        },
+                        enabled = !sending && invite?.canRespond == true && selectedIdentityId != null,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_send),
+                            contentDescription = "Send response",
+                        )
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        val base = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .verticalScroll(scrollState, enabled = !paged)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+        val columnModifier = if (paged) base.pagedScroll(scrollState) else base
+
+        Column(modifier = columnModifier) {
+            if (invite == null || !invite.canRespond) {
+                Text("No replyable invitation in this message.", style = MaterialTheme.typography.bodyLarge)
+                return@Column
+            }
+
+            Text(invite.summary, style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(10.dp))
+
+            val organizer = if (invite.organizerName.isBlank()) {
+                invite.organizerEmail
+            } else {
+                "${invite.organizerName} <${invite.organizerEmail}>"
+            }
+            InviteDetail("From", organizer)
+            val whenText = buildString {
+                append(invite.start)
+                invite.end?.let { append("  –  ").append(it) }
+                invite.duration?.let { if (invite.end == null) append("  (").append(it).append(")") }
+            }
+            InviteDetail("When", whenText)
+            if (invite.location.isNotBlank()) InviteDetail("Where", invite.location)
+            if (invite.attendees.isNotEmpty()) {
+                InviteDetail(
+                    "Invited",
+                    invite.attendees.joinToString("\n") { attendee ->
+                        if (attendee.name.isBlank()) attendee.email
+                        else "${attendee.name} <${attendee.email}>"
+                    },
+                )
+            }
+            if (invite.description.isNotBlank()) {
+                InviteDetail("Details", invite.description.trim())
+            }
+
+            if (error != null) {
+                Spacer(Modifier.height(10.dp))
+                Text(error, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Text("Your response", style = MaterialTheme.typography.titleMedium)
+            for (state in CalendarResponseState.entries) {
+                ChoiceRow(
+                    label = state.label,
+                    selected = response == state,
+                    enabled = !sending,
+                    onSelect = { response = state },
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Text("Respond as", style = MaterialTheme.typography.titleMedium)
+            if (identities.isEmpty()) {
+                Text("No sender identities configured.", style = MaterialTheme.typography.bodyLarge)
+            }
+            for (identity in identities) {
+                ChoiceRow(
+                    label = identity.displayLabel,
+                    selected = identity.id == selectedIdentityId,
+                    enabled = !sending,
+                    onSelect = { selectedIdentityId = identity.id },
+                )
+            }
+
+            if (sending) {
+                Spacer(Modifier.height(12.dp))
+                Text("Sending response...", style = MaterialTheme.typography.bodyMedium)
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun InviteDetail(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.width(72.dp),
+        )
+        Text(value, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun ChoiceRow(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onSelect: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onSelect)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(22.dp), contentAlignment = Alignment.CenterStart) {
+            if (selected) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_check),
+                    contentDescription = "Selected",
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}

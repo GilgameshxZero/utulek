@@ -21,6 +21,7 @@ data class MaildirEntry(
     val subject: String,
     val date: Long,
     val size: Long,
+    val fromAddress: String = "",
 )
 
 @Serializable
@@ -121,7 +122,13 @@ class MaildirFolderStore(
                 val mtime = file.lastModified()
                 val size = file.length()
                 val cached = index.files[relativePath]
-                val info = if (cached != null && cached.mtime == mtime && cached.size == size) {
+                // Older indexes lack the parsed sender address; re-read those headers once
+                // so sender-identity markers and the address book see the real address.
+                val usableCache = cached != null &&
+                    cached.mtime == mtime &&
+                    cached.size == size &&
+                    cached.fromAddress.isNotBlank()
+                val info = if (usableCache) {
                     RawHeaderInfo(
                         from = cached.from,
                         fromAddress = cached.fromAddress,
@@ -160,6 +167,7 @@ class MaildirFolderStore(
                         subject = info.subject,
                         date = info.date,
                         size = size,
+                        fromAddress = info.fromAddress,
                     ),
                 )
             }

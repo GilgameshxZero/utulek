@@ -169,13 +169,13 @@ fun MaildirtApp(vm: MainViewModel = viewModel()) {
     }
 
     val screen = vm.screen
-    BackHandler(enabled = screen != Screen.Folders) { vm.back() }
+    BackHandler(enabled = screen !is Screen.Messages) { vm.back() }
 
     when (screen) {
-        Screen.Folders -> FolderScreen(vm)
         Screen.Settings -> SettingsScreen(vm)
         is Screen.Messages -> MessageListScreen(vm, screen.folderId)
         is Screen.Message -> MessageScreen(vm, screen.folderId)
+        is Screen.CalendarReply -> CalendarReplyScreen(vm)
         is Screen.FolderEditor -> FolderEditorScreen(vm, screen)
         is Screen.IdentityEditor -> IdentityEditorScreen(vm, screen)
         Screen.Compose -> ComposeScreen(vm)
@@ -227,89 +227,72 @@ private fun PermissionScreen(needsRuntimePermission: Boolean, onGrant: () -> Uni
 internal fun AppTopBar(
     title: String,
     onBack: (() -> Unit)? = null,
+    onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(46.dp)
             .background(Color.White)
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                 Icon(
                     painter = painterResource(R.drawable.ic_back),
                     contentDescription = "Back",
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        } else {
+            Spacer(Modifier.width(8.dp))
+        }
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(enabled = onTitleClick != null) { onTitleClick?.invoke() },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                title,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (onTitleClick != null) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_down),
+                    contentDescription = "Switch",
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-        )
         actions()
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FolderScreen(vm: MainViewModel) {
-    val folders = vm.folders()
-    val listState = rememberLazyListState()
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title = "maildirt",
-                actions = {
-                    IconButton(onClick = { vm.openComposeNew() }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_compose),
-                            contentDescription = "New message",
-                        )
-                    }
-                    IconButton(onClick = { vm.openSettings() }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_settings),
-                            contentDescription = "Settings",
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        if (folders.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text("No maildirs configured.", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                Text("Add a maildir path in Settings.", style = MaterialTheme.typography.bodyLarge)
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = { vm.openSettings() }) { Text("Open settings") }
-            }
-        } else {
-            val paged = vm.config.pagedScrolling
-            val base = Modifier.fillMaxSize().padding(padding)
-            LazyColumn(
-                state = listState,
-                userScrollEnabled = !paged,
-                modifier = if (paged) base.pagedScroll(listState) else base,
-            ) {
-                items(folders, key = { it.id }) { folder ->
-                    ListRow(
-                        title = folder.displayName,
-                        subtitle = folder.path,
-                        onClick = { vm.openFolder(folder.id) },
-                    )
-                }
-            }
-        }
+internal fun BarIcon(
+    icon: Int,
+    description: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(44.dp),
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = description,
+            tint = if (enabled) Color.Black else InkDim,
+            modifier = Modifier.size(22.dp),
+        )
     }
 }
 
@@ -322,8 +305,16 @@ private fun MessageListScreen(vm: MainViewModel, folderId: String) {
     val error = vm.listError
     val selection = vm.selection
     val selectionMode = selection.isNotEmpty()
+    val ownAddresses = remember(vm.config.identities) {
+        vm.config.identities
+            .map { it.email.trim().lowercase() }
+            .filter { it.isNotBlank() }
+            .toSet()
+    }
     var selectionMenu by remember { mutableStateOf(false) }
     var listMenu by remember { mutableStateOf(false) }
+    var folderMenu by remember { mutableStateOf(false) }
+    val folders = vm.folders()
     val searchActive = vm.searchActive
     val searchFocusRequester = remember { FocusRequester() }
     LaunchedEffect(searchActive) {
@@ -413,18 +404,12 @@ private fun MessageListScreen(vm: MainViewModel, folderId: String) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(46.dp)
                         .background(Color.White)
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (searchActive) {
-                        IconButton(onClick = { vm.clearSearch() }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_back),
-                                contentDescription = "Close search",
-                            )
-                        }
                         BasicTextField(
                             value = vm.searchQuery,
                             onValueChange = { vm.updateSearchQuery(it) },
@@ -435,8 +420,8 @@ private fun MessageListScreen(vm: MainViewModel, folderId: String) {
                                     if (vm.searchQuery.isEmpty()) {
                                         Text(
                                             "Search maildir",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = Color(0xFF777777),
+                                            fontSize = 16.sp,
+                                            color = InkDim,
                                         )
                                     }
                                     inner()
@@ -446,87 +431,102 @@ private fun MessageListScreen(vm: MainViewModel, folderId: String) {
                                 .weight(1f)
                                 .focusRequester(searchFocusRequester),
                         )
-                        IconButton(onClick = { vm.toggleSearchScope() }) {
-                            Icon(
-                                painter = painterResource(
-                                    if (vm.searchBody) R.drawable.ic_search_all
-                                    else R.drawable.ic_search_headers,
-                                ),
-                                contentDescription = if (vm.searchBody) {
-                                    "Searching headers and body"
+                        BarIcon(
+                            if (vm.searchBody) R.drawable.ic_search_all else R.drawable.ic_search_headers,
+                            if (vm.searchBody) "Searching headers and body" else "Searching headers only",
+                        ) { vm.toggleSearchScope() }
+                        BarIcon(
+                            R.drawable.ic_chevron_left,
+                            "Previous match",
+                            enabled = !vm.searchLoading,
+                        ) { vm.previousSearchMatch() }
+                        BarIcon(
+                            R.drawable.ic_chevron_right,
+                            "Next match",
+                            enabled = !vm.searchLoading,
+                        ) { vm.nextSearchMatch() }
+                        BarIcon(R.drawable.ic_close, "Close search") { vm.clearSearch() }
+                    } else {
+                        Box {
+                            AppTopBar(
+                                title = folder?.displayName ?: "maildirt",
+                                onTitleClick = if (folders.size > 1) {
+                                    { folderMenu = true }
                                 } else {
-                                    "Searching headers only"
+                                    null
+                                },
+                                actions = {
+                                    BarIcon(R.drawable.ic_search, "Search") { vm.beginSearch() }
+                                    BarIcon(R.drawable.ic_add, "New message") {
+                                        vm.openComposeNew()
+                                    }
+                                    Box {
+                                        BarIcon(R.drawable.ic_more_vert, "More actions") {
+                                            listMenu = true
+                                        }
+                                        DropdownMenu(
+                                            expanded = listMenu,
+                                            onDismissRequest = { listMenu = false },
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("Refresh") },
+                                                onClick = {
+                                                    listMenu = false
+                                                    vm.refreshAll()
+                                                },
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("Settings") },
+                                                onClick = {
+                                                    listMenu = false
+                                                    vm.openSettings()
+                                                },
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("Go to item...") },
+                                                onClick = {
+                                                    listMenu = false
+                                                    vm.openGoToItem()
+                                                },
+                                            )
+                                        }
+                                    }
                                 },
                             )
-                        }
-                        IconButton(
-                            onClick = { vm.previousSearchMatch() },
-                            enabled = !vm.searchLoading,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_chevron_left),
-                                contentDescription = "Previous match",
-                            )
-                        }
-                        IconButton(
-                            onClick = { vm.nextSearchMatch() },
-                            enabled = !vm.searchLoading,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_chevron_right),
-                                contentDescription = "Next match",
-                            )
-                        }
-                        IconButton(onClick = { vm.updateSearchQuery("") }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_close),
-                                contentDescription = "Clear search",
-                            )
-                        }
-                    } else {
-                        IconButton(onClick = { vm.back() }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_back),
-                                contentDescription = "Back",
-                            )
-                        }
-                        Text(
-                            folder?.displayName ?: "Folder",
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-                        )
-                        IconButton(onClick = { vm.beginSearch() }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_search),
-                                contentDescription = "Search",
-                            )
-                        }
-                        IconButton(onClick = { vm.refreshAll() }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_refresh),
-                                contentDescription = "Refresh",
-                            )
-                        }
-                        Box {
-                            IconButton(onClick = { listMenu = true }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_more_vert),
-                                    contentDescription = "More actions",
-                                )
-                            }
                             DropdownMenu(
-                                expanded = listMenu,
-                                onDismissRequest = { listMenu = false },
+                                expanded = folderMenu,
+                                onDismissRequest = { folderMenu = false },
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text("Go to item...") },
-                                    onClick = {
-                                        listMenu = false
-                                        vm.openGoToItem()
-                                    },
-                                )
+                                for (candidate in folders) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                candidate.displayName,
+                                                fontSize = 16.sp,
+                                                fontWeight = if (candidate.id == folderId) {
+                                                    FontWeight.SemiBold
+                                                } else {
+                                                    FontWeight.Normal
+                                                },
+                                            )
+                                        },
+                                        trailingIcon = if (candidate.id == folderId) {
+                                            {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_check),
+                                                    contentDescription = "Current maildir",
+                                                    modifier = Modifier.size(18.dp),
+                                                )
+                                            }
+                                        } else {
+                                            null
+                                        },
+                                        onClick = {
+                                            folderMenu = false
+                                            vm.openFolder(candidate.id)
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -536,12 +536,36 @@ private fun MessageListScreen(vm: MainViewModel, folderId: String) {
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             when {
-                loading && messages.isEmpty() -> Text("Loading...", modifier = Modifier.padding(20.dp))
+                folder == null -> Column(Modifier.fillMaxSize().padding(24.dp)) {
+                    Text("No maildirs configured.", fontSize = 14.sp, color = InkDim)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Open settings",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clickable { vm.openSettings() }
+                            .padding(vertical = 8.dp),
+                    )
+                }
+                loading && messages.isEmpty() -> Text(
+                    "Loading...",
+                    fontSize = 14.sp,
+                    color = InkDim,
+                    modifier = Modifier.padding(16.dp),
+                )
                 error != null -> Text(
                     "Could not read this folder:\n$error",
-                    modifier = Modifier.padding(20.dp),
+                    fontSize = 14.sp,
+                    color = InkDim,
+                    modifier = Modifier.padding(16.dp),
                 )
-                messages.isEmpty() -> Text("No messages.", modifier = Modifier.padding(20.dp))
+                messages.isEmpty() -> Text(
+                    "No messages.",
+                    fontSize = 14.sp,
+                    color = InkDim,
+                    modifier = Modifier.padding(16.dp),
+                )
                 else -> {
                     val paged = vm.config.pagedScrolling
                     val base = Modifier.fillMaxSize()
@@ -553,6 +577,7 @@ private fun MessageListScreen(vm: MainViewModel, folderId: String) {
                         items(messages, key = { it.relativePath }) { entry ->
                             MessageRow(
                                 entry = entry,
+                                ownAddresses = ownAddresses,
                                 selected = entry.relativePath in selection,
                                 selectionMode = selectionMode,
                                 searchMatch = entry.relativePath == vm.currentSearchMatch,
@@ -578,27 +603,31 @@ private fun MessageListScreen(vm: MainViewModel, folderId: String) {
 @Composable
 private fun MessageRow(
     entry: MaildirEntry,
+    ownAddresses: Set<String>,
     selected: Boolean,
     selectionMode: Boolean,
     searchMatch: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
+    val fromSelf = remember(entry.fromAddress, ownAddresses) {
+        ownAddresses.isNotEmpty() &&
+            MailText.addressesOf(entry.fromAddress).any { it in ownAddresses }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 8.dp, vertical = 7.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selectionMode && selected) {
-                    Text(
-                        "\u2713",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(end = 5.dp),
+                    Icon(
+                        painter = painterResource(R.drawable.ic_check),
+                        contentDescription = "Selected",
+                        modifier = Modifier.padding(end = 5.dp).size(18.dp),
                     )
                 } else if (searchMatch) {
                     Text(
@@ -607,10 +636,18 @@ private fun MessageRow(
                         modifier = Modifier.padding(end = 5.dp),
                     )
                 }
+                if (fromSelf) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_send),
+                        contentDescription = "From your address",
+                        tint = InkDim,
+                        modifier = Modifier.padding(end = 4.dp).size(13.dp),
+                    )
+                }
                 Text(
                     entry.from,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (entry.unread) FontWeight.Bold else FontWeight.Normal,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -618,7 +655,7 @@ private fun MessageRow(
                 if (entry.unread) {
                     Text(
                         "\u25CF",
-                        fontSize = 8.sp,
+                        fontSize = 7.sp,
                         modifier = Modifier.padding(start = 5.dp),
                     )
                 }
@@ -626,25 +663,27 @@ private fun MessageRow(
                     Icon(
                         painter = painterResource(R.drawable.ic_attachment),
                         contentDescription = "Attachment",
-                        modifier = Modifier.padding(start = 5.dp).size(14.dp),
+                        tint = InkDim,
+                        modifier = Modifier.padding(start = 5.dp).size(13.dp),
                     )
                 }
                 if (entry.replied) {
                     Icon(
                         painter = painterResource(R.drawable.ic_reply),
                         contentDescription = "Replied",
-                        modifier = Modifier.padding(start = 4.dp).size(14.dp),
+                        tint = InkDim,
+                        modifier = Modifier.padding(start = 4.dp).size(13.dp),
                     )
                 }
-                Spacer(Modifier.width(5.dp))
-                Text(formatListDate(entry.date), fontSize = 13.sp)
+                Spacer(Modifier.width(6.dp))
+                Text(formatListDate(entry.date), fontSize = 11.sp, color = InkDim)
             }
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(1.dp))
             Text(
                 entry.subject,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (entry.unread) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 2,
+                fontSize = 13.sp,
+                color = InkDim,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -737,6 +776,16 @@ private fun MessageScreen(vm: MainViewModel, folderId: String) {
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {
+                                if (!showSource && parsed?.calendar?.canRespond == true) {
+                                    DropdownMenuItem(
+                                        text = { Text("Respond to invite") },
+                                        enabled = !vm.calendarReplySending,
+                                        onClick = {
+                                            menuExpanded = false
+                                            vm.openCalendarReply()
+                                        },
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("Reply") },
                                     enabled = parsed != null,
@@ -1209,7 +1258,15 @@ internal fun ListRow(title: String, subtitle: String?, onClick: () -> Unit) {
     }
 }
 
-private fun formatListDate(timestamp: Long): String =
-    SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
-        .apply { timeZone = TimeZone.getDefault() }
-        .format(Date(timestamp))
+private fun formatListDate(timestamp: Long): String {
+    val minutes = (System.currentTimeMillis() - timestamp) / 60_000L
+    return when {
+        minutes < 1 -> "now"
+        minutes < 60 -> "${minutes}m"
+        minutes < 60 * 24 -> "${minutes / 60}h"
+        minutes < 60 * 24 * 7 -> "${minutes / (60 * 24)}d"
+        else -> SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
+            .apply { timeZone = TimeZone.getDefault() }
+            .format(Date(timestamp))
+    }
+}

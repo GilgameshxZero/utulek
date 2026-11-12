@@ -29,7 +29,6 @@ import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeUtility
 
 sealed interface Screen {
-    data object Folders : Screen
     data class Messages(val folderId: String) : Screen
     data class Message(val folderId: String, val relativePath: String) : Screen
     data object Settings : Screen
@@ -37,6 +36,7 @@ sealed interface Screen {
     data class IdentityEditor(val identityId: String?) : Screen
     data object Compose : Screen
     data object PickIdentity : Screen
+    data class CalendarReply(val folderId: String, val relativePath: String) : Screen
     data class GoToItem(val folderId: String) : Screen
     data class PickMaildir(
         val folderId: String,
@@ -94,7 +94,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     var config by mutableStateOf(configStore.load())
         private set
-    var screen by mutableStateOf<Screen>(Screen.Folders)
+    var screen by mutableStateOf<Screen>(Screen.Messages(""))
         private set
     var messages by mutableStateOf<List<MaildirEntry>>(emptyList())
         private set
@@ -123,6 +123,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var actionInProgress by mutableStateOf(false)
         private set
     var toast by mutableStateOf<String?>(null)
+        private set
+    var calendarReplySending by mutableStateOf(false)
+        private set
+    var calendarReplyError by mutableStateOf<String?>(null)
         private set
     var selection by mutableStateOf<Set<String>>(emptySet())
         private set
@@ -154,7 +158,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var pendingMessagePath: String? = null
 
     init {
+        val initialId = config.selectedFolderId?.takeIf { folder(it) != null }
+            ?: config.folders.firstOrNull { it.role == FolderRole.INBOX }?.id
+            ?: config.folders.firstOrNull()?.id
+            ?: ""
+        if (initialId.isNotEmpty()) {
+            activeFolderId = initialId
+            screen = Screen.Messages(initialId)
+            folder(initialId)?.let { startWatching(it) }
+        }
         restoreNavigation()
+        if (screen is Screen.Messages) refreshFolder()
         viewModelScope.launch(Dispatchers.IO) {
             searchIndex.pruneFolders(config.folders.map { it.path }.toSet())
         }
@@ -169,6 +183,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun storeFor(folder: MaildirFolder) = MaildirFolderStore(folder, indexStore)
 
+    private fun messagesScreen(): Screen {
+        val id = activeFolderId?.takeIf { folder(it) != null }
+            ?: config.selectedFolderId?.takeIf { folder(it) != null }
+            ?: config.folders.firstOrNull { it.role == FolderRole.INBOX }?.id
+            ?: config.folders.firstOrNull()?.id
+            ?: ""
+        return Screen.Messages(id)
+    }
+
     fun openFolder(id: String) {
         listState = LazyListState()
         selection = emptySet()
@@ -176,6 +199,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (activeFolderId != id) messages = emptyList()
         activeFolderId = id
         screen = Screen.Messages(id)
+        if (config.selectedFolderId != id) save(config.copy(selectedFolderId = id))
         folder(id)?.let { startWatching(it) }
         saveNavigation()
         refreshFolder()
@@ -357,8 +381,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateRemoteImages(enabled: Boolean) {
-        remoteImages = enabled
+    fun openCalendarReply() {
+        val current = screen as? Screen.Message ?: return
+        if (parsed?.calendar?.canRespond != true) return
+        calendarReplyError = null
+        val path = currentEntry?.relativePath ?: current.relativePath
+        screen = Screen.CalendarReply(current.folderId, path)
+        saveNavigation()
+    }
+
+    fun sendCalendarReply(identityId: String, state: CalendarResponseState) {
+        if (calendarReplySending) return
+        val current = screen as? Screen.CalendarReply ?: return
+        val invite = parsed?.calendar
+        if (invite == null || !invite.canRespond) {
+            calendarReplyError = "This message has no replyable invitation"
+            return
+        }
+        val identity = identity(identityId) ?: run {
+            calendarReplyError = "Choose a sender identity"
+            return
+        }
+        val recordFolder = config.folders.firstOrNull { it.role == FolderRole.ARCHIVE }
+        if (recordFolder == null) {
+            calendarReplyError = "No archive maildir configured for sent copies"
+            return
+        }
+
+        calendarReplySending = true
+        calendarReplyError = null
+        viewModelScope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                runCatching {
+                    val calendar = CalendarMessaging.buildReply(invite, identity.email, state)
+                    val message = MailComposer.buildCalendar(
+                        identity = identity,
+                        to = invite.organizerEmail,
+                        subject = CalendarMessaging.subjectFor(invite, state),
+                        calendar = calendar,
+                    )
+                    smtpClient.send(identity, message)
+                    storeFor(recordFolder).append(MailComposer.toBytes(message), "S")
+                        ?: throw IllegalStateException(
+                            "Sent, but could not save a copy to ${recordFolder.displayName}",
+                        )
+                }
+            }
+            calendarReplySending = false
+            outcome.onSuccess {
+                toast = "Response sent"
+                screen = Screen.Message(current.folderId, current.relativePath)
+                saveNavigation()
+            }.onFailure {
+                calendarReplyError = it.message ?: it.toString()
+            }
+        }
+    }
+
+    fun updateRemoteImages(enabled: Boolean) {        remoteImages = enabled
     }
 
     fun setPagedScrolling(enabled: Boolean) {
@@ -1132,7 +1212,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun discardCompose() {
         val seed = composeSeed
         if (seed == null) {
-            screen = Screen.Folders
+            screen = messagesScreen()
             saveNavigation()
             return
         }
@@ -1176,7 +1256,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun screenAfterCompose(seed: ComposeSeed): Screen = when {
         seed.draftFolderId != null -> Screen.Messages(seed.draftFolderId)
         seed.replyFolderId != null -> Screen.Messages(seed.replyFolderId)
-        else -> Screen.Folders
+        else -> messagesScreen()
     }
 
     private fun refreshFolderFor(folderId: String) {
@@ -1279,22 +1359,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return true
         }
         return when (val current = screen) {
-            Screen.Folders -> false
             Screen.Settings -> {
-                screen = Screen.Folders
+                screen = messagesScreen()
                 saveNavigation()
                 true
             }
-            is Screen.Messages -> {
-                stopWatching()
-                screen = Screen.Folders
-                saveNavigation()
-                true
-            }
+            is Screen.Messages -> false
             is Screen.Message -> {
                 screen = Screen.Messages(current.folderId)
                 saveNavigation()
                 refreshFolder()
+                true
+            }
+            is Screen.CalendarReply -> {
+                screen = Screen.Message(current.folderId, current.relativePath)
+                saveNavigation()
                 true
             }
             is Screen.FolderEditor -> {
@@ -1310,7 +1389,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is Screen.Compose -> {
                 val seed = composeSeed
                 composeSeed = null
-                screen = if (seed == null) Screen.Folders else screenAfterCompose(seed)
+                screen = if (seed == null) messagesScreen() else screenAfterCompose(seed)
                 saveNavigation()
                 true
             }
@@ -1428,24 +1507,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val folderId = when (val current = screen) {
             is Screen.Messages -> current.folderId
             is Screen.Message -> current.folderId
+            is Screen.CalendarReply -> current.folderId
             is Screen.PickMaildir -> current.folderId
             is Screen.GoToItem -> current.folderId
             else -> null
         }
         val relativePath = when (val current = screen) {
             is Screen.Message -> currentEntry?.relativePath ?: current.relativePath
+            is Screen.CalendarReply -> current.relativePath
             is Screen.PickMaildir -> current.relativePath
             else -> null
         }
         val type = when (val current = screen) {
-            Screen.Folders -> "folders"
             Screen.Settings -> "settings"
             is Screen.Messages -> "messages"
             is Screen.Message -> "message"
+            is Screen.CalendarReply -> "message"
             is Screen.FolderEditor -> "settings"
             is Screen.IdentityEditor -> "settings"
-            is Screen.Compose -> "folders"
-            Screen.PickIdentity -> "folders"
+            is Screen.Compose -> "messages"
+            Screen.PickIdentity -> "messages"
             is Screen.GoToItem -> "messages"
             is Screen.PickMaildir -> if (current.relativePath != null) "message" else "messages"
         }
@@ -1462,8 +1543,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val relativePath = navPrefs.getString("relativePath", null)
         when (type) {
             "settings" -> screen = Screen.Settings
-            "messages" -> {
+            "messages", "folders" -> {
                 if (folderId != null && folder(folderId) != null) {
+                    activeFolderId = folderId
                     screen = Screen.Messages(folderId)
                     folder(folderId)?.let { startWatching(it) }
                     refreshFolder()
@@ -1471,6 +1553,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             "message" -> {
                 if (folderId != null && relativePath != null && folder(folderId) != null) {
+                    activeFolderId = folderId
                     screen = Screen.Messages(folderId)
                     pendingMessagePath = relativePath
                     refreshFolder()

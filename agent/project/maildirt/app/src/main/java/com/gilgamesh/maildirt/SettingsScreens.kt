@@ -70,6 +70,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -98,7 +102,6 @@ import java.util.UUID
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsScreen(vm: MainViewModel) {
     val context = LocalContext.current
@@ -129,75 +132,40 @@ internal fun SettingsScreen(vm: MainViewModel) {
             .fillMaxSize()
             .padding(padding)
             .verticalScroll(scrollState, enabled = !paged)
-            .padding(12.dp)
         val columnModifier = if (paged) base.pagedScroll(scrollState) else base
         Column(modifier = columnModifier) {
-            Text("Storage access", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                if (granted.value) "Granted."
-                else "maildirt needs access to shared storage to read maildirs.",
-                style = MaterialTheme.typography.bodyLarge,
+            SettingsSection("Storage")
+            SettingsRow(
+                title = "Storage access",
+                value = if (granted.value) "Granted" else "Not granted",
+                onClick = if (granted.value) null else {
+                    { StorageAccess.openSystemSettings(context) }
+                },
             )
             if (!granted.value) {
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { StorageAccess.openSystemSettings(context) }) {
-                    Text("Open system settings")
-                }
+                Text(
+                    "maildirt needs access to shared storage to read maildirs.",
+                    fontSize = 11.sp,
+                    color = InkDim,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
             }
 
-            Spacer(Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Scrolling", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        if (paged) "Paged: one screen per swipe"
-                        else "Smooth: continuous scrolling",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                OutlinedButton(onClick = { vm.setPagedScrolling(!paged) }) {
-                    Text(if (paged) "Paged" else "Smooth")
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Reply action", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        if (vm.config.defaultReplyAll) "Reply all by default"
-                        else "Reply by default",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                OutlinedButton(onClick = {
-                    vm.setDefaultReplyAll(!vm.config.defaultReplyAll)
-                }) {
-                    Text(if (vm.config.defaultReplyAll) "Reply all" else "Reply")
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Message format", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        if (vm.config.defaultMime == MimePreference.PLAIN) "Plain text first"
-                        else "HTML first",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                OutlinedButton(onClick = {
+            SettingsSection("Appearance")
+            SettingsRow(
+                title = "Scrolling",
+                value = if (paged) "Paged" else "Smooth",
+                onClick = { vm.setPagedScrolling(!paged) },
+            )
+            SettingsRow(
+                title = "Reply action",
+                value = if (vm.config.defaultReplyAll) "Reply all" else "Reply",
+                onClick = { vm.setDefaultReplyAll(!vm.config.defaultReplyAll) },
+            )
+            SettingsRow(
+                title = "Message format",
+                value = if (vm.config.defaultMime == MimePreference.PLAIN) "Plain" else "HTML",
+                onClick = {
                     vm.setDefaultMime(
                         if (vm.config.defaultMime == MimePreference.PLAIN) {
                             MimePreference.HTML
@@ -205,119 +173,76 @@ internal fun SettingsScreen(vm: MainViewModel) {
                             MimePreference.PLAIN
                         },
                     )
-                }) {
-                    Text(
-                        if (vm.config.defaultMime == MimePreference.PLAIN) "Plain" else "HTML",
-                    )
-                }
-            }
+                },
+            )
 
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Notification sound", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        if (vm.config.notifySound) "Sound on" else "Silent",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                OutlinedButton(onClick = {
-                    vm.setNotifySound(!vm.config.notifySound)
-                }) {
-                    Text(if (vm.config.notifySound) "Sound" else "Silent")
-                }
-            }
+            SettingsSection("Notifications")
+            SettingsRow(
+                title = "Sound",
+                value = if (vm.config.notifySound) "Sound" else "Silent",
+                onClick = { vm.setNotifySound(!vm.config.notifySound) },
+            )
+            SettingsRow(
+                title = "Lock screen content",
+                value = if (vm.config.notifyShowContent) "Show" else "Hide",
+                onClick = { vm.setNotifyShowContent(!vm.config.notifyShowContent) },
+            )
+            SettingsRow(
+                title = "Check interval",
+                value = "Every ${formatInterval(vm.config.notifyPollSeconds)}",
+            )
+            SettingsField(
+                label = "Seconds (fallback when file watching is unavailable)",
+                value = pollText,
+                onValueChange = { value -> pollText = value.filter { it.isDigit() } },
+                numeric = true,
+            )
 
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Lock screen content", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        if (vm.config.notifyShowContent) "Sender and subject" else "Generic",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                OutlinedButton(onClick = {
-                    vm.setNotifyShowContent(!vm.config.notifyShowContent)
-                }) {
-                    Text(if (vm.config.notifyShowContent) "Show" else "Hide")
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Check interval", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Every ${formatInterval(vm.config.notifyPollSeconds)}; fallback when file watching is unavailable.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                OutlinedTextField(
-                    value = pollText,
-                    onValueChange = { value -> pollText = value.filter { it.isDigit() } },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.width(84.dp),
-                )
-            }
-
-            Spacer(Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            SettingsSection("Maildirs", addLabel = "Add maildir", onAdd = { vm.openFolderEditor(null) })
+            if (folders.isEmpty()) {
                 Text(
-                    "Maildirs",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
+                    "No maildirs configured.",
+                    fontSize = 13.sp,
+                    color = InkDim,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 )
-                IconButton(onClick = { vm.openFolderEditor(null) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_add),
-                        contentDescription = "Add maildir",
-                    )
-                }
             }
-            Spacer(Modifier.height(4.dp))
-
             for ((folderIndex, folder) in folders.withIndex()) {
                 var menuOpen by remember(folder.id) { mutableStateOf(false) }
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 folder.displayName,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(roleLabel(folder.role), fontSize = 13.sp)
+                            Text(roleLabel(folder.role), fontSize = 11.sp, color = InkDim)
                         }
-                        Text(folder.path, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            folder.path,
+                            fontSize = 12.sp,
+                            color = InkDim,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                     Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_more_vert),
-                                contentDescription = "Maildir actions",
-                            )
-                        }
+                        BarIcon(R.drawable.ic_more_vert, "Maildir actions") { menuOpen = true }
                         DropdownMenu(
                             expanded = menuOpen,
                             onDismissRequest = { menuOpen = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Move up") },
+                                text = { Text("Move up", fontSize = 16.sp) },
                                 enabled = folderIndex > 0,
                                 onClick = {
                                     menuOpen = false
@@ -325,7 +250,7 @@ internal fun SettingsScreen(vm: MainViewModel) {
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Move down") },
+                                text = { Text("Move down", fontSize = 16.sp) },
                                 enabled = folderIndex < folders.lastIndex,
                                 onClick = {
                                     menuOpen = false
@@ -333,14 +258,14 @@ internal fun SettingsScreen(vm: MainViewModel) {
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Edit") },
+                                text = { Text("Edit", fontSize = 16.sp) },
                                 onClick = {
                                     menuOpen = false
                                     vm.openFolderEditor(folder.id)
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Remove") },
+                                text = { Text("Remove", fontSize = 16.sp) },
                                 onClick = {
                                     menuOpen = false
                                     vm.removeFolder(folder.id)
@@ -351,60 +276,58 @@ internal fun SettingsScreen(vm: MainViewModel) {
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Sender identities",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = { vm.openIdentityEditor(null) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_add),
-                        contentDescription = "Add identity",
-                    )
-                }
-            }
-            Text("Topmost identity is used by default.", fontSize = 13.sp)
-            Spacer(Modifier.height(4.dp))
+            SettingsSection("Sender identities", addLabel = "Add identity", onAdd = { vm.openIdentityEditor(null) })
+            Text(
+                "Topmost identity is used by default.",
+                fontSize = 11.sp,
+                color = InkDim,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
             if (vm.identities().isEmpty()) {
-                Text("No sender identities configured.", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "No sender identities configured.",
+                    fontSize = 13.sp,
+                    color = InkDim,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
             }
             val identityList = vm.identities()
             for ((identityIndex, identity) in identityList.withIndex()) {
                 var menuOpen by remember(identity.id) { mutableStateOf(false) }
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
                             identity.displayLabel,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             if (identity.authMode == AuthMode.XOAUTH2) {
-                                "Gmail XOAUTH2 · ${identity.smtpHost}"
+                                "Gmail XOAUTH2 \u00b7 ${identity.smtpHost}"
                             } else {
-                                "SMTP · ${identity.smtpHost}"
+                                "SMTP \u00b7 ${identity.smtpHost}"
                             },
-                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = 12.sp,
+                            color = InkDim,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_more_vert),
-                                contentDescription = "Identity actions",
-                            )
-                        }
+                        BarIcon(R.drawable.ic_more_vert, "Identity actions") { menuOpen = true }
                         DropdownMenu(
                             expanded = menuOpen,
                             onDismissRequest = { menuOpen = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Move up") },
+                                text = { Text("Move up", fontSize = 16.sp) },
                                 enabled = identityIndex > 0,
                                 onClick = {
                                     menuOpen = false
@@ -412,7 +335,7 @@ internal fun SettingsScreen(vm: MainViewModel) {
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Move down") },
+                                text = { Text("Move down", fontSize = 16.sp) },
                                 enabled = identityIndex < identityList.lastIndex,
                                 onClick = {
                                     menuOpen = false
@@ -420,14 +343,14 @@ internal fun SettingsScreen(vm: MainViewModel) {
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Edit") },
+                                text = { Text("Edit", fontSize = 16.sp) },
                                 onClick = {
                                     menuOpen = false
                                     vm.openIdentityEditor(identity.id)
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Remove") },
+                                text = { Text("Remove", fontSize = 16.sp) },
                                 onClick = {
                                     menuOpen = false
                                     vm.removeIdentity(identity.id)
@@ -438,11 +361,115 @@ internal fun SettingsScreen(vm: MainViewModel) {
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
-            Text("maildirt 0.5.0", fontSize = 13.sp)
+            Text(
+                "maildirt 0.5.3",
+                fontSize = 11.sp,
+                color = InkDim,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
+            )
         }
     }
+}
 
+@Composable
+private fun SettingsSection(
+    title: String,
+    addLabel: String = "Add",
+    onAdd: (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 12.dp, top = 12.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            title.uppercase(),
+            fontSize = 10.sp,
+            color = InkDim,
+            modifier = Modifier.weight(1f),
+        )
+        if (onAdd != null) {
+            BarIcon(R.drawable.ic_add, addLabel) { onAdd() }
+        }
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    title: String,
+    value: String? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            .padding(horizontal = 12.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            title,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (value != null) {
+            Text(
+                value,
+                fontSize = 13.sp,
+                color = InkDim,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    numeric: Boolean = false,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Text(label, fontSize = 11.sp, color = InkDim)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+                .drawBehind {
+                    drawLine(
+                        InkDim,
+                        Offset(0f, size.height),
+                        Offset(size.width, size.height),
+                        strokeWidth = 1f,
+                    )
+                },
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(color = Color.Black, fontSize = 16.sp, lineHeight = 22.sp),
+                cursorBrush = SolidColor(Color.Black),
+                keyboardOptions = if (numeric) {
+                    KeyboardOptions(keyboardType = KeyboardType.Number)
+                } else {
+                    KeyboardOptions.Default
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -455,11 +482,28 @@ internal fun FolderEditorScreen(vm: MainViewModel, editor: Screen.FolderEditor) 
     val paged = vm.config.pagedScrolling
     val scrollState = rememberScrollState()
 
+    fun save(): Boolean {
+        if (editor.folderId == null && path.isBlank()) return true
+        val result = if (editor.folderId == null) {
+            vm.addFolder(path, role)
+        } else {
+            vm.updateFolder(editor.folderId, path, role)
+        }
+        return if (result == null) {
+            true
+        } else {
+            error = result
+            false
+        }
+    }
+
+    BackHandler { if (save()) vm.back() }
+
     Scaffold(
         topBar = {
             AppTopBar(
                 title = if (editor.folderId == null) "Add maildir" else "Edit maildir",
-                onBack = { vm.back() },
+                onBack = { if (save()) vm.back() },
             )
         },
     ) { padding ->
@@ -501,12 +545,15 @@ internal fun FolderEditorScreen(vm: MainViewModel, editor: Screen.FolderEditor) 
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            if (selected) "\u2713" else " ",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.width(24.dp),
-                        )
+                        Box(Modifier.width(24.dp), contentAlignment = Alignment.CenterStart) {
+                            if (selected) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check),
+                                    contentDescription = "Selected",
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
                         Text(
                             roleLabel(option),
                             style = MaterialTheme.typography.bodyLarge,
@@ -520,19 +567,6 @@ internal fun FolderEditorScreen(vm: MainViewModel, editor: Screen.FolderEditor) 
                 Text(error!!, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
             Spacer(Modifier.height(20.dp))
-            Button(
-                onClick = {
-                    val result = if (editor.folderId == null) {
-                        vm.addFolder(path, role)
-                    } else {
-                        vm.updateFolder(editor.folderId, path, role)
-                    }
-                    if (result == null) vm.back() else error = result
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Save")
-            }
         }
     }
 }
@@ -591,11 +625,24 @@ internal fun IdentityEditorScreen(vm: MainViewModel, editor: Screen.IdentityEdit
         tokenFilePath = tokenPath,
     )
 
+    fun save(): Boolean {
+        if (editor.identityId == null && email.isBlank()) return true
+        val result = vm.saveIdentity(buildIdentity(), secret)
+        return if (result == null) {
+            true
+        } else {
+            error = result
+            false
+        }
+    }
+
+    BackHandler { if (save()) vm.back() }
+
     Scaffold(
         topBar = {
             AppTopBar(
                 title = if (editor.identityId == null) "Add identity" else "Edit identity",
-                onBack = { vm.back() },
+                onBack = { if (save()) vm.back() },
             )
         },
     ) { padding ->
@@ -647,11 +694,15 @@ internal fun IdentityEditorScreen(vm: MainViewModel, editor: Screen.IdentityEdit
                             .padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(
-                            if (selected) "\u2713" else " ",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        if (selected) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_check),
+                                contentDescription = "Selected",
+                                modifier = Modifier.size(18.dp),
+                            )
+                        } else {
+                            Spacer(Modifier.height(18.dp))
+                        }
                         Text(
                             if (option == AuthMode.STANDARD) "Password" else "Gmail XOAUTH2",
                             style = MaterialTheme.typography.bodyLarge,
@@ -693,11 +744,15 @@ internal fun IdentityEditorScreen(vm: MainViewModel, editor: Screen.IdentityEdit
                             .padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(
-                            if (selected) "\u2713" else " ",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        if (selected) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_check),
+                                contentDescription = "Selected",
+                                modifier = Modifier.size(18.dp),
+                            )
+                        } else {
+                            Spacer(Modifier.height(18.dp))
+                        }
                         Text(
                             when (option) {
                                 SmtpSecurity.STARTTLS -> "STARTTLS"
@@ -828,15 +883,6 @@ internal fun IdentityEditorScreen(vm: MainViewModel, editor: Screen.IdentityEdit
                 Text(error!!, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
             Spacer(Modifier.height(20.dp))
-            Button(
-                onClick = {
-                    val result = vm.saveIdentity(buildIdentity(), secret)
-                    if (result == null) vm.back() else error = result
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Save")
-            }
         }
     }
 }

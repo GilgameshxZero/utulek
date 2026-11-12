@@ -49,6 +49,7 @@ data class ParsedMessage(
     val inlineImages: Map<String, InlineImage>,
     val messageId: String? = null,
     val references: String? = null,
+    val calendar: CalendarInvite? = null,
 )
 
 class MimeReader(private val context: Context) {
@@ -76,6 +77,20 @@ class MimeReader(private val context: Context) {
         val state = ParseState()
         walk(message, state, cacheDir, reuse)
 
+        val calendar = state.calendarTexts
+            .asSequence()
+            .mapNotNull { CalendarMessaging.parseInvite(it) }
+            .firstOrNull()
+            ?: state.attachments
+                .filter { it.isCalendarFile() }
+                .asSequence()
+                .mapNotNull { attachment ->
+                    runCatching { attachment.file.readText() }
+                        .getOrNull()
+                        ?.let { CalendarMessaging.parseInvite(it) }
+                }
+                .firstOrNull()
+
         return ParsedMessage(
             subject = decodeHeader(message.subject).ifBlank { "(no subject)" },
             from = formatAddresses(message.from),
@@ -89,6 +104,7 @@ class MimeReader(private val context: Context) {
             inlineImages = state.inline,
             messageId = message.getHeader("Message-ID")?.firstOrNull()?.trim(),
             references = message.getHeader("References")?.firstOrNull()?.trim(),
+            calendar = calendar,
         )
     }
 
@@ -98,8 +114,14 @@ class MimeReader(private val context: Context) {
         val alternatives = LinkedHashMap<String, String>()
         val attachments = ArrayList<Attachment>()
         val inline = HashMap<String, InlineImage>()
+        val calendarTexts = ArrayList<String>()
         var inlineBytes = 0
     }
+
+    private fun Attachment.isCalendarFile(): Boolean =
+        mimeType.equals("text/calendar", ignoreCase = true) ||
+            mimeType.equals("application/ics", ignoreCase = true) ||
+            name.endsWith(".ics", ignoreCase = true)
 
     private fun walk(part: Part, state: ParseState, cacheDir: File, reuse: Boolean) {
         val fileName = runCatching { part.fileName }.getOrNull()
@@ -138,14 +160,20 @@ class MimeReader(private val context: Context) {
             val mimeType = runCatching {
                 part.contentType?.substringBefore(';')?.trim()
             }.getOrNull()?.takeIf { it.isNotBlank() }?.lowercase() ?: "text/plain"
-            val content = runCatching { part.content as? String }.getOrNull()
+            val content = readTextPart(part)
             if (content != null) {
+                if (mimeType == "text/calendar") state.calendarTexts.add(content)
                 state.alternatives.putIfAbsent(mimeType, content)
                 when (mimeType) {
                     "text/html" -> if (state.html == null) state.html = content
                     "text/plain" -> if (state.text == null) state.text = content
                 }
             }
+            return
+        }
+
+        if (part.isMimeType("application/ics")) {
+            readTextPart(part)?.let { state.calendarTexts.add(it) }
             return
         }
 
@@ -180,6 +208,18 @@ class MimeReader(private val context: Context) {
             return
         }
         state.attachments.add(Attachment(displayName, mimeType, size, target))
+    }
+
+    /** Unknown text subtypes come back as a stream, not a String. */
+    private fun readTextPart(part: Part): String? {
+        (runCatching { part.content as? String }.getOrNull())?.let { return it }
+        return runCatching {
+            val charset = Regex("(?i)charset=\"?([^;\"]+)")
+                .find(part.contentType.orEmpty())?.groupValues?.get(1)?.trim()
+                ?: "UTF-8"
+            val bytes = part.inputStream.use { it.readBytes() }
+            bytes.toString(java.nio.charset.Charset.forName(charset))
+        }.onFailure { android.util.Log.w("MaildirtCal", "could not read text part", it) }.getOrNull()
     }
 
     private fun addInline(part: Part, contentId: String, state: ParseState) {

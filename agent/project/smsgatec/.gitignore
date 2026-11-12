@@ -44,3 +44,9 @@ __pycache__/
 # Project-local intermediates and finished binaries.
 /.obj/
 /.bin/
+
+# Android app intermediates, outputs, signing, and local SDK path.
+/android/.obj/
+/android/.bin/
+/android/.signing/
+/android/local.properties

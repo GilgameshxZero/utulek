@@ -25,8 +25,8 @@ android {
         applicationId = "com.gilgamesh.maildirt"
         minSdk = 28
         targetSdk = 35
-        versionCode = 21
-        versionName = "0.5.0"
+        versionCode = 24
+        versionName = "0.5.3"
     }
 
     signingConfigs {

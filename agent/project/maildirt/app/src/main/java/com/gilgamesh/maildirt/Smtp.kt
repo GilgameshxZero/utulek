@@ -164,6 +164,38 @@ object MailComposer {
         return message
     }
 
+    fun buildCalendar(
+        identity: SenderIdentity,
+        to: String,
+        subject: String,
+        calendar: String,
+    ): MimeMessage {
+        val message = MimeMessage(newSession())
+        val from = if (identity.displayName.isBlank()) {
+            InternetAddress(identity.email)
+        } else {
+            InternetAddress(identity.email, identity.displayName, "UTF-8")
+        }
+        message.setFrom(from)
+        val recipients = parse(to)
+        if (recipients.isEmpty()) throw IllegalStateException("No organizer address")
+        message.setRecipients(Message.RecipientType.TO, recipients)
+        message.setSubject(subject, "UTF-8")
+        message.setSentDate(java.util.Date())
+        message.setHeader("MIME-Version", "1.0")
+
+        // neomutt_xp replies are a single text/calendar part with method=REPLY;
+        // other clients key their RSVP ingestion off these parameters.
+        val type = "text/calendar; charset=UTF-8; method=REPLY; component=VEVENT; name=reply.ics"
+        message.dataHandler = javax.activation.DataHandler(
+            ByteArrayDataSource(calendar.toByteArray(Charsets.UTF_8), type),
+        )
+        message.setHeader("Content-Type", type)
+        message.setHeader("Content-Disposition", "inline; filename=reply.ics")
+        message.saveChanges()
+        return message
+    }
+
     fun toBytes(message: MimeMessage): ByteArray =
         ByteArrayOutputStream().use { output ->
             message.writeTo(output)
