@@ -112,8 +112,8 @@ MMS text is readable. Media is downloaded lazily from Google Voice and cached
 under `media/` in the state directory; `/inbox/{id}/attachments/{partId}` serves
 the original bytes. Outgoing MMS accepts image, video or audio attachments
 (1..20 MiB each, 25 MiB total) and drives the normal Google Voice composer;
-correlation-token reconciliation is the same as SMS. Group sending is not
-implemented.
+correlation-token reconciliation is the same as SMS. Group sending is supported
+for both text and MMS attachments (2–10 recipients).
 
 Authenticated `/events` emits changed message records as a local SSE stream.
 Subscriptions start with a reset indication so reconnecting clients reconcile
